@@ -1,0 +1,25 @@
+$kind: http-request
+name: POST Register - Exito
+description: ""
+url: http://localhost:8080/api/auth/register
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"name\": \"Jose David\",\r
+
+    \  \"email\": \"castro@gmail.com\",\r
+
+    \  \"password\": \"123541213\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code es 409\", function () {\r
+
+      \    pm.response.to.have.status(409);\r
+
+      });"
+    language: text/javascript
+order: 3525958979036508

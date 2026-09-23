@@ -1,0 +1,162 @@
+/* ============================================================
+   BUSCAR — encabezado de página
+   ============================================================ */
+.search-page__container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+}
+
+.search-page__title {
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.search-page__subtitle {
+    color: var(--text-muted);
+    margin-bottom: 32px;
+    text-align: center;
+}
+
+/* ============================================================
+   BARRA DE BÚSQUEDA
+   ============================================================ */
+.search-bar {
+    margin-bottom: 20px;
+}
+
+.search-bar__input {
+    width: 100%;
+    padding: 16px 24px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+    font-size: 1rem;
+    font-family: var(--font-body);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    text-align: center;
+}
+
+.search-bar__input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+/* ============================================================
+   FILTRO DE CATEGORÍAS (chips dinámicos)
+   ============================================================ */
+.category-filter {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 36px;
+}
+
+.category-filter__chip {
+    background: var(--bg-surface);
+    border: 1.5px solid var(--border-color);
+    padding: 8px 20px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    font-family: var(--font-body);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.category-filter__chip:hover {
+    border-color: var(--color-dark);
+}
+
+.category-filter__chip--active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--text-alternative);
+}
+
+/* ============================================================
+   RESULTADOS — grilla de productos
+   ============================================================ */
+.search-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+    min-height: 240px;
+}
+
+.product-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-soft);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.product-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-card);
+}
+
+.product-card__category {
+    align-self: flex-start;
+    background: var(--color-primary-soft);
+    color: var(--color-primary-hover);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+}
+
+.product-card__name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.product-card__unit {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* ============================================================
+   ESTADOS — cargando / vacío / error
+   ============================================================ */
+.search-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+
+.search-state__title {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+    .search-results {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .search-results {
+        grid-template-columns: 1fr;
+    }
+}

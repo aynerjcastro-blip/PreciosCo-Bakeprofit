@@ -1,0 +1,30 @@
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+    .hero {
+        grid-template-columns: 1fr;
+        text-align: center;
+
+    }
+
+
+    .hero__image,
+    .hero__title,
+    .hero__text,
+    .hero__actions {
+        grid-column: 1;
+    }
+
+    .hero__image {
+        grid-row: auto;
+    }
+
+    .site-nav__list {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+}

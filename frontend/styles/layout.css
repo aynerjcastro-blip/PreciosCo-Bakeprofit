@@ -1,0 +1,118 @@
+/* ============================================================
+   HEADER
+   Antes: #HeaderH1, #PreciosCo
+   ============================================================ */
+.site-header {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.site-header__inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.site-header__inner img {
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.site-header__inner img:hover {
+    opacity: 0.7;
+}
+
+.site-header__title {
+    display: flex;
+    align-items: center;
+}
+
+.header-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+/* ============================================================
+   Titulo
+   ============================================================ */
+.logo-img {
+    height: 32px; /* ajusta según el tamaño real que quieras en el header */
+    width: auto;
+    display: block;
+}
+
+
+/* ============================================================
+   NAVEGACION
+   Antes: #Nav-Options
+   ============================================================ */
+.site-nav {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-color);
+
+}
+
+.site-nav__list {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 12px 24px;
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    list-style: none;
+}
+
+.site-nav__list a {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: color 0.2s;
+}
+
+.site-nav__list a:hover {
+    color: var(--color-primary-hover);
+}
+
+
+
+/* ============================================================
+   FOOTER
+   Antes: #FooterOptions, #H5Footer
+   ============================================================ */
+.site-footer {
+    background: var(--color-dark);
+    color: #FFF;
+    padding: 40px 24px 20px;
+    text-align: center;
+}
+
+.site-footer__links {
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 24px;
+}
+
+.site-footer__links a {
+    color: var(--color-dark-muted);
+    transition: color 0.2s;
+}
+
+.site-footer__links a:hover {
+    color: #FFF;
+}
+
+.site-footer__copy {
+    border-top: 1px solid var(--color-dark-border);
+    padding-top: 20px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}

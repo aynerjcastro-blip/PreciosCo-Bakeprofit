@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscar productos · PreciosCo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Nunito:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="preload" href="/frontend/styles/normalize.css" as="stylesheet">
+    <link rel="stylesheet" href="/frontend/styles/normalize.css">
+    <!-- buscar.html -->
+    <link rel="stylesheet" href="/frontend/styles/tokens.css">
+    <link rel="stylesheet" href="/frontend/styles/base.css">
+    <link rel="stylesheet" href="/frontend/styles/layout.css">
+    <link rel="stylesheet" href="/frontend/styles/pages/buscar.css">
+    <link rel="stylesheet" href="/frontend/styles/responsive.css">
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="site-header__inner">
+            <img src="/frontend/assets/icons/meatball-menu.png" alt="Abrir menú" width="30">
+            <a href="/frontend/index.html" class="site-header__title">
+                <img src="/frontend/assets/images/titulo-preciosCo.png" alt="PreciosCo" class="logo-img">
+            </a>
+            <div class="header-actions">
+                <a href="/frontend/pages/buscar.html">
+                    <img src="/frontend/assets/icons/find.png" alt="Buscar" width="30">
+                </a>
+                <a href="/frontend/pages/login.html">
+                    <img src="/frontend/assets/icons/user.png" alt="Iniciar sesion" width="30" >
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="search-page">
+        <div class="search-page__container">
+            <h1 class="search-page__title">Busca tu producto</h1>
+            <p class="search-page__subtitle">Escribe un nombre o filtra por categoría</p>
+
+            <div class="search-bar">
+                <input
+                    type="search"
+                    id="search-input"
+                    class="search-bar__input"
+                    placeholder="Ej. Arroz, Leche, Chocolatina..."
+                    aria-label="Buscar producto por nombre">
+            </div>
+
+            <div class="category-filter" id="category-filter" aria-label="Filtrar por categoría">
+                <!-- Los chips de categoría se insertan dinámicamente desde buscar.js -->
+            </div>
+
+            <div class="search-results" id="search-results" aria-live="polite">
+                <!-- Los resultados se insertan dinámicamente desde buscar.js -->
+            </div>
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        <ul class="site-footer__links">
+            <li><a href="#">
+                    <h5>Preguntas Y Respuestas</h5>
+                </a></li>
+            <li><a href="#">
+                    <h5>Contáctanos</h5>
+                </a></li>
+        </ul>
+        <h5 class="site-footer__copy">Todos los derechos reservados</h5>
+    </footer>
+
+    <script src="/frontend/js/config.js" defer></script>
+    <script src="/frontend/js/ui/buscar.js" defer></script>
+</body>
+
+</html>

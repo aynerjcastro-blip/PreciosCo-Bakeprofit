@@ -1,0 +1,27 @@
+$kind: http-request
+name: POST Register - Email Duplicado
+description: ""
+url: http://localhost:8080/api/auth/register
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"name\": \"Jose Castro\",\r
+
+    \  \"email\": \"josec@gmail.com\",\r
+
+    \  \"password\": \"123541213\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code es 409\", function () {\r
+
+      \    pm.response.to.have.status(409);\r
+
+      });\r
+
+      \r\n"
+    language: text/javascript
+order: 2010082481012735

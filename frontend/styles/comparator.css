@@ -1,0 +1,75 @@
+.comparador {
+    max-width: 800px;
+    margin: 60px auto;
+    padding: 0 24px;
+}
+
+.comparador__header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.comparador__title {
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.comparador__subtitle {
+    color: var(--text-muted);
+    margin-top: 8px;
+}
+
+.comparador__error {
+    text-align: center;
+    color: var(--text-muted);
+    margin-top: 40px;
+}
+
+.price-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.price-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 24px 28px;
+    box-shadow: var(--shadow-soft);
+    position: relative;
+}
+
+.price-card--best {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.price-card__badge {
+    position: absolute;
+    top: -12px;
+    left: 20px;
+    background: var(--color-primary);
+    color: #FFF;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 999px;
+}
+
+.price-card__store {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+}
+
+.price-card__value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--color-primary-hover);
+}
+
+.price-card__date {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+}

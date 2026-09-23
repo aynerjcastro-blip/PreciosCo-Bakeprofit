@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<!-- Spring Boot Starter Parent: gestiona las versiones de todas las dependencias
+	     de Spring de forma compatible entre sí, para no tener que fijar versión a cada una -->
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>4.1.0</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+
+	<groupId>com.comprasco</groupId>
+	<artifactId>bakeprofit</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>bakeprofit</name>
+	<description>Plataforma web de comparacion de precios - ComprasCo</description>
+
+	<properties>
+		<java.version>25</java.version>
+	</properties>
+
+	<dependencies>
+
+		<!-- ============================================================
+		     WEB / API REST
+		     ============================================================ -->
+
+		<!-- Spring MVC + Tomcat embebido + Jackson (JSON).
+		     OJO: el nombre correcto es "spring-boot-starter-web", NO "starter-webmvc".
+		     Sin este starter no puedes exponer @RestController ni endpoints REST. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<!-- ============================================================
+		     PERSISTENCIA / BASE DE DATOS
+		     ============================================================ -->
+
+		<!-- Spring Data JPA + Hibernate: ORM para mapear tus entidades
+		     (Usuario, Producto, Tienda, Categoria, Precio) a tablas SQL -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+
+		<!-- Driver JDBC de PostgreSQL: sin esto Spring no sabe "hablar" con
+		     tu base de datos en la nube (Supabase/Neon/Railway).
+		     scope "runtime" porque solo se necesita al ejecutar, no al compilar. -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- ============================================================
+		     SEGURIDAD / AUTENTICACION
+		     ============================================================ -->
+
+		<!-- Framework de autenticacion y autorizacion (login, roles, control
+		     de acceso). Cubre RF01-RF04 y RNF03 (roles: usuario/proveedor/admin) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+
+		<!-- JWT (JSON Web Token): Spring Security NO genera ni valida tokens
+		     JWT por si solo, se necesita esta libreria aparte.
+		     jjwt-api: interfaces para crear/leer tokens (se usa en tu codigo) -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>0.12.6</version>
+		</dependency>
+		<!-- jjwt-impl: implementacion real de jjwt-api, solo se necesita en
+		     tiempo de ejecucion, no para compilar tu propio codigo -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>0.12.6</version>
+			<scope>runtime</scope>
+		</dependency>
+		<!-- jjwt-jackson: permite que jjwt use Jackson para serializar el
+		     contenido del token a/desde JSON -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>0.12.6</version>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- ============================================================
+		     VALIDACION DE DATOS
+		     ============================================================ -->
+
+		<!-- Habilita @NotNull, @Email, @Positive, @Size, etc. en tus DTOs
+		     (ej. validar precios positivos, emails validos en el registro) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+
+		<!-- ============================================================
+		     DOCUMENTACION DE API (RNF09)
+		     ============================================================ -->
+
+		<!-- Genera automaticamente documentacion interactiva de tu API
+		     en /swagger-ui.html a partir de tus @RestController -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>3.0.3</version>
+		</dependency>
+
+		<!-- ============================================================
+		     MONITOREO
+		     ============================================================ -->
+
+		<!-- Expone endpoints de salud/metrica (ej. /actuator/health) - util
+		     para verificar que el servicio esta vivo una vez desplegado -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+
+		<!-- ============================================================
+		     HERRAMIENTAS DE DESARROLLO
+		     ============================================================ -->
+
+		<!-- Recarga automatica de la app al detectar cambios en el codigo,
+		     evita reiniciar el servidor manualmente en cada cambio.
+		     "optional=true" evita que este jar se propague a quien use tu
+		     proyecto como dependencia (no aplica aqui, pero es buena practica) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Genera automaticamente getters, setters, constructores, etc.
+		     mediante anotaciones (@Getter, @Setter, @Data) - reduce
+		     codigo repetitivo en entidades y DTOs -->
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- ============================================================
+		     TESTING
+		     ============================================================ -->
+
+		<!-- Starter UNICO para testing: incluye JUnit 5, Mockito, AssertJ,
+		     y utilidades para testear controllers (MockMvc) y JPA.
+		     NO existe un "-test" por cada starter individual (eso no es
+		     un patron real de Spring Boot) - este starter cubre todo. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Utilidades especificas para testear configuraciones de
+		     Spring Security (ej. simular usuarios autenticados en tests) -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+	</dependencies>
+
+	<build>
+		<plugins>
+			<!-- Empaqueta la app como un .jar ejecutable y habilita
+			     "mvn spring-boot:run" -->
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+
+			<!-- Configura el procesador de anotaciones de Lombok durante
+			     la compilacion (necesario para que @Getter/@Setter/@Data
+			     generen el codigo real al compilar) -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>default-compile</id>
+						<phase>compile</phase>
+						<goals>
+							<goal>compile</goal>
+						</goals>
+						<configuration>
+							<annotationProcessorPaths>
+								<path>
+									<groupId>org.projectlombok</groupId>
+									<artifactId>lombok</artifactId>
+								</path>
+							</annotationProcessorPaths>
+						</configuration>
+					</execution>
+					<execution>
+						<id>default-testCompile</id>
+						<phase>test-compile</phase>
+						<goals>
+							<goal>testCompile</goal>
+						</goals>
+						<configuration>
+							<annotationProcessorPaths>
+								<path>
+									<groupId>org.projectlombok</groupId>
+									<artifactId>lombok</artifactId>
+								</path>
+							</annotationProcessorPaths>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

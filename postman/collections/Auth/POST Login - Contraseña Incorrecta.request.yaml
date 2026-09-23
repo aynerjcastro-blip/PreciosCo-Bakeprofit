@@ -1,0 +1,23 @@
+$kind: http-request
+name: POST Login - Contraseña Incorrecta
+description: ""
+url: http://localhost:8080/api/auth/login
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"email\": \"ayner@test.com\",\r
+
+    \  \"password\": \"contraseñaincorrecta\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code es 401\", function () {\r
+
+      \    pm.response.to.have.status(401);\r
+
+      });"
+    language: text/javascript
+order: 4384270837290348

@@ -1,0 +1,39 @@
+/* ============================================================
+   DESIGN TOKENS (paleta, tipografía, espaciado, sombras)
+   ============================================================ */
+:root {
+    /* Colores de fondo */
+    --bg-main: #F8FAFC;
+    --bg-surface: #FFFFFF;
+
+    /* Colores oscuros (header/footer/dark sections) */
+    --color-dark: #0F172A;
+    --color-dark-card: #1E293B;
+    --color-dark-border: #334155;
+    --color-dark-muted: #94A3B8;
+
+    /* Texto */
+    --text-primary: #0F172A;
+    --text-muted: #64748B;
+    --text-alternative: #FFF;
+
+    /* Marca (nombres semánticos, no por apariencia) */
+    --color-primary: #FF9F1C;
+    --color-primary-hover: #E08700;
+    --color-primary-soft: #FFF7ED;
+    --color-secondary: #10B981;
+
+    /* Bordes */
+    --border-color: #E2E8F0;
+
+    /* Tipografía */
+    --font-display: 'Poppins', sans-serif;
+    --font-body: 'Nunito', sans-serif;
+
+    /* Radios y sombras */
+    --radius-sm: 8px;
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --shadow-soft: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
+    --shadow-card: 0 20px 30px -10px rgba(15, 23, 42, 0.08);
+}
