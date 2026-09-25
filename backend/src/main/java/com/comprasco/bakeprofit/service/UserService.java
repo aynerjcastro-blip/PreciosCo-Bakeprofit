@@ -53,18 +53,37 @@ public class UserService {
     /* REGISTRO / AUTH */
 
     @Transactional
-    public User register(RegisterRequest request) {
+    public AuthResponse register(RegisterRequest request) {
+
+        // Verifica que el email no este ya en uso antes de intentar guardar.
+        // Se hace aqui, no se deja que la base de datos falle sola, para
+        // poder devolver un mensaje de error claro (409) en vez de una
+        // excepcion generica de base de datos.
         if (userRepository.findByEmail(request.email()).isPresent()) {
-            throw new EmailAlreadyExistsException(request.email()); // ← 409 CONFLICT
+            throw new EmailAlreadyExistsException(request.email()); // -> 409 CONFLICT
         }
 
+        // Construye la entidad User a partir del DTO. No se copia "role"
+        // del request: el rol siempre se fija aqui mismo como USER, nunca
+        // lo decide el cliente, para que nadie pueda auto-asignarse ADMIN
+        // enviando ese campo en el JSON.
         User user = new User();
         user.setName(request.name());
         user.setEmail(request.email());
-        user.setPassword(passwordEncoder.encode(request.password()));
+        user.setPassword(passwordEncoder.encode(request.password())); // nunca texto plano
         user.setRole(Role.USER);
 
-        return userRepository.save(user);
+        // Guarda el usuario en la base de datos. savedUser trae el id
+        // generado por la base de datos, aunque aqui no se use directamente.
+        User savedUser = userRepository.save(user);
+
+        // Genera el JWT para el usuario recien creado, usando email y rol
+        // como los dos datos que el token necesita llevar en su payload.
+        String token = jwtSecurity.generateToken(savedUser.getEmail(), savedUser.getRole().name());
+
+        // Devuelve el DTO de salida (no la entidad User completa), para
+        // no exponer el password hasheado ni otros campos internos.
+        return new AuthResponse(token, savedUser.getName(), savedUser.getEmail(), savedUser.getRole());
     }
 
     /**
@@ -94,7 +113,6 @@ public class UserService {
         user.setActive(true);
     }
 
-    
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new InvalidCredentialsException());
