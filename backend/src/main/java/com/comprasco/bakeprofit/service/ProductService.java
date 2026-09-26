@@ -4,7 +4,6 @@ import com.comprasco.bakeprofit.entity.Product;
 import com.comprasco.bakeprofit.repository.ProductRepository;
 import com.comprasco.bakeprofit.entity.Category;
 import com.comprasco.bakeprofit.dto.ProductResponse;
-import com.comprasco.bakeprofit.service.CategoryService;
 import com.comprasco.bakeprofit.exception.ProductNotFoundException;
 
 import org.springframework.stereotype.Service;
