@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Nunito:wght@400;600&display=swap" rel="stylesheet">
     <link rel="preload" href="/frontend/styles/normalize.css" as="style">
     <link rel="stylesheet" href="/frontend/styles/normalize.css">
+    <script>(() => { const saved = localStorage.getItem("preciosco_theme"); if (saved) document.documentElement.setAttribute("data-theme", saved); })();
+    </script>
     <link rel="stylesheet" href="/frontend/styles/tokens.css">
     <link rel="stylesheet" href="/frontend/styles/base.css">
     <link rel="stylesheet" href="/frontend/styles/layout.css">
@@ -24,6 +26,7 @@
                 <img src="/frontend/assets/images/titulo-preciosCo.png" alt="PreciosCo" class="logo-img">
             </a>
             <div class="header-actions">
+                <button id="theme-toggle" class="theme-toggle">Modo oscuro</button>
                 <a href="/frontend/pages/buscar.html">
                     <img src="/frontend/assets/icons/find.png" alt="Buscar" width="30">
                 </a>
@@ -61,6 +64,10 @@
     </footer>
 
     <script src="/frontend/js/ui/comparator.js"></script>
+        <script type="module">
+        import { initTheme } from "/frontend/js/utils/theme.js";
+        initTheme();
+    </script>
 </body>
 
 </html>

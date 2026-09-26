@@ -1,35 +1,41 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PreciosCo</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Nunito:wght@400;600&display=swap"rel="stylesheet">
-    <link rel="preload" href="/frontend/styles/normalize.css" as="style">
-    <link rel="stylesheet" href="/frontend/styles/normalize.css">
-    <link rel="stylesheet" href="/frontend/styles/tokens.css">
-    <link rel="stylesheet" href="/frontend/styles/base.css">
-    <link rel="stylesheet" href="/frontend/styles/layout.css">
-    <link rel="stylesheet" href="/frontend/styles/pages/home.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Nunito:wght@400;600&display=swap"
+        rel="stylesheet" />
+    <link rel="preload" href="/frontend/styles/normalize.css" as="style" />
+    <link rel="stylesheet" href="/frontend/styles/normalize.css" />
+    <script>(() => { const saved = localStorage.getItem("preciosco_theme"); if (saved) document.documentElement.setAttribute("data-theme", saved); })();
+    </script>
+    <link rel="stylesheet" href="/frontend/styles/tokens.css" />
+    <link rel="stylesheet" href="/frontend/styles/base.css" />
+    <link rel="stylesheet" href="/frontend/styles/layout.css" />
+    <link rel="stylesheet" href="/frontend/styles/pages/home.css" />
 </head>
 
 <body>
     <header class="site-header">
         <div class="site-header__inner">
-            <img src="/frontend/assets/icons/meatball-menu.png" alt="Abrir menú" width="30">
+            <img src="/frontend/assets/icons/meatball-menu.png" alt="Abrir menú" width="30" />
             <a href="/frontend/index.html" class="site-header__title">
-                <img src="/frontend/assets/images/titulo-preciosCo.png" alt="PreciosCo" class="logo-img">
+                <img src="/frontend/assets/images/titulo-preciosCo.png" alt="PreciosCo" class="logo-img" />
             </a>
             <div class="header-actions">
+                <button id="theme-toggle" class="theme-toggle">Modo oscuro</button>
                 <a href="/frontend/pages/buscar.html">
-                    <img src="/frontend/assets/icons/find.png" alt="Buscar" width="30">
+                    <img src="/frontend/assets/icons/find.png" alt="Buscar" width="30" />
                 </a>
                 <a href="/frontend/pages/login.html">
-                    <img src="/frontend/assets/icons/user.png" alt="Iniciar sesion" width="30" >
+                    <img src="/frontend/assets/icons/user.png" alt="Iniciar sesion" width="30" />
                 </a>
+                
             </div>
         </div>
     </header>
@@ -44,11 +50,10 @@
     </nav>
 
     <section>
-
         <div class="hero">
             <img class="hero__image"
                 src="/frontend/assets/images/isometric-flat-3d-illustration-online-shopping-concept-with-ecommerce-app_18660-4570-removebg-preview.png"
-                alt="Ilustración de compra en línea">
+                alt="Ilustración de compra en línea" />
             <h2 class="hero__title">Encuentra Tu Producto al Mejor Precio</h2>
             <p class="hero__text">Rápido y Sencillo</p>
 
@@ -68,35 +73,52 @@
 
         <div id="sobre-nosotros" class="about">
             <h2 class="about__title">Quienes Somos</h2>
-            <img class="about__image" src="/frontend/assets/images/LogoPreciosCo.png" alt="Logo PreciosCo" width="400">
-            <p class="about__eslogan">Somos PreciosCo, nacimos con una misión clara: ayudarte a tomar mejores decisiones
-                de compra, cuidando tu bolsillo y ahorrándote tiempo.</p>
-            <p class="about__eslogan">Evolucionamos desde una herramienta de consulta ágil en Telegram hacia una
-                plataforma web completa diseñada para centralizar, comparar y transparentar la información de precios de
-                los principales establecimientos del país.</p>
+            <img class="about__image" src="/frontend/assets/images/LogoPreciosCo.png" alt="Logo PreciosCo"
+                width="400" />
+            <p class="about__eslogan">
+                Somos PreciosCo, nacimos con una misión clara: ayudarte a tomar
+                mejores decisiones de compra, cuidando tu bolsillo y ahorrándote
+                tiempo.
+            </p>
+            <p class="about__eslogan">
+                Evolucionamos desde una herramienta de consulta ágil en Telegram hacia
+                una plataforma web completa diseñada para centralizar, comparar y
+                transparentar la información de precios de los principales
+                establecimientos del país.
+            </p>
         </div>
 
         <div id="como-funciona" class="how-it-works">
             <div class="section-heading">
                 <h2 class="section-heading__title">¿Cómo funciona PreciosCo?</h2>
-                <p class="section-heading__subtitle">Encontrar la mejor opción de compra nunca fue tan fácil.</p>
+                <p class="section-heading__subtitle">
+                    Encontrar la mejor opción de compra nunca fue tan fácil.
+                </p>
             </div>
             <div>
                 <ol class="steps-list">
                     <li class="steps-list__item">
                         <h3 class="steps-list__item-title">Busca Y Compara</h3>
-                        <p class="steps-list__item-text">Ingresa el nombre, marca o categoría del producto. Compara
-                            precios al instante entre D1, Jumbo, Éxito y Olímpica ordenados de menor a mayor.</p>
+                        <p class="steps-list__item-text">
+                            Ingresa el nombre, marca o categoría del producto. Compara
+                            precios al instante entre D1, Jumbo, Éxito y Olímpica ordenados
+                            de menor a mayor.
+                        </p>
                     </li>
                     <li class="steps-list__item">
                         <h3 class="steps-list__item-title">Activa Alertas de Ahorro</h3>
-                        <p class="steps-list__item-text">Sigue tus productos favoritos y configura un precio objetivo.
-                            Te avisamos por correo o en la plataforma apenas bajen de precio.</p>
+                        <p class="steps-list__item-text">
+                            Sigue tus productos favoritos y configura un precio objetivo. Te
+                            avisamos por correo o en la plataforma apenas bajen de precio.
+                        </p>
                     </li>
                     <li class="steps-list__item">
                         <h3 class="steps-list__item-title">Consulta a la IA</h3>
-                        <p class="steps-list__item-text">Usa nuestros asistentes de inteligencia artificial para recibir
-                            recomendaciones de cuidado facial, opciones de droguería o sugerencias de recetas.</p>
+                        <p class="steps-list__item-text">
+                            Usa nuestros asistentes de inteligencia artificial para recibir
+                            recomendaciones de cuidado facial, opciones de droguería o
+                            sugerencias de recetas.
+                        </p>
                     </li>
                 </ol>
             </div>
@@ -108,42 +130,49 @@
                 <li class="testimonial-card">
                     <h4 class="testimonial-card__label">Nombre de la empresa</h4>
                     <p class="testimonial-card__quote">"Opinión de la empresa"</p>
-                    <img class="testimonial-card__avatar" src="#" alt="Foto de la persona" width="40">
+                    <img class="testimonial-card__avatar" src="#" alt="Foto de la persona" width="40" />
                     <p class="testimonial-card__author">Nombre de la persona</p>
                     <p class="testimonial-card__role">Cargo de la persona</p>
                 </li>
                 <li class="testimonial-card">
                     <h4 class="testimonial-card__label">Nombre de la empresa</h4>
                     <p class="testimonial-card__quote">"Opinión de la empresa"</p>
-                    <img class="testimonial-card__avatar" src="#" alt="Foto de la persona" width="40">
+                    <img class="testimonial-card__avatar" src="#" alt="Foto de la persona" width="40" />
                     <p class="testimonial-card__author">Nombre de la persona</p>
                     <p class="testimonial-card__role">Cargo de la persona</p>
                 </li>
                 <li class="testimonial-card">
                     <h4 class="testimonial-card__label">Nombre de la empresa</h4>
                     <p class="testimonial-card__quote">"Opinión de la empresa"</p>
-                    <img class="testimonial-card__avatar" src="#" alt="Foto de la persona" width="40">
+                    <img class="testimonial-card__avatar" src="#" alt="Foto de la persona" width="40" />
                     <p class="testimonial-card__author">Nombre de la persona</p>
                     <p class="testimonial-card__role">Cargo de la persona</p>
                 </li>
             </ul>
             <button class="testimonials__button">Encuentra más Opiniones</button>
         </div>
-
-
     </section>
 
     <footer class="site-footer">
         <ul class="site-footer__links">
-            <li><a href="#">
+            <li>
+                <a href="#">
                     <h5>Preguntas Y Respuestas</h5>
-                </a></li>
-            <li><a href="#">
+                </a>
+            </li>
+            <li>
+                <a href="#">
                     <h5>Contáctanos</h5>
-                </a></li>
+                </a>
+            </li>
         </ul>
         <h5 class="site-footer__copy">Todos los derechos reservados</h5>
     </footer>
+
+    <script type="module">
+        import { initTheme } from "/frontend/js/utils/theme.js";
+        initTheme();
+    </script>
 </body>
 
 </html>

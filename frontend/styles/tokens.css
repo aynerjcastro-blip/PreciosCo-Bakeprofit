@@ -37,3 +37,28 @@
     --shadow-soft: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
     --shadow-card: 0 20px 30px -10px rgba(15, 23, 42, 0.08);
 }
+/* 1. Si el SISTEMA operativo del usuario está en oscuro, Y todavía
+    no eligió nada manualmente (no hay data-theme="light" puesto),
+   usa oscuro por defecto. Esto es un "fallback" automático. */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bg-main: #121212;
+        --bg-surface: #1E1E1E;
+        --color-dark: #F8FAFC;
+        --text-primary: #F1F5F9;
+        --text-muted: #94A3B8;
+        --border-color: #334155;
+    }
+}
+
+
+/* 2. Si el usuario ELIGIÓ oscuro manualmente con el switch,
+   esto gana sin importar lo que diga el sistema operativo. */
+:root[data-theme="dark"] {
+    --bg-main: #121212;
+    --bg-surface: #1E1E1E;
+    --color-dark: #F8FAFC;
+    --text-primary: #F1F5F9;
+    --text-muted: #94A3B8;
+    --border-color: #334155;
+}

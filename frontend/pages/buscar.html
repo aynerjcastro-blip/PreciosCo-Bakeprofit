@@ -12,7 +12,8 @@
         rel="stylesheet">
     <link rel="preload" href="/frontend/styles/normalize.css" as="stylesheet">
     <link rel="stylesheet" href="/frontend/styles/normalize.css">
-    <!-- buscar.html -->
+    <script>(() => { const saved = localStorage.getItem("preciosco_theme"); if (saved) document.documentElement.setAttribute("data-theme", saved); })();
+    </script>
     <link rel="stylesheet" href="/frontend/styles/tokens.css">
     <link rel="stylesheet" href="/frontend/styles/base.css">
     <link rel="stylesheet" href="/frontend/styles/layout.css">
@@ -28,6 +29,7 @@
                 <img src="/frontend/assets/images/titulo-preciosCo.png" alt="PreciosCo" class="logo-img">
             </a>
             <div class="header-actions">
+                <button id="theme-toggle" class="theme-toggle">Modo oscuro</button>
                 <a href="/frontend/pages/buscar.html">
                     <img src="/frontend/assets/icons/find.png" alt="Buscar" width="30">
                 </a>
@@ -76,6 +78,11 @@
 
     <script src="/frontend/js/config.js" defer></script>
     <script src="/frontend/js/ui/buscar.js" defer></script>
+    
+    <script type="module">
+        import { initTheme } from "/frontend/js/utils/theme.js";
+        initTheme();
+    </script>
 </body>
 
 </html>
