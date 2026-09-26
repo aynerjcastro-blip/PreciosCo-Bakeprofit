@@ -36,7 +36,10 @@
     --radius-lg: 24px;
     --shadow-soft: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
     --shadow-card: 0 20px 30px -10px rgba(15, 23, 42, 0.08);
+
+    --color-navy-band: #0F172A;
 }
+
 /* 1. Si el SISTEMA operativo del usuario está en oscuro, Y todavía
     no eligió nada manualmente (no hay data-theme="light" puesto),
    usa oscuro por defecto. Esto es un "fallback" automático. */

@@ -104,7 +104,7 @@
    Antes: #AboutUs
    ============================================================ */
 .about {
-    background: var(--color-dark);
+    background: var(--color-navy-band);
     color: #FFF;
     padding: 80px 24px;
     margin: 80px 0;
