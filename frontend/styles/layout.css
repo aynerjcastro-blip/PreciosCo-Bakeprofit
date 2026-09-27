@@ -213,3 +213,19 @@
 .icon-button:hover .icon {
     background-color: var(--color-primary-hover);
 }
+
+/* ============================================================
+   Logo: Con reactividad al cambio en el modo de visualizacion
+   ============================================================ */
+   .logo-text {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.75rem;
+    color: var(--text-primary); /* se invierte solo con el tema */
+}
+
+.logo-co {
+    height: 28px;
+    width: auto;
+    vertical-align: middle;
+}
