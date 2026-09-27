@@ -73,3 +73,10 @@
     color: var(--text-muted);
     margin-top: 6px;
 }
+
+.price-card__source {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-style: italic;
+}
