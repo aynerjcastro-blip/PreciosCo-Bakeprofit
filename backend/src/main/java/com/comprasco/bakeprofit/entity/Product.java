@@ -38,7 +38,7 @@ public class Product {
     private LocalDateTime registrationDate = LocalDateTime.now();
 
     @ManyToOne
-    @JoinColumn(name = "category_id", nullable = false, foreignKey = @ForeignKey(name = "fk_product_category"))
+    @JoinColumn(name = "category_id", nullable = false, foreignKey = @ForeignKey(name = "fk_products_categories"))
     private Category category;
 
 }

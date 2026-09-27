@@ -38,11 +38,11 @@ public class Price {
     private String source;
 
     @ManyToOne
-    @JoinColumn(name = "product_id", nullable = false, foreignKey = @ForeignKey(name = "fk_price_product"))
+    @JoinColumn(name = "product_id", nullable = false, foreignKey = @ForeignKey(name = "fk_prices_products"))
     private Product product;
 
     @ManyToOne
-    @JoinColumn(name = "store_id", nullable = false, foreignKey = @ForeignKey(name = "fk_price_store" ))
+    @JoinColumn(name = "store_id", nullable = false, foreignKey = @ForeignKey(name = "fk_prices_stores" ))
     private Store store;
 
 }

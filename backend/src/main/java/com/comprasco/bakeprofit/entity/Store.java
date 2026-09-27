@@ -31,4 +31,9 @@ public class Store {
 
     @Column(nullable = false)
     private LocalDateTime registrationDate = LocalDateTime.now();
+
+    @ManyToOne
+    @JoinColumn(name = "category_id", nullable = false, foreignKey = @ForeignKey(name = "fk_stores_categories"))
+    private Category category;
+
 }
