@@ -23,23 +23,27 @@
 <body>
     <header class="site-header">
         <div class="site-header__inner">
-            <img src="/frontend/assets/icons/meatball-menu.png" alt="Abrir menú" width="30" />
+            <button class="icon-button" type="button" aria-label="Abrir menú">
+                <span class="icon icon--menu"></span>
+            </button>
+
             <a href="/frontend/index.html" class="site-header__title">
                 <img src="/frontend/assets/images/titulo-preciosCo.png" alt="PreciosCo" class="logo-img" />
             </a>
+
             <div class="header-actions">
                 <button id="theme-toggle" class="theme-toggle">Modo oscuro</button>
-                <a href="/frontend/pages/buscar.html">
-                    <img src="/frontend/assets/icons/find.png" alt="Buscar" width="30" />
+
+                <a href="/frontend/pages/buscar.html" class="icon-button" aria-label="Buscar">
+                    <span class="icon icon--search"></span>
                 </a>
-                <a href="/frontend/pages/login.html">
-                    <img src="/frontend/assets/icons/user.png" alt="Iniciar sesion" width="30" />
+
+                <a href="/frontend/pages/login.html" class="icon-button" aria-label="Iniciar sesión">
+                    <span class="icon icon--user"></span>
                 </a>
-                
             </div>
         </div>
     </header>
-
     <nav class="site-nav">
         <ul class="site-nav__list">
             <a href="#sobre-nosotros">Sobre Nosotros</a>

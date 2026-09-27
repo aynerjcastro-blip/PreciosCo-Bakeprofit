@@ -87,7 +87,7 @@
 .auth-form__submit {
     grid-column: 1 / -1;
     background: var(--color-dark);
-    color: #FFF;
+    color:var(--bg-surface);
     border: none;
     padding: 14px;
     border-radius: var(--radius-sm);

@@ -87,8 +87,8 @@
    Antes: #FooterOptions, #H5Footer
    ============================================================ */
 .site-footer {
-    background: var(--color-navy-band);
-    color: #FFF;
+    background: var(--color-dark);
+    color: var(--bg-surface);
     padding: 40px 24px 20px;
     text-align: center;
 }
@@ -166,4 +166,50 @@
 .theme-toggle:focus-visible {
     outline: 2px solid var(--primary-color);
     outline-offset: 3px;
+}
+
+/* ============================================================
+   Icons: Con reactividad al cambio en el modo de visualizacion
+   ============================================================ */
+
+.icon-button {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    background-color: var(--text-primary); /* esto reacciona al tema */
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+}
+
+.icon--menu {
+    mask-image: url("/frontend/assets/icons/meatball-menu.png");
+    -webkit-mask-image: url("/frontend/assets/icons/meatball-menu.png");
+}
+
+.icon--search {
+    mask-image: url("/frontend/assets/icons/find.png");
+    -webkit-mask-image: url("/frontend/assets/icons/find.png");
+}
+
+.icon--user {
+    mask-image: url("/frontend/assets/icons/user.png");
+    -webkit-mask-image: url("/frontend/assets/icons/user.png");
+}
+
+.icon-button:hover .icon {
+    background-color: var(--color-primary-hover);
 }
