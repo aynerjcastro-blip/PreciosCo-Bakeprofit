@@ -5,6 +5,7 @@ import com.comprasco.bakeprofit.exception.CategoryAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.CategoryNotFoundException;
 import com.comprasco.bakeprofit.repository.CategoryRepository;
 import com.comprasco.bakeprofit.repository.ProductRepository;
+import com.comprasco.bakeprofit.dto.CategoryResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,16 +25,22 @@ public class CategoryService {
 
     /* CONSULTAS */
 
-    public List<Category> findAll () {
-        return categoryRepository.findAll();
+    public List<CategoryResponse> findAll () {
+        return categoryRepository.findAll().stream()
+                .map(CategoryResponse::from)
+                .toList();
     }
 
-    public List<Category> findActive () {
-        return categoryRepository.findByActiveTrue();
+    public List<CategoryResponse> findActive () {
+        return categoryRepository.findByActiveTrueAndParentIsNotNull().stream()
+                .map(CategoryResponse::from)
+                .toList();
     }
 
-    public List<Category> findInactive () {
-        return categoryRepository.findByActiveFalse();
+    public List<CategoryResponse> findInactive () {
+        return categoryRepository.findByActiveFalseAndParentIsNotNull().stream()
+                .map(CategoryResponse::from)
+                .toList();
     }
 
     public Category findById (Long id) {
@@ -41,26 +48,34 @@ public class CategoryService {
                 .orElseThrow(() -> new CategoryNotFoundException("Categoria no encontrada con id: " + id));
     }
 
-    public List<Category> searchByName (String name) {
-        return categoryRepository.findByNameContainingIgnoreCaseAndActiveTrue(name);
+    public CategoryResponse findByIdResponse (Long id) {
+        return CategoryResponse.from(findById(id));
+    }
+
+    public List<CategoryResponse> searchByName (String name) {
+        return categoryRepository.findByNameContainingIgnoreCaseAndActiveTrueAndParentIsNotNull(name).stream()
+                .map(CategoryResponse::from)
+                .toList();
     }
 
     /* ESCRITURA */
 
     @Transactional
-    public Category create (String name) {
+    public CategoryResponse create (String name, Long parentId) {
         if (categoryRepository.existsByNameIgnoreCase(name)) {
             throw new CategoryAlreadyExistsException(name);
         }
 
         Category category = new Category();
         category.setName(name);
-
-        return categoryRepository.save(category);
+        if (parentId != null) {
+            category.setParent(findById(parentId));
+        }
+        return CategoryResponse.from(categoryRepository.save(category));
     }
 
     @Transactional
-    public Category update (Long id, String name) {
+    public CategoryResponse update (Long id, String name, Long parentId) {
         Category category = findById(id);
 
         if (categoryRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
@@ -68,24 +83,39 @@ public class CategoryService {
         }
 
         category.setName(name);
-        return categoryRepository.save(category);
+        if (parentId != null) {
+            category.setParent(findById(parentId));
+        }
+        return CategoryResponse.from(categoryRepository.save(category));
     }
 
     @Transactional
     public void activateCategory (Long id) {
         Category category = findById(id);
+        
         category.setActive(true);
-        productRepository.updateActiveByCategoryId(id, true);
-
+        if (category.getParent() == null) {
+            categoryRepository.updateActiveByParentId(id, true);        
+            productRepository.updateActiveByCategoryParentId(id, true);
+        } else {
+            productRepository.updateActiveByCategoryId(id, true);       
+        }
+        
         categoryRepository.save(category);
     }
 
     @Transactional
     public void deactivateCategory (Long id) {
         Category category = findById(id);
-        category.setActive(false);
-        productRepository.updateActiveByCategoryId(id, false);
 
+        category.setActive(false);
+        if (category.getParent() == null) {
+            categoryRepository.updateActiveByParentId(id, false);        
+            productRepository.updateActiveByCategoryParentId(id, false);
+        } else {
+            productRepository.updateActiveByCategoryId(id, false);                   
+        }
+        
         categoryRepository.save(category);
     }
 }

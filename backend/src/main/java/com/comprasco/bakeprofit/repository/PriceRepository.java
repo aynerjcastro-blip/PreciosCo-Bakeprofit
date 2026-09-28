@@ -11,11 +11,11 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
 
     
     @Query("""
-        SELECT p FROM Prices p
+        SELECT p FROM Price p
         WHERE p.product.id = :productId
         AND p.registrationDate = (
             SELECT MAX(p2.registrationDate)
-            FROM Prices p2
+            FROM Price p2
             WHERE p2.product.id = p.product.id
             AND p2.store.id = p.store.id
         )
@@ -25,11 +25,11 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
 
    
     @Query("""
-        SELECT MIN(p.value) FROM Prices p
+        SELECT MIN(p.value) FROM Price p
         WHERE p.product.id = :productId
         AND p.registrationDate = (
             SELECT MAX(p2.registrationDate)
-            FROM Prices p2
+            FROM Price p2
             WHERE p2.product.id = p.product.id
             AND p2.store.id = p.store.id
         )

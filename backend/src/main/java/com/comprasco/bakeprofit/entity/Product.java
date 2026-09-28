@@ -29,6 +29,7 @@ public class Product {
     @Column(nullable = false)
     private String name;
 
+    @Column
     private String unit;
 
     @Column(nullable = false)

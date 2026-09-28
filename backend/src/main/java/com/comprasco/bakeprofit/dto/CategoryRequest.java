@@ -6,5 +6,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record CategoryRequest(
     @Schema(description = "Nombre a asignar a la categoria")
     @NotBlank(message = "El nombre de la categoria es obligatorio")
-    String name
+    String name,
+
+    @Schema(description = "Id de categoría padre")
+    Long parentId
 ) {}
