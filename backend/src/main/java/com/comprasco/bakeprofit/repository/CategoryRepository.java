@@ -26,6 +26,8 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
 
+    boolean existsByParentId(Long parentId);
+
     @Modifying
     @Query("UPDATE Category c SET c.active = :active WHERE c.parent.id = :parentId")
     int updateActiveByParentId(@Param("parentId") Long parentId, @Param("active") boolean active);

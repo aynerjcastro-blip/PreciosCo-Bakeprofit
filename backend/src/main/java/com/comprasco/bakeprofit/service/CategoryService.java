@@ -3,6 +3,7 @@ package com.comprasco.bakeprofit.service;
 import com.comprasco.bakeprofit.entity.Category;
 import com.comprasco.bakeprofit.exception.CategoryAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.CategoryNotFoundException;
+import com.comprasco.bakeprofit.exception.InvalidCategoryParentException;
 import com.comprasco.bakeprofit.repository.CategoryRepository;
 import com.comprasco.bakeprofit.repository.ProductRepository;
 import com.comprasco.bakeprofit.dto.CategoryResponse;
@@ -68,9 +69,16 @@ public class CategoryService {
 
         Category category = new Category();
         category.setName(name);
+
         if (parentId != null) {
-            category.setParent(findById(parentId));
+            Category parent = findById(parentId);
+            if (parent.getParent() != null) {
+                throw new InvalidCategoryParentException("La categoría padre debe ser una categoría raíz, no una subcategoría");
+            }
+
+            category.setParent(parent);
         }
+        
         return CategoryResponse.from(categoryRepository.save(category));
     }
 
@@ -83,9 +91,24 @@ public class CategoryService {
         }
 
         category.setName(name);
+
         if (parentId != null) {
-            category.setParent(findById(parentId));
+            if (parentId.equals(id)) {
+                throw new InvalidCategoryParentException("Una categoría no puede ser su propia categoría padre");
+            }
+
+            Category parent = findById(parentId);
+            if (parent.getParent() != null) {
+                throw new InvalidCategoryParentException("La categoría padre debe ser una categoría raíz, no una subcategoría");
+            }
+
+            if (categoryRepository.existsByParentId(id)) {
+                throw new InvalidCategoryParentException("No se puede asignar padre a una categoría que ya tiene subcategorías");
+            }
+
+            category.setParent(parent);
         }
+
         return CategoryResponse.from(categoryRepository.save(category));
     }
 
