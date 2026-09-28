@@ -3,7 +3,7 @@ package com.comprasco.bakeprofit.service;
 import com.comprasco.bakeprofit.entity.Category;
 import com.comprasco.bakeprofit.exception.CategoryAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.CategoryNotFoundException;
-import com.comprasco.bakeprofit.exception.InvalidCategoryParentException;
+import com.comprasco.bakeprofit.exception.InvalidCategoryHierarchyException;
 import com.comprasco.bakeprofit.repository.CategoryRepository;
 import com.comprasco.bakeprofit.repository.ProductRepository;
 import com.comprasco.bakeprofit.repository.StoreRepository;
@@ -78,7 +78,7 @@ public class CategoryService {
         if (parentId != null) {
             Category parent = findById(parentId);
             if (parent.getParent() != null) {
-                throw new InvalidCategoryParentException("La categoría padre debe ser una categoría raíz, no una subcategoría");
+                throw new InvalidCategoryHierarchyException("La categoría padre debe ser una categoría raíz, no una subcategoría");
             }
 
             category.setParent(parent);
@@ -99,16 +99,16 @@ public class CategoryService {
 
         if (parentId != null) {
             if (parentId.equals(id)) {
-                throw new InvalidCategoryParentException("Una categoría no puede ser su propia categoría padre");
+                throw new InvalidCategoryHierarchyException("Una categoría no puede ser su propia categoría padre");
             }
 
             Category parent = findById(parentId);
             if (parent.getParent() != null) {
-                throw new InvalidCategoryParentException("La categoría padre debe ser una categoría raíz, no una subcategoría");
+                throw new InvalidCategoryHierarchyException("La categoría padre debe ser una categoría raíz, no una subcategoría");
             }
 
             if (categoryRepository.existsByParentId(id)) {
-                throw new InvalidCategoryParentException("No se puede asignar padre a una categoría que ya tiene subcategorías");
+                throw new InvalidCategoryHierarchyException("No se puede asignar padre a una categoría que ya tiene subcategorías");
             }
 
             category.setParent(parent);

@@ -2,6 +2,7 @@ package com.comprasco.bakeprofit.exception.handler;
 
 import com.comprasco.bakeprofit.exception.EmailAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.InvalidCredentialsException;
+import com.comprasco.bakeprofit.exception.InvalidCategoryHierarchyException;
 import com.comprasco.bakeprofit.exception.UserNotFoundException;
 import com.comprasco.bakeprofit.exception.CategoryAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.CategoryNotFoundException;
@@ -84,8 +85,8 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
-    @ExceptionHandler(InvalidCategoryParentException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidCategoryParent(InvalidCategoryParentException ex) {
+    @ExceptionHandler(InvalidCategoryHierarchyException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCategoryHierarchy(InvalidCategoryHierarchyException ex) {
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(), // 400
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
