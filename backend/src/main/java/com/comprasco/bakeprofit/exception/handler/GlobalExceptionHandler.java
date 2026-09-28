@@ -84,6 +84,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    @ExceptionHandler(InvalidCategoryParentException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCategoryParent(InvalidCategoryParentException ex) {
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(), // 400
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
     // Fallback para cualquier otra cosa que no hayas mapeado
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
