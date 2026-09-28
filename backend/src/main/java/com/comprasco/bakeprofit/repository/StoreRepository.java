@@ -18,4 +18,8 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
     boolean existsByNameIgnoreCase(String name);
 
     boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
+
+    @Modifying
+    @Query("UPDATE Store s SET s.active = :active WHERE s.category.id = :categoryId")
+    int updateActiveByCategoryId(@Param("categoryId") Long categoryId, @Param("active") boolean active);
 }

@@ -6,6 +6,7 @@ import com.comprasco.bakeprofit.exception.CategoryNotFoundException;
 import com.comprasco.bakeprofit.exception.InvalidCategoryParentException;
 import com.comprasco.bakeprofit.repository.CategoryRepository;
 import com.comprasco.bakeprofit.repository.ProductRepository;
+import com.comprasco.bakeprofit.repository.StoreRepository;
 import com.comprasco.bakeprofit.dto.CategoryResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,10 +19,14 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
+    private final StoreRespository storeRepository;
 
-    public CategoryService (CategoryRepository categoryRepository, ProductRepository productRepository) {
+    public CategoryService (CategoryRepository categoryRepository, ProductRepository productRepository,
+                            StoreRepsository storeRepository
+    ) {
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
+        this.storeRepository = storeRespository;
     }
 
     /* CONSULTAS */
@@ -120,6 +125,7 @@ public class CategoryService {
         if (category.getParent() == null) {
             categoryRepository.updateActiveByParentId(id, true);        
             productRepository.updateActiveByCategoryParentId(id, true);
+            storeRepository.updateActiveByCategoryId(id, true)
         } else {
             productRepository.updateActiveByCategoryId(id, true);       
         }
@@ -135,6 +141,7 @@ public class CategoryService {
         if (category.getParent() == null) {
             categoryRepository.updateActiveByParentId(id, false);        
             productRepository.updateActiveByCategoryParentId(id, false);
+            storeRepository.updateActiveByCategoryId(id, false)
         } else {
             productRepository.updateActiveByCategoryId(id, false);                   
         }

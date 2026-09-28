@@ -108,7 +108,7 @@ public class CategoryController {
 
     @Operation(summary = "Desactivar categoría", description = """
             Busca la categoría con el id indicado y cambia su estado a inactivo, y:
-            - Si es raíz: desactiva en cascada categorías hijas y productos asociados a éstas
+            - Si es raíz: desactiva en cascada tiendas, categorías hijas y productos asociados a éstas
             - Si es hija: desactiva en cascada productos relacionados
             """)
     @ApiResponse(responseCode = "204", description = "Categoría desactivada")
@@ -124,7 +124,7 @@ public class CategoryController {
 
     @Operation(summary = "Activar categoría", description = """
             Busca la categoría con el id indicado y cambia su estado a activo, y:
-            - Si es raíz: activa en cascada categorías hijas y productos asociados a éstas
+            - Si es raíz: activa en cascada tiendas, categorías hijas y productos asociados a éstas
             - Si es hija: activa en cascada productos relacionados
             """)
     @ApiResponse(responseCode = "204", description = "Categoría activada")
