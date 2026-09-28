@@ -78,6 +78,7 @@ public class ProductController {
     @Operation(summary = "Registrar productos", description = "Registra el nuevo producto en la base de datos")
     @ApiResponse(responseCode = "201", description = "Producto registrado")
     @ApiResponse(responseCode = "400", description = "Validación fallida")
+    @ApiResponse(responseCode = "404", description = "CategoryId no existe")
     @PostMapping
     public ResponseEntity<ProductResponse> create (
                 @Parameter(description = "Record con toda la información del producto(nombre, unidades, id de su categoria)")
@@ -92,7 +93,7 @@ public class ProductController {
     @Operation(summary = "Actualizar producto", description = "Modifica la información del producto indicado")
     @ApiResponse(responseCode = "200", description = "Producto modificado")
     @ApiResponse(responseCode = "400", description = "Validación fallida")
-    @ApiResponse(responseCode = "404", description = "Id no existe")
+    @ApiResponse(responseCode = "404", description = "Id o categoryId no existe")
     @PutMapping("/{id}")
     public ResponseEntity<ProductResponse> update (
                 @Parameter(description = "Id del producto que se va a actualizar")

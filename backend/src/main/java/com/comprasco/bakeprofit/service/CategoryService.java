@@ -19,14 +19,14 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
-    private final StoreRespository storeRepository;
+    private final StoreRepository storeRepository;
 
     public CategoryService (CategoryRepository categoryRepository, ProductRepository productRepository,
-                            StoreRepsository storeRepository
+                            StoreRepository storeRepository
     ) {
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
-        this.storeRepository = storeRespository;
+        this.storeRepository = storeRepository;
     }
 
     /* CONSULTAS */
@@ -111,6 +111,10 @@ public class CategoryService {
                 throw new InvalidCategoryHierarchyException("No se puede asignar padre a una categoría que ya tiene subcategorías");
             }
 
+            if (storeRepository.existsByCategoryId(id)) {
+                throw new InvalidCategoryHierarchyException("No se puede asignar padre a una categoría que ya tiene tiendas en su dominio");
+            }
+
             category.setParent(parent);
         }
 
@@ -125,7 +129,7 @@ public class CategoryService {
         if (category.getParent() == null) {
             categoryRepository.updateActiveByParentId(id, true);        
             productRepository.updateActiveByCategoryParentId(id, true);
-            storeRepository.updateActiveByCategoryId(id, true)
+            storeRepository.updateActiveByCategoryId(id, true);
         } else {
             productRepository.updateActiveByCategoryId(id, true);       
         }
@@ -141,7 +145,7 @@ public class CategoryService {
         if (category.getParent() == null) {
             categoryRepository.updateActiveByParentId(id, false);        
             productRepository.updateActiveByCategoryParentId(id, false);
-            storeRepository.updateActiveByCategoryId(id, false)
+            storeRepository.updateActiveByCategoryId(id, false);
         } else {
             productRepository.updateActiveByCategoryId(id, false);                   
         }

@@ -67,14 +67,9 @@ public class StoreService {
             throw new StoreAlreadyExistsException(name);
         }
 
-        Category category = categoryService.findById(categoryId);
-        if (category.getParent() != null) {
-            throw new InvalidCategoryHierarchyException("La categoría de una tienda debe ser una categoría raíz");
-        }
-
         Store store = new Store();
         store.setName(name);
-        store.setCategory(category);
+        store.setCategory(resolveRootCategory(categoryId));
 
         return StoreResponse.from(storeRepository.save(store));
     }
@@ -86,14 +81,9 @@ public class StoreService {
         if (storeRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
             throw new StoreAlreadyExistsException(name);
         }
-
-        Category category = categoryService.findById(categoryId);
-        if (category.getParent() != null) {
-            throw new InvalidCategoryHierarchyException("La categoría de una tienda debe ser una categoría raíz");
-        }
         
         store.setName(name);
-        store.setCategory(category);
+        store.setCategory(resolveRootCategory(categoryId));
 
         return StoreResponse.from(storeRepository.save(store));
     }
@@ -112,5 +102,13 @@ public class StoreService {
         store.setActive(true);
 
         storeRepository.save(store);
+    }
+
+    private Category resolveRootCategory (Long categoryId) {
+        Category category = categoryService.findById(categoryId);
+        if (category.getParent() != null) {
+            throw new InvalidCategoryHierarchyException("La categoría de una tienda debe ser una categoría raíz");
+        }
+        return category;
     }
 }

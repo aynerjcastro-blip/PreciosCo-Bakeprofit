@@ -5,6 +5,7 @@ import com.comprasco.bakeprofit.repository.ProductRepository;
 import com.comprasco.bakeprofit.entity.Category;
 import com.comprasco.bakeprofit.dto.ProductResponse;
 import com.comprasco.bakeprofit.exception.ProductNotFoundException;
+import com.comprasco.bakeprofit.exception.InvalidCategoryHierarchyException;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,7 +55,7 @@ public class ProductService {
         boolean hasName = name != null && !name.isBlank();
         boolean hasIdCategory = idCategory != null;
 
-        Category category = new Category();
+        Category category = null;
         if(hasIdCategory) category = categoryService.findById(idCategory);
 
         if(hasName && hasIdCategory) {
@@ -80,6 +81,10 @@ public class ProductService {
     public ProductResponse create (String name, String unit, Long idCategory) {
         Category category = categoryService.findById(idCategory);
 
+        if (category.getParent() == null) {
+            throw new InvalidCategoryHierarchyException("Los productos no pueden pertencer a una categoría raíz");
+        }
+
         Product product = new Product();
         product.setName(name);
         product.setUnit(unit);
@@ -93,6 +98,10 @@ public class ProductService {
         Product product = findById(id);
         Category category = categoryService.findById(idCategory);
 
+        if (category.getParent() == null) {
+            throw new InvalidCategoryHierarchyException("Los productos no pueden pertencer a una categoría raíz");
+        }
+        
         product.setName(name);
         product.setUnit(unit);
         product.setCategory(category);

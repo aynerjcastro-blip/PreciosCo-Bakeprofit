@@ -22,11 +22,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findByActiveFalse ();
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Product p SET p.active = :active WHERE p.category.id = :categoryId")
     int updateActiveByCategoryId(@Param("categoryId") Long categoryId, @Param("active") boolean active);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Product p SET p.active = :active WHERE p.category.parent.id = :parentId")
     int updateActiveByCategoryParentId(@Param("parentId") Long parentId, @Param("active") boolean active);
 }
