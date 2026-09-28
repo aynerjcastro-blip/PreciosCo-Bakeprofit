@@ -74,7 +74,7 @@ public class StoreController {
 
     @Operation(summary = "Registrar tienda", description = "Registra la nueva tienda en la base de datos")
     @ApiResponse(responseCode = "201", description = "Tienda registrada")
-    @ApiResponse(responseCode = "400", description = "Validación fallida")
+    @ApiResponse(responseCode = "400", description = "Validación fallida (o categoryId no es raíz)")
     @ApiResponse(responseCode = "404", description = "CategoryId no existe")
     @ApiResponse(responseCode = "409", description = "Ya existe una tienda con ese nombre")
     @PostMapping
@@ -90,7 +90,7 @@ public class StoreController {
 
     @Operation(summary = "Actualizar tienda", description = "Modifica el nombre e id de categoría de la tienda indicada")
     @ApiResponse(responseCode = "200", description = "Tienda actualizada")
-    @ApiResponse(responseCode = "400", description = "Validación fallida")
+    @ApiResponse(responseCode = "400", description = "Validación fallida (o categoryId no es raíz)")
     @ApiResponse(responseCode = "404", description = "Id o categoryId no existe")
     @PutMapping("/{id}")
     public ResponseEntity<StoreResponse> update(

@@ -5,7 +5,7 @@ import com.comprasco.bakeprofit.entity.Category;
 import com.comprasco.bakeprofit.dto.StoreResponse;
 import com.comprasco.bakeprofit.exception.StoreAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.StoreNotFoundException;
-import com.comprasco.bakeprofit.exception.InvalidCategoryParentException;
+import com.comprasco.bakeprofit.exception.InvalidCategoryHierarchyException;
 import com.comprasco.bakeprofit.repository.StoreRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,6 +68,9 @@ public class StoreService {
         }
 
         Category category = categoryService.findById(categoryId);
+        if (category.getParent() != null) {
+            throw new InvalidCategoryHierarchyException("La categoría de una tienda debe ser una categoría raíz");
+        }
 
         Store store = new Store();
         store.setName(name);
@@ -85,7 +88,10 @@ public class StoreService {
         }
 
         Category category = categoryService.findById(categoryId);
-
+        if (category.getParent() != null) {
+            throw new InvalidCategoryHierarchyException("La categoría de una tienda debe ser una categoría raíz");
+        }
+        
         store.setName(name);
         store.setCategory(category);
 
