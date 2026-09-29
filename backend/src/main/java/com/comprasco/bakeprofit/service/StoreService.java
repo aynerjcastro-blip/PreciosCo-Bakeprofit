@@ -6,6 +6,7 @@ import com.comprasco.bakeprofit.dto.StoreResponse;
 import com.comprasco.bakeprofit.exception.StoreAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.StoreNotFoundException;
 import com.comprasco.bakeprofit.exception.InvalidCategoryHierarchyException;
+import com.comprasco.bakeprofit.exception.InactiveParentException;
 import com.comprasco.bakeprofit.repository.StoreRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,7 +70,7 @@ public class StoreService {
 
         Store store = new Store();
         store.setName(name);
-        store.setCategory(resolveRootCategory(categoryId));
+        store.setCategory(resolveRootCategory(categoryId, "crear"));
 
         return StoreResponse.from(storeRepository.save(store));
     }
@@ -83,7 +84,7 @@ public class StoreService {
         }
         
         store.setName(name);
-        store.setCategory(resolveRootCategory(categoryId));
+        store.setCategory(resolveRootCategory(categoryId, "actualizar"));
 
         return StoreResponse.from(storeRepository.save(store));
     }
@@ -99,15 +100,27 @@ public class StoreService {
     @Transactional
     public void activateStore (Long id) {
         Store store = findById(id);
+
+        if (!Boolean.TRUE.equals(store.getCategory().getActive())) {
+            throw new InactiveParentException(
+                    "No se puede activar la tienda '" + store.getName() +
+                    "' porque su categoría raíz '" + store.getCategory().getName() + "' está inactiva.");
+        }
+
         store.setActive(true);
 
         storeRepository.save(store);
     }
 
-    private Category resolveRootCategory (Long categoryId) {
+    private Category resolveRootCategory (Long categoryId, String action) {
         Category category = categoryService.findById(categoryId);
         if (category.getParent() != null) {
             throw new InvalidCategoryHierarchyException("La categoría de una tienda debe ser una categoría raíz");
+        }
+        if (!Boolean.TRUE.equals(category.getActive())) {
+            throw new InactiveParentException(
+                    "No se puede " + action + " la tienda " +
+                    "porque su categoría raíz '" + category.getName() + "' está inactiva.");
         }
         return category;
     }

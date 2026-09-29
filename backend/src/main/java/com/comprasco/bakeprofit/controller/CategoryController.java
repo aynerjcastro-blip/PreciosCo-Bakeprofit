@@ -76,7 +76,7 @@ public class CategoryController {
     @ApiResponse(responseCode = "201", description = "Categoría registrada")
     @ApiResponse(responseCode = "400", description = "Validación fallida")
     @ApiResponse(responseCode = "404", description = "ParentId no existe")
-    @ApiResponse(responseCode = "409", description = "Ya existe una categoría con ese nombre")
+    @ApiResponse(responseCode = "409", description = "Ya existe una categoría con ese nombre o la categoría raíz indicada no está activa")
     @PostMapping
     public ResponseEntity<CategoryResponse> create(
                 @Parameter(description = "Record con el nombre de la categoría, y id de categoría padre(cuando no es raíz)")
@@ -96,6 +96,7 @@ public class CategoryController {
     @ApiResponse(responseCode = "200", description = "Categoría actualizada")
     @ApiResponse(responseCode = "400", description = "Validación fallida")
     @ApiResponse(responseCode = "404", description = "Id o parentId no existe")
+    @ApiResponse(responseCode = "409", description = "La nueva categoría raíz no está activa")
     @PutMapping("/{id}")
     public ResponseEntity<CategoryResponse> update(
                 @Parameter(description = "Id de la categoría a actualizar")
@@ -129,6 +130,7 @@ public class CategoryController {
             """)
     @ApiResponse(responseCode = "204", description = "Categoría activada")
     @ApiResponse(responseCode = "404", description = "Id no existe")
+    @ApiResponse(responseCode = "409", description = "La categoría raíz no está activa")
     @PatchMapping("/{id}/activate")
     public ResponseEntity<Void> activate(
                 @Parameter(description = "Id de la categoría")

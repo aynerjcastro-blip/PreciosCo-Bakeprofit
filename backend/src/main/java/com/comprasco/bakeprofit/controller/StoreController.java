@@ -76,7 +76,7 @@ public class StoreController {
     @ApiResponse(responseCode = "201", description = "Tienda registrada")
     @ApiResponse(responseCode = "400", description = "Validación fallida (o categoryId no es raíz)")
     @ApiResponse(responseCode = "404", description = "CategoryId no existe")
-    @ApiResponse(responseCode = "409", description = "Ya existe una tienda con ese nombre")
+    @ApiResponse(responseCode = "409", description = "Ya existe una tienda con ese nombre o la categoría está inactivada")
     @PostMapping
     public ResponseEntity<StoreResponse> create(
                 @Parameter(description = "Record con el nombre de la tienda e id de categoría")
@@ -92,6 +92,7 @@ public class StoreController {
     @ApiResponse(responseCode = "200", description = "Tienda actualizada")
     @ApiResponse(responseCode = "400", description = "Validación fallida (o categoryId no es raíz)")
     @ApiResponse(responseCode = "404", description = "Id o categoryId no existe")
+    @ApiResponse(responseCode = "409", description = "Categoría inactiva")
     @PutMapping("/{id}")
     public ResponseEntity<StoreResponse> update(
                 @Parameter(description = "Id de la tienda a actualizar")
@@ -117,6 +118,7 @@ public class StoreController {
     @Operation(summary = "Activar tienda", description = "Busca la tienda con el id indicado y cambia su estado a activo")
     @ApiResponse(responseCode = "204", description = "Tienda activada")
     @ApiResponse(responseCode = "404", description = "Id no existe")
+    @ApiResponse(responseCode = "409", description = "Categoría inactiva")
     @PatchMapping("/{id}/activate")
     public ResponseEntity<Void> activate(
                 @Parameter(description = "Id de la tienda")

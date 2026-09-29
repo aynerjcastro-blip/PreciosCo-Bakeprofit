@@ -4,6 +4,7 @@ import com.comprasco.bakeprofit.entity.Category;
 import com.comprasco.bakeprofit.exception.CategoryAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.CategoryNotFoundException;
 import com.comprasco.bakeprofit.exception.InvalidCategoryHierarchyException;
+import com.comprasco.bakeprofit.exception.InactiveParentException;
 import com.comprasco.bakeprofit.repository.CategoryRepository;
 import com.comprasco.bakeprofit.repository.ProductRepository;
 import com.comprasco.bakeprofit.repository.StoreRepository;
@@ -73,7 +74,6 @@ public class CategoryService {
         }
 
         Category category = new Category();
-        category.setName(name);
 
         if (parentId != null) {
             Category parent = findById(parentId);
@@ -81,9 +81,16 @@ public class CategoryService {
                 throw new InvalidCategoryHierarchyException("La categoría padre debe ser una categoría raíz, no una subcategoría");
             }
 
+            if (!Boolean.TRUE.equals(parent.getActive())) {
+                throw new InactiveParentException(
+                        "No se puede crear la categoría '" + name +
+                        "' porque la categoría raíz '" + parent.getName() + "' está inactiva.");
+            }
+
             category.setParent(parent);
         }
-        
+        category.setName(name);
+    
         return CategoryResponse.from(categoryRepository.save(category));
     }
 
@@ -95,8 +102,6 @@ public class CategoryService {
             throw new CategoryAlreadyExistsException(name);
         }
 
-        category.setName(name);
-
         if (parentId != null) {
             if (parentId.equals(id)) {
                 throw new InvalidCategoryHierarchyException("Una categoría no puede ser su propia categoría padre");
@@ -105,6 +110,12 @@ public class CategoryService {
             Category parent = findById(parentId);
             if (parent.getParent() != null) {
                 throw new InvalidCategoryHierarchyException("La categoría padre debe ser una categoría raíz, no una subcategoría");
+            }
+
+            if (!Boolean.TRUE.equals(parent.getActive())) {
+                throw new InactiveParentException(
+                        "No se puede actualizar la categoría '" + category.getName() +
+                        "' porque la nueva categoría raíz '" + parent.getName() + "' está inactiva.");
             }
 
             if (categoryRepository.existsByParentId(id)) {
@@ -117,6 +128,7 @@ public class CategoryService {
 
             category.setParent(parent);
         }
+        category.setName(name);
 
         return CategoryResponse.from(categoryRepository.save(category));
     }
@@ -124,6 +136,12 @@ public class CategoryService {
     @Transactional
     public void activateCategory (Long id) {
         Category category = findById(id);
+
+        if (category.getParent() != null && !Boolean.TRUE.equals(category.getParent().getActive())) {
+            throw new InactiveParentException(
+                    "No se puede activar la categoría '" + category.getName() +
+                    "' porque su categoría raíz '" + category.getParent().getName() + "' está inactiva.");
+        }
         
         category.setActive(true);
         if (category.getParent() == null) {

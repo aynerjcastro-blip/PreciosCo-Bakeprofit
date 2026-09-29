@@ -6,6 +6,7 @@ import com.comprasco.bakeprofit.entity.Category;
 import com.comprasco.bakeprofit.dto.ProductResponse;
 import com.comprasco.bakeprofit.exception.ProductNotFoundException;
 import com.comprasco.bakeprofit.exception.InvalidCategoryHierarchyException;
+import com.comprasco.bakeprofit.exception.InactiveParentException;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -85,6 +86,12 @@ public class ProductService {
             throw new InvalidCategoryHierarchyException("Los productos no pueden pertencer a una categoría raíz");
         }
 
+        if (!Boolean.TRUE.equals(category.getActive())) {
+            throw new InactiveParentException(
+                    "No se puede crear el producto '" + name +
+                    "' porque la categoría '" + category.getName() + "' está inactiva.");
+        }
+
         Product product = new Product();
         product.setName(name);
         product.setUnit(unit);
@@ -101,6 +108,12 @@ public class ProductService {
         if (category.getParent() == null) {
             throw new InvalidCategoryHierarchyException("Los productos no pueden pertencer a una categoría raíz");
         }
+
+        if (!Boolean.TRUE.equals(category.getActive())) {
+            throw new InactiveParentException(
+                    "No se puede actualizar el producto '" + product.getName() +
+                    "' porque la nueva categoría '" + category.getName() + "' está inactiva.");
+        }
         
         product.setName(name);
         product.setUnit(unit);
@@ -112,6 +125,13 @@ public class ProductService {
     @Transactional
     public void activateProduct (Long id) {
         Product product = findById(id);
+
+        if (!Boolean.TRUE.equals(product.getCategory().getActive())) {
+            throw new InactiveParentException(
+                    "No se puede activar el producto '" + product.getName() +
+                    "' porque su categoría '" + product.getCategory().getName() + "' está inactiva.");
+        }
+
         product.setActive(true);
 
         productRepository.save(product);

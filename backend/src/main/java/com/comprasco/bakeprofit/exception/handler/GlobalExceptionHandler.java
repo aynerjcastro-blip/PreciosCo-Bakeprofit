@@ -9,6 +9,7 @@ import com.comprasco.bakeprofit.exception.CategoryNotFoundException;
 import com.comprasco.bakeprofit.exception.StoreAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.StoreNotFoundException;
 import com.comprasco.bakeprofit.exception.ProductNotFoundException;
+import com.comprasco.bakeprofit.exception.InactiveParentException;
 import com.comprasco.bakeprofit.exception.response.ErrorResponse;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -44,6 +45,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(StoreAlreadyExistsException.class)
     public ResponseEntity<ErrorResponse> handleStoreAlreadyExists(StoreAlreadyExistsException ex) {
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.CONFLICT.value(), // 409
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(InactiveParentException.class)
+    public ResponseEntity<ErrorResponse> handleInactiveParent(InactiveParentException ex) {
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.CONFLICT.value(), // 409
                 HttpStatus.CONFLICT.getReasonPhrase(),
