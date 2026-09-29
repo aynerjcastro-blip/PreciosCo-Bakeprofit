@@ -2,12 +2,14 @@ package com.comprasco.bakeprofit.exception.handler;
 
 import com.comprasco.bakeprofit.exception.EmailAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.InvalidCredentialsException;
+import com.comprasco.bakeprofit.exception.InvalidCategoryHierarchyException;
 import com.comprasco.bakeprofit.exception.UserNotFoundException;
 import com.comprasco.bakeprofit.exception.CategoryAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.CategoryNotFoundException;
 import com.comprasco.bakeprofit.exception.StoreAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.StoreNotFoundException;
 import com.comprasco.bakeprofit.exception.ProductNotFoundException;
+import com.comprasco.bakeprofit.exception.InactiveParentException;
 import com.comprasco.bakeprofit.exception.response.ErrorResponse;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -50,6 +52,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
+    @ExceptionHandler(InactiveParentException.class)
+    public ResponseEntity<ErrorResponse> handleInactiveParent(InactiveParentException ex) {
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.CONFLICT.value(), // 409
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
     @ExceptionHandler({ UserNotFoundException.class, EntityNotFoundException.class, 
                         CategoryNotFoundException.class, StoreNotFoundException.class,
                         ProductNotFoundException.class
@@ -81,6 +92,15 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST.value(), // 400
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
                 mensajes);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(InvalidCategoryHierarchyException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCategoryHierarchy(InvalidCategoryHierarchyException ex) {
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(), // 400
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 

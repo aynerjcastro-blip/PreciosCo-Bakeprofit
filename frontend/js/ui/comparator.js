@@ -34,6 +34,7 @@ async function loadComparison() {
                 <h3 class="price-card__store">${item.storeName}</h3>
                 <p class="price-card__value">$${Number(item.value).toLocaleString('es-CO')}</p>
                 <p class="price-card__date">Actualizado: ${new Date(item.registrationDate).toLocaleDateString('es-CO')}</p>
+                ${item.source ? `<p class="price-card__source">Fuente: ${item.source}</p>` : ''}
             `;
 
             container.appendChild(card);
