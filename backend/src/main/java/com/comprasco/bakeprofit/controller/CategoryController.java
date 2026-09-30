@@ -1,6 +1,7 @@
 package com.comprasco.bakeprofit.controller;
 
 import com.comprasco.bakeprofit.dto.CategoryRequest;
+import com.comprasco.bakeprofit.dto.CategoryResponse;
 import com.comprasco.bakeprofit.entity.Category;
 import com.comprasco.bakeprofit.service.CategoryService;
 import jakarta.validation.Valid;
@@ -29,7 +30,7 @@ public class CategoryController {
     @Operation(summary = "Listar todas las categorías", description = "No filtra las categorías")
     @ApiResponse(responseCode = "200", description = "Lista de todas las categorías")
     @GetMapping
-    public ResponseEntity<List<Category>> findAll() {
+    public ResponseEntity<List<CategoryResponse>> findAll() {
         return ResponseEntity.ok(categoryService.findAll());
     }
 
@@ -38,33 +39,33 @@ public class CategoryController {
     @ApiResponse(responseCode = "200", description = "Categoría que tiene el id ingresado")
     @ApiResponse(responseCode = "404", description = "Id no existe")
     @GetMapping("/{id}")
-    public ResponseEntity<Category> findById(
+    public ResponseEntity<CategoryResponse> findById(
                 @Parameter(description = "Id de la categoría a buscar")
                 @PathVariable Long id) {
-        return ResponseEntity.ok(categoryService.findById(id));
+        return ResponseEntity.ok(categoryService.findByIdResponse(id));
     }
 
 
-    @Operation(summary = "Listar categorías activas", description = "Filtra categorías por su estado")
+    @Operation(summary = "Listar categorías activas", description = "Filtra categorías por su estado (solo subcategorías)")
     @ApiResponse(responseCode = "200", description = "Lista de categorías activas")
     @GetMapping("/active")
-    public ResponseEntity<List<Category>> findActive() {
+    public ResponseEntity<List<CategoryResponse>> findActive() {
         return ResponseEntity.ok(categoryService.findActive());
     }
 
 
-    @Operation(summary = "Listar categorías inactivas", description = "Filtra categorías por su estado")
+    @Operation(summary = "Listar categorías inactivas", description = "Filtra categorías por su estado (solo subcategorías)")
     @ApiResponse(responseCode = "200", description = "Lista de categorías inactivas")
     @GetMapping("/inactive")
-    public ResponseEntity<List<Category>> findInactive() {
+    public ResponseEntity<List<CategoryResponse>> findInactive() {
         return ResponseEntity.ok(categoryService.findInactive());
     }
 
 
-    @Operation(summary = "Buscar categorías por nombre", description = "Filtra categorías cuyo nombre coincida parcialmente con el texto indicado")
+    @Operation(summary = "Buscar categorías por nombre", description = "Filtra categorías cuyo nombre coincida parcialmente con el texto indicado (solo subcategorías)")
     @ApiResponse(responseCode = "200", description = "Lista de categorías que coinciden con el filtro")
     @GetMapping("/search")
-    public ResponseEntity<List<Category>> search(
+    public ResponseEntity<List<CategoryResponse>> search(
                 @Parameter(description = "Texto parcial del nombre de la categoría")
                 @RequestParam String name) {
         return ResponseEntity.ok(categoryService.searchByName(name));
@@ -74,34 +75,43 @@ public class CategoryController {
     @Operation(summary = "Registrar categoría", description = "Registra la nueva categoría en la base de datos")
     @ApiResponse(responseCode = "201", description = "Categoría registrada")
     @ApiResponse(responseCode = "400", description = "Validación fallida")
-    @ApiResponse(responseCode = "409", description = "Ya existe una categoría con ese nombre")
+    @ApiResponse(responseCode = "404", description = "ParentId no existe")
+    @ApiResponse(responseCode = "409", description = "Ya existe una categoría con ese nombre o la categoría raíz indicada no está activa")
     @PostMapping
-    public ResponseEntity<Category> create(
-                @Parameter(description = "Record con el nombre de la categoría")
+    public ResponseEntity<CategoryResponse> create(
+                @Parameter(description = "Record con el nombre de la categoría, y id de categoría padre(cuando no es raíz)")
                 @Valid @RequestBody CategoryRequest request) {
-        Category category = categoryService.create(request.name());
+        CategoryResponse response = categoryService.create(request.name(), request.parentId());
         return ResponseEntity
-                    .created(URI.create("/api/categories/" + category.getId()))
-                    .body(category);
+                    .created(URI.create("/api/categories/" + response.id()))
+                    .body(response);
     }
 
 
-    @Operation(summary = "Actualizar categoría", description = "Modifica el nombre de la categoría indicada")
-    @ApiResponse(responseCode = "204", description = "Categoría actualizada")
+    @Operation(summary = "Actualizar categoría", description = """
+            Modifica el nombre de la categoría indicada, y:
+            - Si se ingresa parentId: se actualizará
+            - Si no se ingresa parentId: permanecerá cómo estaba
+            """)
+    @ApiResponse(responseCode = "200", description = "Categoría actualizada")
     @ApiResponse(responseCode = "400", description = "Validación fallida")
-    @ApiResponse(responseCode = "404", description = "Id no existe")
+    @ApiResponse(responseCode = "404", description = "Id o parentId no existe")
+    @ApiResponse(responseCode = "409", description = "La nueva categoría raíz no está activa")
     @PutMapping("/{id}")
-    public ResponseEntity<Void> update(
+    public ResponseEntity<CategoryResponse> update(
                 @Parameter(description = "Id de la categoría a actualizar")
                 @PathVariable Long id,
-                @Parameter(description = "Record con el nuevo nombre de la categoría")
+                @Parameter(description = "Record con el nuevo nombre de la categoría, y id de categoría padre(cuando no es raíz)")
                 @Valid @RequestBody CategoryRequest request) {
-        categoryService.update(id, request.name());
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(categoryService.update(id, request.name(), request.parentId()));
     }
 
 
-    @Operation(summary = "Desactivar categoría", description = "Busca la categoría con el id indicado y cambia su estado a inactivo (afecta en cascada a sus productos)")
+    @Operation(summary = "Desactivar categoría", description = """
+            Busca la categoría con el id indicado y cambia su estado a inactivo, y:
+            - Si es raíz: desactiva en cascada tiendas, categorías hijas y productos asociados a éstas
+            - Si es hija: desactiva en cascada productos relacionados
+            """)
     @ApiResponse(responseCode = "204", description = "Categoría desactivada")
     @ApiResponse(responseCode = "404", description = "Id no existe")
     @PatchMapping("/{id}/deactivate")
@@ -113,9 +123,14 @@ public class CategoryController {
     }
 
 
-    @Operation(summary = "Activar categoría", description = "Busca la categoría con el id indicado y cambia su estado a activo")
+    @Operation(summary = "Activar categoría", description = """
+            Busca la categoría con el id indicado y cambia su estado a activo, y:
+            - Si es raíz: activa en cascada tiendas, categorías hijas y productos asociados a éstas
+            - Si es hija: activa en cascada productos relacionados
+            """)
     @ApiResponse(responseCode = "204", description = "Categoría activada")
     @ApiResponse(responseCode = "404", description = "Id no existe")
+    @ApiResponse(responseCode = "409", description = "La categoría raíz no está activa")
     @PatchMapping("/{id}/activate")
     public ResponseEntity<Void> activate(
                 @Parameter(description = "Id de la categoría")

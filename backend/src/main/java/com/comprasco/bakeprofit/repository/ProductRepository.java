@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -23,8 +22,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findByActiveFalse ();
 
-    @Modifying
-    @Transactional
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Product p SET p.active = :active WHERE p.category.id = :categoryId")
     int updateActiveByCategoryId(@Param("categoryId") Long categoryId, @Param("active") boolean active);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Product p SET p.active = :active WHERE p.category.parent.id = :parentId")
+    int updateActiveByCategoryParentId(@Param("parentId") Long parentId, @Param("active") boolean active);
 }
