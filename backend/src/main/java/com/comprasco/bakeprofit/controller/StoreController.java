@@ -1,6 +1,7 @@
 package com.comprasco.bakeprofit.controller;
 
 import com.comprasco.bakeprofit.dto.StoreRequest;
+import com.comprasco.bakeprofit.dto.StoreResponse;
 import com.comprasco.bakeprofit.entity.Store;
 import com.comprasco.bakeprofit.service.StoreService;
 import jakarta.validation.Valid;
@@ -29,7 +30,7 @@ public class StoreController {
     @Operation(summary = "Listar todas las tiendas", description = "No filtra las tiendas")
     @ApiResponse(responseCode = "200", description = "Lista de todas las tiendas")
     @GetMapping
-    public ResponseEntity<List<Store>> findAll() {
+    public ResponseEntity<List<StoreResponse>> findAll() {
         return ResponseEntity.ok(storeService.findAll());
     }
 
@@ -38,17 +39,17 @@ public class StoreController {
     @ApiResponse(responseCode = "200", description = "Tienda que tiene el id ingresado")
     @ApiResponse(responseCode = "404", description = "Id no existe")
     @GetMapping("/{id}")
-    public ResponseEntity<Store> findById(
+    public ResponseEntity<StoreResponse> findById(
                 @Parameter(description = "Id de la tienda a buscar")
                 @PathVariable Long id) {
-        return ResponseEntity.ok(storeService.findById(id));
+        return ResponseEntity.ok(storeService.findByIdResponse(id));
     }
 
 
     @Operation(summary = "Buscar tiendas por nombre", description = "Filtra tiendas cuyo nombre coincida parcialmente con el texto indicado")
     @ApiResponse(responseCode = "200", description = "Lista de tiendas que coinciden con el filtro")
     @GetMapping("/search")
-    public ResponseEntity<List<Store>> search(
+    public ResponseEntity<List<StoreResponse>> search(
                 @Parameter(description = "Texto parcial del nombre de la tienda")
                 @RequestParam String name) {
         return ResponseEntity.ok(storeService.searchByName(name));
@@ -58,7 +59,7 @@ public class StoreController {
     @Operation(summary = "Listar tiendas activas", description = "Filtra tiendas por su estado")
     @ApiResponse(responseCode = "200", description = "Lista de tiendas activas")
     @GetMapping("/active")
-    public ResponseEntity<List<Store>> findActive() {
+    public ResponseEntity<List<StoreResponse>> findActive() {
         return ResponseEntity.ok(storeService.findActive());
     }
 
@@ -66,38 +67,39 @@ public class StoreController {
     @Operation(summary = "Listar tiendas inactivas", description = "Filtra tiendas por su estado")
     @ApiResponse(responseCode = "200", description = "Lista de tiendas inactivas")
     @GetMapping("/inactive")
-    public ResponseEntity<List<Store>> findInactive() {
+    public ResponseEntity<List<StoreResponse>> findInactive() {
         return ResponseEntity.ok(storeService.findInactive());
     }
 
 
     @Operation(summary = "Registrar tienda", description = "Registra la nueva tienda en la base de datos")
     @ApiResponse(responseCode = "201", description = "Tienda registrada")
-    @ApiResponse(responseCode = "400", description = "Validación fallida")
-    @ApiResponse(responseCode = "409", description = "Ya existe una tienda con ese nombre")
+    @ApiResponse(responseCode = "400", description = "Validación fallida (o categoryId no es raíz)")
+    @ApiResponse(responseCode = "404", description = "CategoryId no existe")
+    @ApiResponse(responseCode = "409", description = "Ya existe una tienda con ese nombre o la categoría está inactivada")
     @PostMapping
-    public ResponseEntity<Store> create(
-                @Parameter(description = "Record con el nombre de la tienda")
+    public ResponseEntity<StoreResponse> create(
+                @Parameter(description = "Record con el nombre de la tienda e id de categoría")
                 @Valid @RequestBody StoreRequest request) {
-        Store store = storeService.create(request.name());
+        StoreResponse response = storeService.create(request.name(), request.categoryId());
         return ResponseEntity
-                .created(URI.create("/api/stores/" + store.getId()))
-                .body(store);
+                .created(URI.create("/api/stores/" + response.id()))
+                .body(response);
     }
 
 
-    @Operation(summary = "Actualizar tienda", description = "Modifica el nombre de la tienda indicada")
-    @ApiResponse(responseCode = "204", description = "Tienda actualizada")
-    @ApiResponse(responseCode = "400", description = "Validación fallida")
-    @ApiResponse(responseCode = "404", description = "Id no existe")
+    @Operation(summary = "Actualizar tienda", description = "Modifica el nombre e id de categoría de la tienda indicada")
+    @ApiResponse(responseCode = "200", description = "Tienda actualizada")
+    @ApiResponse(responseCode = "400", description = "Validación fallida (o categoryId no es raíz)")
+    @ApiResponse(responseCode = "404", description = "Id o categoryId no existe")
+    @ApiResponse(responseCode = "409", description = "Categoría inactiva")
     @PutMapping("/{id}")
-    public ResponseEntity<Void> update(
+    public ResponseEntity<StoreResponse> update(
                 @Parameter(description = "Id de la tienda a actualizar")
                 @PathVariable Long id,
-                @Parameter(description = "Record con el nuevo nombre de la tienda")
+                @Parameter(description = "Record con el nuevo nombre de la tienda e id de categoría")
                 @Valid @RequestBody StoreRequest request) {
-        storeService.update(id, request.name());
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(storeService.update(id, request.name(), request.categoryId()));
     }
 
 
@@ -116,6 +118,7 @@ public class StoreController {
     @Operation(summary = "Activar tienda", description = "Busca la tienda con el id indicado y cambia su estado a activo")
     @ApiResponse(responseCode = "204", description = "Tienda activada")
     @ApiResponse(responseCode = "404", description = "Id no existe")
+    @ApiResponse(responseCode = "409", description = "Categoría inactiva")
     @PatchMapping("/{id}/activate")
     public ResponseEntity<Void> activate(
                 @Parameter(description = "Id de la tienda")
