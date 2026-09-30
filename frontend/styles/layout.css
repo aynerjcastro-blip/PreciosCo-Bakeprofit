@@ -88,7 +88,7 @@
    ============================================================ */
 .site-footer {
     background: var(--color-dark);
-    color: #FFF;
+    color: var(--bg-surface);
     padding: 40px 24px 20px;
     text-align: center;
 }
@@ -113,6 +113,119 @@
 .site-footer__copy {
     border-top: 1px solid var(--color-dark-border);
     padding-top: 20px;
-    color: var(--text-muted);
+    color: var(--color-dark-muted);
     font-size: 0.85rem;
+}
+
+.site-footer__links a h5{
+    color: inherit;
+}
+
+/* ============================================================
+   Switch
+   ============================================================ */
+
+.theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+
+    padding: 8px 14px;
+    border-radius: 999px;
+
+    font-size: 0.85rem;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+.theme-toggle:hover {
+    background-color: var(--surface-hover);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+}
+
+.theme-toggle:active {
+    transform: scale(0.96);
+}
+
+.theme-toggle:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 3px;
+}
+
+/* ============================================================
+   Icons: Con reactividad al cambio en el modo de visualizacion
+   ============================================================ */
+
+.icon-button {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    background-color: var(--text-primary); /* esto reacciona al tema */
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+}
+
+.icon--menu {
+    mask-image: url("/frontend/assets/icons/meatball-menu.png");
+    -webkit-mask-image: url("/frontend/assets/icons/meatball-menu.png");
+}
+
+.icon--search {
+    mask-image: url("/frontend/assets/icons/find.png");
+    -webkit-mask-image: url("/frontend/assets/icons/find.png");
+}
+
+.icon--user {
+    mask-image: url("/frontend/assets/icons/user.png");
+    -webkit-mask-image: url("/frontend/assets/icons/user.png");
+}
+
+.icon-button:hover .icon {
+    background-color: var(--color-primary-hover);
+}
+
+/* ============================================================
+   Logo: Con reactividad al cambio en el modo de visualizacion
+   ============================================================ */
+   .logo-text {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.75rem;
+    color: var(--text-primary); /* se invierte solo con el tema */
+}
+
+.logo-co {
+    height: 28px;
+    width: auto;
+    vertical-align: middle;
 }

@@ -12,6 +12,8 @@
         rel="stylesheet">
     <link rel="preload" href="/frontend/styles/normalize.css" as="style">
     <link rel="stylesheet" href="/frontend/styles/normalize.css">
+    <script>(() => { const saved = localStorage.getItem("preciosco_theme"); if (saved) document.documentElement.setAttribute("data-theme", saved); })();
+    </script>
     <link rel="stylesheet" href="/frontend/styles/tokens.css">
     <link rel="stylesheet" href="/frontend/styles/base.css">
     <link rel="stylesheet" href="/frontend/styles/layout.css">
@@ -22,15 +24,25 @@
 <body>
     <header class="site-header">
         <div class="site-header__inner">
-            <img src="/frontend/assets/icons/meatball-menu.png" alt="Abrir menú" width="30">
+            <button class="icon-button" type="button" aria-label="Abrir menú">
+                <span class="icon icon--menu"></span>
+            </button>
+
             <a href="/frontend/index.html" class="site-header__title">
-                <img src="/frontend/assets/images/titulo-preciosCo.png" alt="PreciosCo" class="logo-img">
+                <span class="logo-text">Precios</span>
+                <img src="/frontend/assets/images/co-badge.png" alt="" class="logo-co">
             </a>
+
             <div class="header-actions">
-                <a href="/frontend/pages/buscar.html">
-                    <img src="/frontend/assets/icons/find.png" alt="Buscar" width="30">
+                <button id="theme-toggle" class="theme-toggle">Modo oscuro</button>
+
+                <a href="/frontend/pages/buscar.html" class="icon-button" aria-label="Buscar">
+                    <span class="icon icon--search"></span>
                 </a>
-                <img src="/frontend/assets/icons/user.png" alt="Mi cuenta" width="30">
+
+                <a href="/frontend/pages/login.html" class="icon-button" aria-label="Iniciar sesión">
+                    <span class="icon icon--user"></span>
+                </a>
             </div>
         </div>
     </header>
@@ -63,6 +75,11 @@
             <button type="submit" class="auth-form__submit">Registrarse</button>
         </form>
     </div>
+
+    <script type="module">
+        import { initTheme } from "/frontend/js/utils/theme.js";
+        initTheme();
+    </script>
 </body>
 
 </html>
