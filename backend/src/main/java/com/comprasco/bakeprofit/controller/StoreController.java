@@ -2,7 +2,6 @@ package com.comprasco.bakeprofit.controller;
 
 import com.comprasco.bakeprofit.dto.StoreRequest;
 import com.comprasco.bakeprofit.dto.StoreResponse;
-import com.comprasco.bakeprofit.entity.Store;
 import com.comprasco.bakeprofit.service.StoreService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;

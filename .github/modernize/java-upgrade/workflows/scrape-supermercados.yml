@@ -1,0 +1,40 @@
+name: Scraping de precios - Supermercados
+
+on:
+  schedule:
+    # 10:00 UTC = 5:00 am en Colombia (UTC-5). Ajusta la hora a gusto.
+    - cron: "0 10 * * *"
+  workflow_dispatch: {}   # permite lanzarlo manualmente desde la pestaña Actions
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Instalar dependencias
+        working-directory: scraper_supermercados
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar scraper
+        working-directory: scraper_supermercados
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          HEADLESS: "true"
+        run: python scraper_supermercados.py
+amkkit5yb ´lñ.,l,ñhlñlñ.ñ.ml,ñn,.f , , ,  mnnnnnnnnnnnnnnnnn}
