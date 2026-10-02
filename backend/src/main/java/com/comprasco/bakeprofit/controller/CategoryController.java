@@ -2,7 +2,6 @@ package com.comprasco.bakeprofit.controller;
 
 import com.comprasco.bakeprofit.dto.CategoryRequest;
 import com.comprasco.bakeprofit.dto.CategoryResponse;
-import com.comprasco.bakeprofit.entity.Category;
 import com.comprasco.bakeprofit.service.CategoryService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
