@@ -1,9 +1,9 @@
 name: Scraping de precios - Supermercados
 
 on:
-  schedule:
-    # 10:00 UTC = 5:00 am en Colombia (UTC-5). Ajusta la hora a gusto.
-    - cron: "0 10 * * *"
+  # schedule:
+  #   # 10:00 UTC = 5:00 am en Colombia (UTC-5). Ajusta la hora a gusto.
+  #   - cron: "0 10 * * *"
   workflow_dispatch: {}   # permite lanzarlo manualmente desde la pestaña Actions
 
 jobs:
@@ -37,4 +37,3 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           HEADLESS: "true"
         run: python scraper_supermercados.py
-amkkit5yb ´lñ.,l,ñhlñlñ.ñ.ml,ñn,.f , , ,  mnnnnnnnnnnnnnnnnn}
