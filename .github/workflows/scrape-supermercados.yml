@@ -37,4 +37,5 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           HEADLESS: "true"
         run: python scraper_supermercados.py
-amkkit5yb ´lñ.,l,ñhlñlñ.ñ.ml,ñn,.f , , ,  mnnnnnnnnnnnnnnnnn}
+amkk
+amkkit5yb ´lñ.,l,ñhlñlñ.ñ.ml,ñn,.f , , ,  mnnnnnnnnnnnnnnnnn}it5yb ´lñ.,l,ñhlñlñ.ñ.ml,ñn,.f , , ,  mnnnnnnnnnnnnnnnnn}
