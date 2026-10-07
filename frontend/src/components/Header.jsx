@@ -1,4 +1,3 @@
-// src/components/Header.jsx
 import { Link } from 'react-router-dom';
 import { toggleTheme } from '../utils/theme'; // Asumiendo que migraremos theme.js
 
