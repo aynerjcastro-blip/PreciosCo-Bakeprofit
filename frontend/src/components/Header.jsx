@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { toggleTheme } from '../utils/theme'; // Asumiendo que migraremos theme.js
+// import { toggleTheme } from '../utils/theme'; // Asumiendo que migraremos theme.js
 
 export default function Header() {
     return (
@@ -16,7 +16,7 @@ export default function Header() {
                     </Link>
 
                     <div className="header-actions">
-                        <button id="theme-toggle" className="theme-toggle" onClick={toggleTheme}>
+                        <button id="theme-toggle" className="theme-toggle" >
                             Modo oscuro
                         </button>
                         <Link to="/buscar" className="icon-button" aria-label="Buscar">
