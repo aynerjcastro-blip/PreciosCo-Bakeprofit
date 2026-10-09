@@ -1,7 +1,29 @@
-import { Link } from 'react-router-dom';
-// import { toggleTheme } from '../utils/theme'; // Asumiendo que migraremos theme.js
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { toggleTheme } from '../utils/theme';
 
 export default function Header() {
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    const handleScrollTo = (e, elementId) => {
+        e.preventDefault();
+
+        if (location.pathname !== '/') {
+            navigate('/');
+            setTimeout(() => {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 100);
+        } else {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    };
+
     return (
         <>
             <header className="site-header">
@@ -16,7 +38,7 @@ export default function Header() {
                     </Link>
 
                     <div className="header-actions">
-                        <button id="theme-toggle" className="theme-toggle" >
+                        <button id="theme-toggle" className="theme-toggle" onClick={toggleTheme}>
                             Modo oscuro
                         </button>
                         <Link to="/buscar" className="icon-button" aria-label="Buscar">
@@ -31,9 +53,9 @@ export default function Header() {
 
             <nav className="site-nav">
                 <ul className="site-nav__list">
-                    <li><Link to="/#sobre-nosotros">Sobre Nosotros</Link></li>
-                    <li><Link to="/#como-funciona">Como funciona</Link></li>
-                    <li><Link to="/#testimonios">Testimonios</Link></li>
+                    <li><a href="#sobre-nosotros" onClick={(e) => handleScrollTo(e, 'sobre-nosotros')}>Sobre Nosotros</a></li>
+                    <li><a href="#como-funciona" onClick={(e) => handleScrollTo(e, 'como-funciona')}>Como funciona</a></li>
+                    <li><a href="#testimonios" onClick={(e) => handleScrollTo(e, 'testimonios')}>Testimonios</a></li>
                     <li><Link to="/register">Registrarse</Link></li>
                 </ul>
             </nav>

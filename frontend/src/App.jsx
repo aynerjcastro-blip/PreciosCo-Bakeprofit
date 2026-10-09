@@ -10,7 +10,17 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Comparator from './pages/Comparator';
 
+import { useEffect } from 'react';
+// Importacion de la funcion de inicializacion
+import { initTheme } from './utils/theme';
+
 export default function App() {
+  //Ejecuta el efecto una sola vez cuando la aplicacion arranca
+  useEffect(() => {
+    initTheme();
+  }, []);
+
+
   return (
     <BrowserRouter>
       <Routes>
