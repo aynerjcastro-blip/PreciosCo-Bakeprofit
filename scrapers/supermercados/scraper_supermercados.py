@@ -281,13 +281,13 @@ def conectar_bd():
 
 
 def obtener_id_tienda(cur, nombre_tienda):
-    cur.execute('SELECT id FROM store WHERE lower(name) = lower(%s)', (nombre_tienda,))
+    cur.execute('SELECT id FROM stores WHERE lower(name) = lower(%s)', (nombre_tienda,))
     row = cur.fetchone()
     return row[0] if row else None
 
 
 def obtener_id_producto(cur, nombre_producto):
-    cur.execute('SELECT id FROM product WHERE lower(name) = lower(%s)', (nombre_producto,))
+    cur.execute('SELECT id FROM products WHERE lower(name) = lower(%s)', (nombre_producto,))
     row = cur.fetchone()
     return row[0] if row else None
 
@@ -297,7 +297,7 @@ def precio_repetido(cur, id_producto, id_tienda, valor):
     desde la última corrida (no hay procedimiento de BD que lo bloquee,
     como sí pasaba en Oracle con PKG_PRECIO)."""
     cur.execute(
-        """SELECT value FROM price
+        """SELECT value FROM prices
            WHERE product_id = %s AND store_id = %s
            ORDER BY registration_date DESC LIMIT 1""",
         (id_producto, id_tienda),
@@ -311,7 +311,7 @@ def insertar_precio(conn, cur, valor, source, id_producto, id_tienda):
         log.info("   ⚠️  Precio repetido, no se reinserta")
         return False
     cur.execute(
-        "INSERT INTO price (value, source, registration_date, product_id, store_id) "
+        "INSERT INTO prices (value, source, registration_date, product_id, store_id) "
         "VALUES (%s, %s, now(), %s, %s)",
         (valor, source[:500], id_producto, id_tienda),
     )

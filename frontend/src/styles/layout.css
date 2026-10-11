@@ -43,7 +43,8 @@
    Titulo
    ============================================================ */
 .logo-img {
-    height: 32px; /* ajusta según el tamaño real que quieras en el header */
+    height: 32px;
+    /* ajusta según el tamaño real que quieras en el header */
     width: auto;
     display: block;
 }
@@ -117,7 +118,7 @@
     font-size: 0.85rem;
 }
 
-.site-footer__links a h5{
+.site-footer__links a h5 {
     color: inherit;
 }
 
@@ -186,7 +187,8 @@
     display: inline-block;
     width: 24px;
     height: 24px;
-    background-color: var(--text-primary); /* esto reacciona al tema */
+    background-color: var(--text-primary);
+    /* esto reacciona al tema */
     mask-size: contain;
     mask-repeat: no-repeat;
     mask-position: center;
@@ -196,18 +198,18 @@
 }
 
 .icon--menu {
-    mask-image: url("/frontend/assets/icons/meatball-menu.png");
-    -webkit-mask-image: url("/frontend/assets/icons/meatball-menu.png");
+    mask-image: url("/assets/icons/meatball-menu.png");
+    -webkit-mask-image: url("/assets/icons/meatball-menu.png");
 }
 
 .icon--search {
-    mask-image: url("/frontend/assets/icons/find.png");
-    -webkit-mask-image: url("/frontend/assets/icons/find.png");
+    mask-image: url("/assets/icons/find.png");
+    -webkit-mask-image: url("/assets/icons/find.png");
 }
 
 .icon--user {
-    mask-image: url("/frontend/assets/icons/user.png");
-    -webkit-mask-image: url("/frontend/assets/icons/user.png");
+    mask-image: url("/assets/icons/user.png");
+    -webkit-mask-image: url("/assets/icons/user.png");
 }
 
 .icon-button:hover .icon {
@@ -217,11 +219,12 @@
 /* ============================================================
    Logo: Con reactividad al cambio en el modo de visualizacion
    ============================================================ */
-   .logo-text {
+.logo-text {
     font-family: var(--font-display);
     font-weight: 800;
     font-size: 1.75rem;
-    color: var(--text-primary); /* se invierte solo con el tema */
+    color: var(--text-primary);
+    /* se invierte solo con el tema */
 }
 
 .logo-co {
