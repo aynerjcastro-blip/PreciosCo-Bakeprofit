@@ -2,6 +2,8 @@ package com.comprasco.bakeprofit.exception.handler;
 
 import com.comprasco.bakeprofit.exception.EmailAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.InvalidCredentialsException;
+import com.comprasco.bakeprofit.exception.InvalidRatingFilterException;
+import com.comprasco.bakeprofit.exception.PriceNotFoundException;
 import com.comprasco.bakeprofit.exception.InvalidCategoryHierarchyException;
 import com.comprasco.bakeprofit.exception.UserNotFoundException;
 import com.comprasco.bakeprofit.exception.CategoryAlreadyExistsException;
@@ -9,6 +11,8 @@ import com.comprasco.bakeprofit.exception.CategoryNotFoundException;
 import com.comprasco.bakeprofit.exception.StoreAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.StoreNotFoundException;
 import com.comprasco.bakeprofit.exception.ProductNotFoundException;
+import com.comprasco.bakeprofit.exception.RatingAlreadyExistsException;
+import com.comprasco.bakeprofit.exception.RatingNotAllowedException;
 import com.comprasco.bakeprofit.exception.InactiveParentException;
 import com.comprasco.bakeprofit.exception.response.ErrorResponse;
 
@@ -18,9 +22,12 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -60,10 +67,19 @@ public class GlobalExceptionHandler {
                 ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
+    
+    @ExceptionHandler({ RatingAlreadyExistsException.class, RatingNotAllowedException.class })
+    public ResponseEntity<ErrorResponse> handleRatingConflict(RuntimeException ex) {
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),  // 409
+                HttpStatus.CONFLICT.getReasonPhrase(), 
+                ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
 
     @ExceptionHandler({ UserNotFoundException.class, EntityNotFoundException.class, 
                         CategoryNotFoundException.class, StoreNotFoundException.class,
-                        ProductNotFoundException.class
+                        ProductNotFoundException.class, PriceNotFoundException.class
     })
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex) {
         ErrorResponse error = new ErrorResponse(
@@ -101,6 +117,26 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST.value(), // 400
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
                 ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(InvalidRatingFilterException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRatingFilter(InvalidRatingFilterException ex) {
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(), // 400
+                HttpStatus.BAD_REQUEST.getReasonPhrase(), 
+                ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler({ HttpMessageNotReadableException.class,         
+                        MethodArgumentTypeMismatchException.class,    
+                        MissingServletRequestParameterException.class }) 
+    public ResponseEntity<ErrorResponse> handleBadRequest(Exception ex) {
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(), // 400
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                "Solicitud inválida: revisa los parámetros y el cuerpo de la petición");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
