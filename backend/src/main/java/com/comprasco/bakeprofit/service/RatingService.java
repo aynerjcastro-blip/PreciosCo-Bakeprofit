@@ -12,6 +12,8 @@ import com.comprasco.bakeprofit.entity.Product;
 import com.comprasco.bakeprofit.entity.Rating;
 import com.comprasco.bakeprofit.entity.Store;
 import com.comprasco.bakeprofit.entity.User;
+import com.comprasco.bakeprofit.entity.Role;
+import com.comprasco.bakeprofit.exception.ForbiddenRoleException;
 import com.comprasco.bakeprofit.exception.InvalidRatingFilterException;
 import com.comprasco.bakeprofit.exception.PriceNotFoundException;
 import com.comprasco.bakeprofit.exception.RatingAlreadyExistsException;
@@ -45,6 +47,10 @@ public class RatingService {
      */
     @Transactional
     public RatingResponse create(User user, Long productId, Long storeId, Integer score) {
+        if (user.getRole() != Role.USER) {
+            throw new ForbiddenRoleException("Solo los usuarios pueden calificar.");
+        }
+
         Product product = productService.findById(productId);   // 404 si no existe
         Store store = storeService.findById(storeId);           // 404 si no existe
 
