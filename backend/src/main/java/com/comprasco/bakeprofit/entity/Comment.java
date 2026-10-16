@@ -12,43 +12,38 @@ import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * Comentario de una opinión. Pertenece a una única {@link Rating} (relación 1 a 1 obligatoria):
+ * el usuario, el producto y la tienda se leen de ella, así no se duplican ni pueden contradecirse.
+ * Eliminar el comentario es un borrado lógico (ELIMINADO): la fila se conserva, por eso no se puede volver a comentar.
+ */
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "comments",
-    indexes = {
-        @Index(name = "idx_comments_product_id_store_id", columnList = "product_id, store_id"),
-        @Index(name = "idx_comments_store_id", columnList = "store_id")
-    })
+    uniqueConstraints = @UniqueConstraint(
+        name = "comments_rating_id_key",
+        columnNames = "rating_id"))
 public class Comment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false,
-        foreignKey = @ForeignKey(name = "fk_comments_users"))
-    private User user;
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "rating_id", nullable = false,
+        foreignKey = @ForeignKey(name = "fk_comments_ratings"))
+    private Rating rating;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "product_id", nullable = false,
-        foreignKey = @ForeignKey(name = "fk_comments_products"))
-    private Product product;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "store_id", nullable = false,
-        foreignKey = @ForeignKey(name = "fk_comments_stores"))
-    private Store store;
-
+    // Se conserva aunque el comentario se elimine (borrado lógico)
     @Column(nullable = false, length = 500)
     private String text;
 
@@ -59,18 +54,27 @@ public class Comment {
     @Column(nullable = false, updatable = false)
     private LocalDateTime registrationDate;
 
-    public static Comment of(User user, Product product, Store store, String text) {
+    public static Comment of(Rating rating, String text) {
         Comment c = new Comment();
-        c.user = Objects.requireNonNull(user);
-        c.product = Objects.requireNonNull(product);
-        c.store = Objects.requireNonNull(store);
+        c.rating = Objects.requireNonNull(rating);
         c.text = Objects.requireNonNull(text);
         c.status = CommentStatus.PUBLICADO;
         c.registrationDate = LocalDateTime.now();
         return c;
     }
 
-    /** Un reporte nuevo reabre un comentario conservado; uno oculto no cambia. */
+    public void updateText(String text) {
+        this.text = Objects.requireNonNull(text);
+    }
+
+    /** Borrado lógico por su autor. Un comentario OCULTO por moderación conserva ese estado. */
+    public void delete() {
+        if (status != CommentStatus.OCULTO) {
+            status = CommentStatus.ELIMINADO;
+        }
+    }
+
+    /** Un reporte nuevo reabre un comentario conservado. REPORTADO, OCULTO y ELIMINADO no cambian. */
     public void markAsReported() {
         if (status == CommentStatus.PUBLICADO || status == CommentStatus.CONSERVADO) {
             status = CommentStatus.REPORTADO;

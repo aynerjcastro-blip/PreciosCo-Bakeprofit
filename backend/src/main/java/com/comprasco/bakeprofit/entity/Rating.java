@@ -67,4 +67,12 @@ public class Rating {
         r.registrationDate = LocalDateTime.now();
         return r;
     }
+
+    public boolean isOwnedBy(Long userId) {
+        return user.getId().equals(userId);
+    }
+
+    public void updateScore(int score) {
+        this.score = score;
+    }
 }

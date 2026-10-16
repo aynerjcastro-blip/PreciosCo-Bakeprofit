@@ -1,5 +1,6 @@
 package com.comprasco.bakeprofit.repository;
 
+import java.util.Collection;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -12,17 +13,24 @@ import com.comprasco.bakeprofit.entity.CommentStatus;
 
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
-    // El EntityGraph trae usuario, producto y tienda en la misma consulta (evita N+1 al armar el DTO)
-    @EntityGraph(attributePaths = {"user", "product", "store"})
-    Page<Comment> findByProductIdAndStatusNot(Long productId, CommentStatus status, Pageable pageable);
+    Optional<Comment> findByRatingId(Long ratingId);
 
-    @EntityGraph(attributePaths = {"user", "product", "store"})
-    Page<Comment> findByStoreIdAndStatusNot(Long storeId, CommentStatus status, Pageable pageable);
+    // Reportar: solo comentarios visibles
+    Optional<Comment> findByRatingIdAndStatusIn(Long ratingId, Collection<CommentStatus> statuses);
 
-    @EntityGraph(attributePaths = {"user", "product", "store"})
-    Page<Comment> findByProductIdAndStoreIdAndStatusNot(Long productId, Long storeId,
-                                                        CommentStatus status, Pageable pageable);
+    // Listados: el EntityGraph trae calificación, usuario, producto y tienda en una sola consulta (evita N+1)
+    @EntityGraph(attributePaths = {"rating", "rating.user", "rating.product", "rating.store"})
+    Page<Comment> findByRatingProductIdAndStatusIn(Long productId, 
+                                                   Collection<CommentStatus> statuses, 
+                                                   Pageable pageable);
 
-    // Para reportar: un comentario OCULTO se trata como inexistente
-    Optional<Comment> findByIdAndStatusNot(Long id, CommentStatus status);
+    @EntityGraph(attributePaths = {"rating", "rating.user", "rating.product", "rating.store"})
+    Page<Comment> findByRatingStoreIdAndStatusIn(Long storeId, 
+                                                 Collection<CommentStatus> statuses, 
+                                                 Pageable pageable);
+
+    @EntityGraph(attributePaths = {"rating", "rating.user", "rating.product", "rating.store"})
+    Page<Comment> findByRatingProductIdAndRatingStoreIdAndStatusIn(Long productId, Long storeId,
+                                                                   Collection<CommentStatus> statuses, 
+                                                                   Pageable pageable);
 }

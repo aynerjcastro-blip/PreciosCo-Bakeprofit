@@ -7,5 +7,5 @@ package com.comprasco.bakeprofit.entity;
  * En la Fase 2 solo la API pasa de PUBLICADO/CONSERVADO a REPORTADO; el resto se cambia a mano en la BD.
  */
 public enum CommentStatus {
-    PUBLICADO, REPORTADO, CONSERVADO, OCULTO
+    PUBLICADO, REPORTADO, CONSERVADO, OCULTO, ELIMINADO
 }
