@@ -92,10 +92,18 @@ public class ReviewController {
     @ApiResponse(responseCode = "404", description = "Producto o tienda no existe")
     @GetMapping
     public ResponseEntity<PagedModel<ReviewCommentResponse>> list(
-            @Parameter(description = "Id del producto") @RequestParam(required = false) Long productId,
-            @Parameter(description = "Id de la tienda") @RequestParam(required = false) Long storeId,
-            @Parameter(description = "Página (desde 0)") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Tamaño de página (1 a 50)") @RequestParam(defaultValue = "10") int size) {
+            @Parameter(description = "Id del producto") 
+            @RequestParam(required = false) 
+            Long productId,
+            @Parameter(description = "Id de la tienda") 
+            @RequestParam(required = false) 
+            Long storeId,
+            @Parameter(description = "Página (desde 0)") 
+            @RequestParam(defaultValue = "0") 
+            int page,
+            @Parameter(description = "Tamaño de página (1 a 50)") 
+            @RequestParam(defaultValue = "10") 
+            int size) {
         return ResponseEntity.ok(reviewService.list(productId, storeId, page, size));
     }
 
@@ -106,8 +114,12 @@ public class ReviewController {
     @ApiResponse(responseCode = "404", description = "Producto o tienda no existe")
     @GetMapping("/summary")
     public ResponseEntity<RatingSummaryResponse> summary(
-            @Parameter(description = "Id del producto") @RequestParam(required = false) Long productId,
-            @Parameter(description = "Id de la tienda") @RequestParam(required = false) Long storeId) {
+            @Parameter(description = "Id del producto") 
+            @RequestParam(required = false) 
+            Long productId,
+            @Parameter(description = "Id de la tienda") 
+            @RequestParam(required = false) 
+            Long storeId) {
         return ResponseEntity.ok(reviewService.getSummary(productId, storeId));
     }
 
@@ -119,8 +131,12 @@ public class ReviewController {
     @ApiResponse(responseCode = "404", description = "Producto o tienda no existe")
     @GetMapping("/me")
     public ResponseEntity<ReviewResponse> mine(
-            @Parameter(description = "Id del producto") @RequestParam Long productId,
-            @Parameter(description = "Id de la tienda") @RequestParam Long storeId) {
+            @Parameter(description = "Id del producto") 
+            @RequestParam 
+            Long productId,
+            @Parameter(description = "Id de la tienda") 
+            @RequestParam 
+            Long storeId) {
         return reviewService.findMine(currentUser.get(), productId, storeId)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());

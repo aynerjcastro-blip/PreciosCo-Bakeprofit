@@ -59,7 +59,7 @@ public class Comment {
         c.rating = Objects.requireNonNull(rating);
         c.text = Objects.requireNonNull(text);
         c.status = CommentStatus.PUBLICADO;
-        c.registrationDate = LocalDateTime.now();
+        c.registrationDate = rating.getRegistrationDate();
         return c;
     }
 

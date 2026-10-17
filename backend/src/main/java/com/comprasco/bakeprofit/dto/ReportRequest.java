@@ -8,11 +8,11 @@ import jakarta.validation.constraints.Size;
 
 public record ReportRequest(
 
-    @Schema(description = "Tipo de reporte", example = "SPAM")
-    @NotNull(message = "El tipo de reporte es obligatorio")
+    @Schema(description = "Razón de reporte", example = "SPAM")
+    @NotNull(message = "La razón de reporte es obligatoria")
     ReportReason reason,
 
-    @Schema(description = "Detalle opcional (obligatorio si el tipo es OTRO), máximo 200 caracteres")
+    @Schema(description = "Detalle opcional (obligatorio si la razón es OTRO), máximo 200 caracteres")
     @Size(max = 200, message = "El detalle no puede superar 200 caracteres")
     String details
 ) {
