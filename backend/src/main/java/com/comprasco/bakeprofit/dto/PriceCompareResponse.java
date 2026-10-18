@@ -8,5 +8,7 @@ public record PriceCompareResponse(
     String storeName,
     BigDecimal value,
     String source,
-    LocalDateTime registrationDate
+    LocalDateTime registrationDate,
+    String productUrl,
+    String imageUrl
 ) {}
