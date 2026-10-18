@@ -30,10 +30,10 @@ import com.comprasco.bakeprofit.security.JwtAuthFilter;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final JwtSecurity jwtSecurity;
+        private final JwtAuthFilter jwtAuthFilter;
 
-    public SecurityConfig(JwtSecurity jwtSecurity) {
-        this.jwtSecurity = jwtSecurity;
+        public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+                this.jwtAuthFilter = jwtAuthFilter;
     }
 
     /**
@@ -84,7 +84,7 @@ public class SecurityConfig {
                 // TODO: conectar RestAuthenticationEntryPoint y
                 // RestAccessDeniedHandler para devolver 401/403 JSON consistentes.
                 .addFilterBefore(
-                        new JwtAuthFilter(jwtSecurity),
+                        jwtAuthFilter,
                         UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

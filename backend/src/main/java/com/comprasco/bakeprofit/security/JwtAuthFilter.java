@@ -1,62 +1,74 @@
 package com.comprasco.bakeprofit.security;
 
-import java.io.IOException;
-import java.util.List;
-import org.springframework.http.HttpHeaders;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.filter.OncePerRequestFilter;
 import com.comprasco.bakeprofit.config.JwtSecurity;
+import com.comprasco.bakeprofit.entity.User;
+import com.comprasco.bakeprofit.repository.UserRepository;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.List;
+
 /**
- * Filtro que autentica una petición a partir de un token JWT.
- *
- * <p>
- * Si el header {@code Authorization} contiene un token válido, establece
- * la identidad del usuario en {@link SecurityContextHolder}. No autoriza
- * rutas: eso lo hace la configuración de Spring Security.
- * </p>
- *
- * <p>
- * Un token ausente o inválido no corta la cadena; la petición continúa
- * sin autenticación y las reglas de autorización deciden el resultado.
- * </p>
+ * Filtro de seguridad que valida el token JWT y verifica que la cuenta este activa en la base de datos por peticion.
  */
+@Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-    private static final String BEARER_PREFIX = "Bearer ";
+    private final JwtSecurity jwtSecurity;
+    private final UserRepository userRepository;
 
-    private final JwtSecurity jwt;
-
-    public JwtAuthFilter(JwtSecurity jwt) {
-        this.jwt = jwt;
+    /**
+     * Inyeccion de dependencias por constructor.
+     */
+    public JwtAuthFilter(JwtSecurity jwtSecurity, UserRepository userRepository) {
+        this.jwtSecurity = jwtSecurity;
+        this.userRepository = userRepository;
     }
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
-        String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String authHeader = request.getHeader("Authorization");
 
-        if (header != null && header.startsWith(BEARER_PREFIX)) {
-            String token = header.substring(BEARER_PREFIX.length());
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
 
-            if (jwt.isTokenValid(token)) {
-                var authentication = new UsernamePasswordAuthenticationToken(
-                        jwt.extractEmail(token),
-                        null,
-                        List.of(new SimpleGrantedAuthority(
-                                "ROLE_" + jwt.extractRole(token))));
+            if (jwtSecurity.isTokenValid(token)) {
+                String email = jwtSecurity.extractEmail(token);
 
-                SecurityContextHolder.getContext()
-                        .setAuthentication(authentication);
+                if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    // RN-10: Carga del usuario por peticion para revalidar el estado activo en la BD
+                    User user = userRepository.findByEmail(email).orElse(null);
+
+                    // Verificacion del campo active (si la propiedad en User es private Boolean active)
+                    if (user != null && Boolean.TRUE.equals(user.getActive())) {
+
+                        // Mapeo explicito del rol de la entidad a SimpleGrantedAuthority de Spring Security
+                        List<SimpleGrantedAuthority> authorities = List.of(
+                                new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
+                        );
+
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                user,
+                                null,
+                                authorities
+                        );
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    }
+                }
             }
         }
 
