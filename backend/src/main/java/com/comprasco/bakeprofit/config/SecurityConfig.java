@@ -30,98 +30,94 @@ import com.comprasco.bakeprofit.security.JwtAuthFilter;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final JwtSecurity jwtSecurity;
+        private final JwtAuthFilter jwtAuthFilter;
 
-    public SecurityConfig(JwtSecurity jwtSecurity) {
-        this.jwtSecurity = jwtSecurity;
-    }
+        public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+                this.jwtAuthFilter = jwtAuthFilter;
+        }
 
-    /**
-     * Define las reglas de autenticación y autorización de la API.
-     *
-     * <p>
-     * Las reglas se evalúan en orden: primero las excepciones y al final
-     * {@code anyRequest().authenticated()}.
-     * </p>
-     */
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        String[] catalog = {
-                "/api/categories/**",
-                "/api/stores/**",
-                "/api/products/**"
-        };
+        /**
+         * Define las reglas de autenticación y autorización de la API.
+         *
+         * <p>
+         * Las reglas se evalúan en orden: primero las excepciones y al final
+         * {@code anyRequest().authenticated()}.
+         * </p>
+         */
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+                String[] catalog = {
+                                "/api/categories/**",
+                                "/api/stores/**",
+                                "/api/products/**"
+                };
 
-        http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                http
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                .csrf(csrf -> csrf.disable())
+                                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .exceptionHandling(ex -> ex
+                                                .authenticationEntryPoint((request, response, authException) -> {
+                                                        response.setStatus(
+                                                                        jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                                                        response.setContentType("application/json;charset=UTF-8");
+                                                        response.getWriter()
+                                                                        .write("""
+                                                                                {
+                                                                                "status": 401,
+                                                                                "error": "Unauthorized",
+                                                                                "message": "Acceso no autorizado o cuenta desactivada",
+                                                                                "path": "%s"
+                                                                                        }
+                                                                                        """
+                                                                                        .formatted(request
+                                                                                                        .getRequestURI()));
+                                                }))
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                                                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**",
+                                                                "/swagger-ui.html")
+                                                .permitAll()
+                                                .requestMatchers(HttpMethod.GET, catalog).permitAll()
+                                                .requestMatchers(HttpMethod.GET, "/api/prices/compare").permitAll()
+                                                .anyRequest().authenticated())
+                                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-                // API stateless con JWT en Authorization; si se migra a cookies
-                // de sesión, reactivar CSRF.
-                .csrf(csrf -> csrf.disable())
+                return http.build();
+        }
 
-                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        @Bean
+        public BCryptPasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/auth/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/actuator/health",
-                                "/error")
-                        .permitAll()
+        /**
+         * Orígenes permitidos para el frontend.
+         *
+         * <p>
+         * En producción deben provenir de una propiedad de configuración,
+         * no quedar escritos en el código.
+         * </p>
+         */
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
 
-                        .requestMatchers(HttpMethod.GET, catalog).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/prices/compare").permitAll()
+                configuration.setAllowedOrigins(List.of(
+                                "http://localhost:5173",
+                                "http://127.0.0.1:5173"));
 
-                        .requestMatchers(HttpMethod.POST, catalog).hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, catalog).hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, catalog).hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, catalog).hasRole("ADMIN")
+                configuration.setAllowedMethods(List.of(
+                                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
-                        .anyRequest().authenticated())
+                configuration.setAllowedHeaders(List.of(
+                                "Content-Type", "Authorization"));
 
-                // TODO: conectar RestAuthenticationEntryPoint y
-                // RestAccessDeniedHandler para devolver 401/403 JSON consistentes.
-                .addFilterBefore(
-                        new JwtAuthFilter(jwtSecurity),
-                        UsernamePasswordAuthenticationFilter.class);
+                configuration.setAllowCredentials(true);
 
-        return http.build();
-    }
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 
-    @Bean
-    public BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    /**
-     * Orígenes permitidos para el frontend.
-     *
-     * <p>
-     * En producción deben provenir de una propiedad de configuración,
-     * no quedar escritos en el código.
-     * </p>
-     */
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "http://127.0.0.1:5173"));
-
-        configuration.setAllowedMethods(List.of(
-                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-
-        configuration.setAllowedHeaders(List.of(
-                "Content-Type", "Authorization"));
-
-        configuration.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+                source.registerCorsConfiguration("/**", configuration);
+                return source;
+        }
 }
