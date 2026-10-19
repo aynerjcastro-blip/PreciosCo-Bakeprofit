@@ -34,94 +34,90 @@ public class SecurityConfig {
 
         public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
                 this.jwtAuthFilter = jwtAuthFilter;
-    }
+        }
 
-    /**
-     * Define las reglas de autenticación y autorización de la API.
-     *
-     * <p>
-     * Las reglas se evalúan en orden: primero las excepciones y al final
-     * {@code anyRequest().authenticated()}.
-     * </p>
-     */
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        String[] catalog = {
-                "/api/categories/**",
-                "/api/stores/**",
-                "/api/products/**"
-        };
+        /**
+         * Define las reglas de autenticación y autorización de la API.
+         *
+         * <p>
+         * Las reglas se evalúan en orden: primero las excepciones y al final
+         * {@code anyRequest().authenticated()}.
+         * </p>
+         */
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+                String[] catalog = {
+                                "/api/categories/**",
+                                "/api/stores/**",
+                                "/api/products/**"
+                };
 
-        http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                http
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // API stateless con JWT en Authorization; si se migra a cookies
-                // de sesión, reactivar CSRF.
-                .csrf(csrf -> csrf.disable())
+                                // API stateless con JWT en Authorization; si se migra a cookies
+                                // de sesión, reactivar CSRF.
+                                .csrf(csrf -> csrf.disable())
 
-                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/auth/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/actuator/health",
-                                "/error")
-                        .permitAll()
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                                                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**",
+                                                                "/swagger-ui.html")
+                                                .permitAll()
 
-                        .requestMatchers(HttpMethod.GET, catalog).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/prices/compare").permitAll()
+                                                .requestMatchers(HttpMethod.GET, catalog).permitAll()
+                                                .requestMatchers(HttpMethod.GET, "/api/prices/compare").permitAll()
 
-                        .requestMatchers(HttpMethod.POST, catalog).hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, catalog).hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, catalog).hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, catalog).hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.POST, catalog).hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.PUT, catalog).hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.PATCH, catalog).hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.DELETE, catalog).hasRole("ADMIN")
 
-                        .anyRequest().authenticated())
+                                                .anyRequest().authenticated())
 
-                // TODO: conectar RestAuthenticationEntryPoint y
-                // RestAccessDeniedHandler para devolver 401/403 JSON consistentes.
-                .addFilterBefore(
-                        jwtAuthFilter,
-                        UsernamePasswordAuthenticationFilter.class);
+                                // TODO: conectar RestAuthenticationEntryPoint y
+                                // RestAccessDeniedHandler para devolver 401/403 JSON consistentes.
+                                .addFilterBefore(
+                                                jwtAuthFilter,
+                                                UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
-    }
+                return http.build();
+        }
 
-    @Bean
-    public BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Bean
+        public BCryptPasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    /**
-     * Orígenes permitidos para el frontend.
-     *
-     * <p>
-     * En producción deben provenir de una propiedad de configuración,
-     * no quedar escritos en el código.
-     * </p>
-     */
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
+        /**
+         * Orígenes permitidos para el frontend.
+         *
+         * <p>
+         * En producción deben provenir de una propiedad de configuración,
+         * no quedar escritos en el código.
+         * </p>
+         */
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "http://127.0.0.1:5173"));
+                configuration.setAllowedOrigins(List.of(
+                                "http://localhost:5173",
+                                "http://127.0.0.1:5173"));
 
-        configuration.setAllowedMethods(List.of(
-                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+                configuration.setAllowedMethods(List.of(
+                                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
-        configuration.setAllowedHeaders(List.of(
-                "Content-Type", "Authorization"));
+                configuration.setAllowedHeaders(List.of(
+                                "Content-Type", "Authorization"));
 
-        configuration.setAllowCredentials(true);
+                configuration.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+                source.registerCorsConfiguration("/**", configuration);
+                return source;
+        }
 }
