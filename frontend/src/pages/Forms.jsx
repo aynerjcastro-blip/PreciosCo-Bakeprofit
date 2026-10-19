@@ -100,20 +100,7 @@ export default function Forms({ type = 'login' }) {
                     />
                 </div>
 
-                {!isLogin && (
-                    <div className={styles['auth-form__field']}>
-                        <label className={styles['auth-form__label']} htmlFor="register-phone">Numero de telefono:</label>
-                        {/* Cambio clave: type="tel" elimina las flechas de incremento */}
-                        <input
-                            type="tel"
-                            id="register-phone"
-                            name="phone"
-                            value={formData.phone}
-                            onChange={handleChange}
-                            pattern="[0-9]*"
-                        />
-                    </div>
-                )}
+                
 
                 <div className={styles['auth-form__field']}>
                     <label className={styles['auth-form__label']} htmlFor="password">Contraseña:</label>
