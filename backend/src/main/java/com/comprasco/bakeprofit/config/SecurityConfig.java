@@ -80,6 +80,7 @@ public class SecurityConfig {
                                                 .permitAll()
                                                 .requestMatchers(HttpMethod.GET, catalog).permitAll()
                                                 .requestMatchers(HttpMethod.GET, "/api/prices/compare").permitAll()
+                                                .requestMatchers(HttpMethod.GET, "/api/reviews", "/api/reviews/summary").permitAll()
                                                 .anyRequest().authenticated())
                                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

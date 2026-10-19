@@ -23,6 +23,10 @@
     --color-primary-soft: #FFF7ED;
     --color-secondary: #10B981;
 
+    /* Calificación (estrellas): relleno ámbar y borde oscuro para que se distingan del fondo */
+    --color-star: #FF9F1C;
+    --color-star-stroke: #B45309;
+
     /* Bordes */
     --border-color: #E2E8F0;
 
@@ -49,6 +53,7 @@
         --text-primary: #F1F5F9;
         --text-muted: #94A3B8;
         --border-color: #334155;
+        --color-star-stroke: #FF9F1C;
     }
 }
 
@@ -62,4 +67,5 @@
     --text-primary: #F1F5F9;
     --text-muted: #94A3B8;
     --border-color: #334155;
+    --color-star-stroke: #FF9F1C;
 }
