@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import styles from './Search.module.css';
+import apiClient from '../api/client'; // Importamos el cliente API centralizado
 import {
     CartIcon,
     PillIcon,
@@ -10,9 +11,6 @@ import {
 } from '../components/Sectoricons.jsx';
 
 import { Link } from 'react-router-dom';
-// import { API_BASE } from '../config';
-
-const API_BASE = 'http://localhost:8080/api'; // Ajusta segun el entorno
 
 // Sectores que se muestran como tarjetas.
 // `available: false` -> la tarjeta se muestra, pero aun no hay datos en el backend.
@@ -57,13 +55,12 @@ export default function Search() {
         );
     }, [searchTerm, selectedCategoryId, selectedSectorId, showAll]);
 
-    // Carga inicial de categorías
+    // Carga inicial de categorías usando apiClient.get
     useEffect(() => {
         async function fetchCategories() {
             try {
-                const response = await fetch(`${API_BASE}/categories/active`);
-                if (!response.ok) throw new Error('Error al cargar categorías');
-                const data = await response.json();
+                // Usamos el cliente centralizado en lugar de fetch con URL dura
+                const data = await apiClient.get('/api/categories/active');
                 setCategories(data);
             } catch (error) {
                 console.error(error);
@@ -101,12 +98,11 @@ export default function Search() {
             if (selectedCategoryId !== null) params.set('idCategory', selectedCategoryId);
 
             try {
-                const response = await fetch(`${API_BASE}/products/search?${params.toString()}`, {
+                // Usamos apiClient.get pasando la señal del AbortController en las opciones
+                const data = await apiClient.get(`/api/products/search?${params.toString()}`, {
                     signal: controller.signal,
                 });
-                if (!response.ok) throw new Error('Error en la petición');
-
-                const data = await response.json();
+                
                 setProducts(data);
                 setStatus(data.length === 0 ? 'empty' : 'success');
             } catch (error) {

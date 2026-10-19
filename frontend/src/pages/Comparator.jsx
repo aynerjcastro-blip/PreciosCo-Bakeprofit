@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import apiClient from '../api/client'; // Importamos el cliente API centralizado
 import styles from './comparator.module.css';
-
-const API_BASE = 'http://localhost:8080';
 
 export default function Comparator() {
     const [searchParams] = useSearchParams();
@@ -18,15 +17,19 @@ export default function Comparator() {
 
         const fetchPrices = async () => {
             try {
-                const res = await fetch(`${API_BASE}/api/prices/compare?productId=${productId}`);
-                if (!res.ok) throw new Error('Error al consultar precios');
-                const data = await res.json();
-                if (data.length === 0) { setStatus('empty'); return; }
+                // Usamos apiClient.get en lugar de fetch manual y BASE_URL
+                const data = await apiClient.get(`/api/prices/compare?productId=${productId}`);
+                
+                if (!data || data.length === 0) { 
+                    setStatus('empty'); 
+                    return; 
+                }
+                
                 setProductName(data[0].productName);
                 setPrices(data);
                 setStatus('success');
             } catch (err) {
-                console.error(err);
+                console.error("Error al consultar precios:", err.message);
                 setStatus('error');
             }
         };
