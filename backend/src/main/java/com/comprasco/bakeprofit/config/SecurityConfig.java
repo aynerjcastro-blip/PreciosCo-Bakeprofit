@@ -54,34 +54,34 @@ public class SecurityConfig {
 
                 http
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                                // API stateless con JWT en Authorization; si se migra a cookies
-                                // de sesión, reactivar CSRF.
                                 .csrf(csrf -> csrf.disable())
-
                                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
+                                .exceptionHandling(ex -> ex
+                                                .authenticationEntryPoint((request, response, authException) -> {
+                                                        response.setStatus(
+                                                                        jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                                                        response.setContentType("application/json;charset=UTF-8");
+                                                        response.getWriter()
+                                                                        .write("""
+                                                                                {
+                                                                                "status": 401,
+                                                                                "error": "Unauthorized",
+                                                                                "message": "Acceso no autorizado o cuenta desactivada",
+                                                                                "path": "%s"
+                                                                                        }
+                                                                                        """
+                                                                                        .formatted(request
+                                                                                                        .getRequestURI()));
+                                                }))
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                                                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**",
                                                                 "/swagger-ui.html")
                                                 .permitAll()
-
                                                 .requestMatchers(HttpMethod.GET, catalog).permitAll()
                                                 .requestMatchers(HttpMethod.GET, "/api/prices/compare").permitAll()
-
-                                                .requestMatchers(HttpMethod.POST, catalog).hasRole("ADMIN")
-                                                .requestMatchers(HttpMethod.PUT, catalog).hasRole("ADMIN")
-                                                .requestMatchers(HttpMethod.PATCH, catalog).hasRole("ADMIN")
-                                                .requestMatchers(HttpMethod.DELETE, catalog).hasRole("ADMIN")
-
                                                 .anyRequest().authenticated())
-
-                                // TODO: conectar RestAuthenticationEntryPoint y
-                                // RestAccessDeniedHandler para devolver 401/403 JSON consistentes.
-                                .addFilterBefore(
-                                                jwtAuthFilter,
-                                                UsernamePasswordAuthenticationFilter.class);
+                                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
                 return http.build();
         }

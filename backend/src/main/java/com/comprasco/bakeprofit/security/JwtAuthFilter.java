@@ -20,7 +20,8 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Filtro de seguridad que valida el token JWT y verifica que la cuenta este activa en la base de datos por peticion.
+ * Filtro de seguridad que valida el token JWT y verifica que la cuenta este
+ * activa en la base de datos por peticion.
  */
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -49,27 +50,31 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String email = jwtSecurity.extractEmail(token);
 
                 if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    // RN-10: Carga del usuario por peticion para revalidar el estado activo en la BD
                     User user = userRepository.findByEmail(email).orElse(null);
 
-                    // Verificacion del campo active (si la propiedad en User es private Boolean active)
-                    if (user != null && Boolean.TRUE.equals(user.getActive())) {
+                    if (user != null) {
+                        System.out.println(
+                                ">>> [DEBUG Filter] Usuario encontrado: " + email + " | active = " + user.getActive());
 
-                        // Mapeo explicito del rol de la entidad a SimpleGrantedAuthority de Spring Security
-                        List<SimpleGrantedAuthority> authorities = List.of(
-                                new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
-                        );
+                        if (Boolean.TRUE.equals(user.getActive())) {
+                            List<SimpleGrantedAuthority> authorities = List.of(
+                                    new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
 
-                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                                user,
-                                null,
-                                authorities
-                        );
-                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                    user, null, authorities);
+                            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                            SecurityContextHolder.getContext().setAuthentication(authToken);
+                            System.out.println(">>> [DEBUG Filter] Autenticacion OK para: " + email);
+                        } else {
+                            System.out.println(">>> [DEBUG Filter] BLOQUEADO: Usuario inactivo en BD.");
+                        }
                     }
                 }
+            } else {
+                System.out.println(">>> [DEBUG Filter] Token invalido o expirado");
             }
+        } else {
+            System.out.println(">>> [DEBUG Filter] Header Authorization ausente o no empieza con Bearer");
         }
 
         filterChain.doFilter(request, response);

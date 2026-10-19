@@ -2,11 +2,9 @@ package com.comprasco.bakeprofit.security;
 
 import com.comprasco.bakeprofit.entity.User;
 import com.comprasco.bakeprofit.exception.UserNotFoundException;
-
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
+
 
 /**
  * Helper utilitario para recuperar el usuario autenticado desde cualquier capa
