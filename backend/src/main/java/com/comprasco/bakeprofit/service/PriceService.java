@@ -28,7 +28,9 @@ public class PriceService {
                         p.getStore().getName(),
                         p.getValue(),
                         p.getSource(),
-                        p.getRegistrationDate()
+                        p.getRegistrationDate(),
+                        p.getProductUrl(),
+                        p.getImageUrl()
                 ))
                 .toList();
     }

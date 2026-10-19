@@ -15,6 +15,7 @@ import os
 import re
 import time
 import logging
+from urllib.parse import urljoin
 from dataclasses import dataclass, field
 
 import psycopg2
@@ -139,6 +140,28 @@ def limpiar_nombre(nombre):
     )
 
 
+def extraer_url_imagen(tag, base):
+    """Saca el enlace del producto y su imagen de la tarjeta HTML.
+    Devuelve (url, imagen); cualquiera puede ser None si no se encuentra."""
+    url = None
+    enlace = tag if tag.name == "a" and tag.get("href") else tag.select_one("a[href]")
+    if enlace:
+        url = urljoin(base, enlace["href"])
+
+    imagen = None
+    img = tag.select_one("img")
+    if img:
+        imagen = img.get("src") or img.get("data-src")
+        # Imágenes con carga diferida: el src real viene en srcset
+        if (not imagen or imagen.startswith("data:")) and img.get("srcset"):
+            imagen = img["srcset"].split(",")[0].strip().split(" ")[0]
+        if imagen:
+            imagen = urljoin(base, imagen)
+            if imagen.startswith("data:"):
+                imagen = None
+    return url, imagen
+
+
 def cumple_filtro(nombre, filtros, exclusiones):
     nombre_lower = nombre.lower()
     if any(ex.lower() in nombre_lower for ex in exclusiones):
@@ -186,7 +209,8 @@ def scrapear_d1(driver, termino):
         nombre = limpiar_nombre(nombre_tag.text.strip())
         precio = limpiar_precio(precio_tag.text)
         if precio is not None:
-            candidatos.append({"nombre": nombre, "precio": precio})
+            url, imagen = extraer_url_imagen(t, "https://domicilios.tiendasd1.com")
+            candidatos.append({"nombre": nombre, "precio": precio, "url": url, "imagen": imagen})
     return candidatos
 
 
@@ -208,7 +232,8 @@ def scrapear_exito(driver, termino):
         nombre = limpiar_nombre(nombre_tag.text.strip())
         precio = limpiar_precio(precio_tag.text)
         if precio is not None:
-            candidatos.append({"nombre": nombre, "precio": precio})
+            url, imagen = extraer_url_imagen(art, "https://www.exito.com")
+            candidatos.append({"nombre": nombre, "precio": precio, "url": url, "imagen": imagen})
     return candidatos
 
 
@@ -232,7 +257,8 @@ def scrapear_jumbo(driver, termino):
         nombre = limpiar_nombre(nombre_tag.text.strip())
         precio = limpiar_precio(precio_tag.text)
         if precio is not None:
-            candidatos.append({"nombre": nombre, "precio": precio})
+            url, imagen = extraer_url_imagen(prod, "https://www.jumbocolombia.com")
+            candidatos.append({"nombre": nombre, "precio": precio, "url": url, "imagen": imagen})
     return candidatos
 
 
@@ -259,7 +285,8 @@ def scrapear_olimpica(driver, termino):
         spans = precio_container.select("span.olimpica-dinamic-flags-0-x-currencyContainer span")
         precio = limpiar_precio("".join(s.text for s in spans))
         if precio is not None:
-            candidatos.append({"nombre": nombre, "precio": precio})
+            url, imagen = extraer_url_imagen(prod, "https://www.olimpica.com")
+            candidatos.append({"nombre": nombre, "precio": precio, "url": url, "imagen": imagen})
     return candidatos
 
 
@@ -292,28 +319,33 @@ def obtener_id_producto(cur, nombre_producto):
     return row[0] if row else None
 
 
-def precio_repetido(cur, id_producto, id_tienda, valor):
-    """Verificación previa: evita reinsertar el mismo precio si no cambió
-    desde la última corrida (no hay procedimiento de BD que lo bloquee,
-    como sí pasaba en Oracle con PKG_PRECIO)."""
+def ultimo_precio(cur, id_producto, id_tienda):
+    """Última fila de precio (id, valor) de ese producto en esa tienda."""
     cur.execute(
-        """SELECT value FROM prices
+        """SELECT id, value FROM prices
            WHERE product_id = %s AND store_id = %s
            ORDER BY registration_date DESC LIMIT 1""",
         (id_producto, id_tienda),
     )
-    row = cur.fetchone()
-    return row is not None and float(row[0]) == float(valor)
+    return cur.fetchone()
 
 
-def insertar_precio(conn, cur, valor, source, id_producto, id_tienda):
-    if precio_repetido(cur, id_producto, id_tienda, valor):
-        log.info("   ⚠️  Precio repetido, no se reinserta")
+def insertar_precio(conn, cur, valor, source, id_producto, id_tienda, url=None, imagen=None):
+    ultimo = ultimo_precio(cur, id_producto, id_tienda)
+    if ultimo is not None and float(ultimo[1]) == float(valor):
+        # Precio sin cambios: no se reinserta, pero se completan el enlace y la imagen
+        # de la última fila (así se rellenan los registros anteriores a estas columnas).
+        cur.execute(
+            "UPDATE prices SET product_url = %s, image_url = %s WHERE id = %s",
+            (url, imagen, ultimo[0]),
+        )
+        conn.commit()
+        log.info("   ⚠️  Precio repetido, no se reinserta (se actualizó enlace/imagen)")
         return False
     cur.execute(
-        "INSERT INTO prices (value, source, registration_date, product_id, store_id) "
-        "VALUES (%s, %s, now(), %s, %s)",
-        (valor, source[:500], id_producto, id_tienda),
+        "INSERT INTO prices (value, source, registration_date, product_id, store_id, product_url, image_url) "
+        "VALUES (%s, %s, now(), %s, %s, %s, %s)",
+        (valor, source[:500], id_producto, id_tienda, url, imagen),
     )
     conn.commit()
     return True
@@ -370,7 +402,8 @@ def main():
                 continue
 
             guardado = insertar_precio(
-                conn, cur, mejor["precio"], mejor["nombre"], id_producto, id_tienda
+                conn, cur, mejor["precio"], mejor["nombre"], id_producto, id_tienda,
+                mejor.get("url"), mejor.get("imagen"),
             )
             if guardado:
                 log.info(f"   ✅ ${mejor['precio']:,.0f} — {mejor['nombre'][:60]}")
