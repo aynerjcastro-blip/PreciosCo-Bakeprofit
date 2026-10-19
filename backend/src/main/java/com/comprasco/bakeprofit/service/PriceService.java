@@ -25,6 +25,7 @@ public class PriceService {
         return prices.stream()
                 .map(p -> new PriceCompareResponse(
                         p.getProduct().getName(),
+                        p.getStore().getId(),
                         p.getStore().getName(),
                         p.getValue(),
                         p.getSource(),
