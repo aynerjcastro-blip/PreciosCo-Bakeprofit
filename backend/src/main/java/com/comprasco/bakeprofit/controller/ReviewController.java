@@ -13,7 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.comprasco.bakeprofit.config.TemporaryCurrentUser;
+import com.comprasco.bakeprofit.security.CurrentUser;
+import com.comprasco.bakeprofit.entity.User;
 import com.comprasco.bakeprofit.dto.RatingSummaryResponse;
 import com.comprasco.bakeprofit.dto.ReportRequest;
 import com.comprasco.bakeprofit.dto.ReviewCommentResponse;
@@ -34,11 +35,9 @@ import jakarta.validation.Valid;
 public class ReviewController {
 
     private final ReviewService reviewService;
-    private final TemporaryCurrentUser currentUser;   // TODO(Ayner): reemplazar por CurrentUser
 
-    public ReviewController(ReviewService reviewService, TemporaryCurrentUser currentUser) {
+    public ReviewController(ReviewService reviewService) {
         this.reviewService = reviewService;
-        this.currentUser = currentUser;
     }
 
     @Operation(summary = "Calificar y comentar un producto en una tienda",
@@ -51,9 +50,10 @@ public class ReviewController {
     @ApiResponse(responseCode = "404", description = "Producto, tienda o precio del par no existe")
     @ApiResponse(responseCode = "409", description = "Ya opinaste, o el producto/tienda está inactivo")
     @PostMapping
-    public ResponseEntity<ReviewResponse> create(@Valid @RequestBody ReviewRequest request) {
+    public ResponseEntity<ReviewResponse> create(@CurrentUser User user,
+                                                 @Valid @RequestBody ReviewRequest request) {
         ReviewResponse response = reviewService.create(
-                currentUser.get(), request.productId(), request.storeId(), request.score(), request.text());
+                user, request.productId(), request.storeId(), request.score(), request.text());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -67,10 +67,10 @@ public class ReviewController {
     @ApiResponse(responseCode = "404", description = "La opinión no existe")
     @ApiResponse(responseCode = "409", description = "Plazo vencido o comentario reportado, oculto o eliminado")
     @PutMapping("/{id}")
-    public ResponseEntity<ReviewResponse> update(@PathVariable Long id,
+    public ResponseEntity<ReviewResponse> update(@CurrentUser User user, @PathVariable Long id,
                                                  @Valid @RequestBody ReviewUpdateRequest request) {
         return ResponseEntity.ok(
-                reviewService.update(currentUser.get(), id, request.score(), request.text()));
+                reviewService.update(user, id, request.score(), request.text()));
     }
 
     @Operation(summary = "Eliminar mi comentario",
@@ -80,8 +80,8 @@ public class ReviewController {
     @ApiResponse(responseCode = "403", description = "No eres el autor")
     @ApiResponse(responseCode = "404", description = "La opinión no existe")
     @DeleteMapping("/{id}/comment")
-    public ResponseEntity<Void> deleteComment(@PathVariable Long id) {
-        reviewService.deleteComment(currentUser.get(), id);
+    public ResponseEntity<Void> deleteComment(@CurrentUser User user, @PathVariable Long id) {
+        reviewService.deleteComment(user, id);
         return ResponseEntity.noContent().build();
     }
 
@@ -131,13 +131,14 @@ public class ReviewController {
     @ApiResponse(responseCode = "404", description = "Producto o tienda no existe")
     @GetMapping("/me")
     public ResponseEntity<ReviewResponse> mine(
+            @CurrentUser User user,
             @Parameter(description = "Id del producto") 
             @RequestParam 
             Long productId,
             @Parameter(description = "Id de la tienda") 
             @RequestParam 
             Long storeId) {
-        return reviewService.findMine(currentUser.get(), productId, storeId)
+        return reviewService.findMine(user, productId, storeId)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
@@ -147,11 +148,13 @@ public class ReviewController {
     @ApiResponse(responseCode = "204", description = "Reporte registrado")
     @ApiResponse(responseCode = "400", description = "Validación fallida o reporte del propio comentario")
     @ApiResponse(responseCode = "401", description = "Sin sesión")
+    @ApiResponse(responseCode = "403", description = "El rol del usuario no puede reportar")
     @ApiResponse(responseCode = "404", description = "La opinión no existe o su comentario no es visible")
     @ApiResponse(responseCode = "409", description = "Reporte simultáneo duplicado")
     @PostMapping("/{id}/report")
-    public ResponseEntity<Void> report(@PathVariable Long id, @Valid @RequestBody ReportRequest request) {
-        reviewService.report(currentUser.get(), id, request.reason(), request.details());
+    public ResponseEntity<Void> report(@CurrentUser User user, @PathVariable Long id, 
+                                       @Valid @RequestBody ReportRequest request) {
+        reviewService.report(user, id, request.reason(), request.details());
         return ResponseEntity.noContent().build();
     }
 }

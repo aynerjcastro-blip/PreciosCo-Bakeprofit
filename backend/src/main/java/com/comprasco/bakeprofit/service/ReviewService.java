@@ -195,6 +195,10 @@ public class ReviewService {
      */
     @Transactional
     public void report(User reporter, Long reviewId, ReportReason reason, String details) {
+        if (reporter.getRole() != Role.USER) {
+            throw new ForbiddenActionException("Solo los usuarios pueden reportar comentarios.");
+        }
+
         Comment comment = commentRepository.findByRatingIdAndStatusIn(reviewId, VISIBLE_STATUSES)
                 .orElseThrow(() -> new ReviewNotFoundException(reviewId));
 
