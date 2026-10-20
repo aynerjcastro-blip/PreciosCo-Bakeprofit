@@ -12,6 +12,15 @@ import com.comprasco.bakeprofit.exception.StoreAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.StoreNotFoundException;
 import com.comprasco.bakeprofit.exception.UserNotFoundException;
 import com.comprasco.bakeprofit.exception.response.ErrorResponse;
+import com.comprasco.bakeprofit.exception.ForbiddenActionException;
+import com.comprasco.bakeprofit.exception.InvalidReviewRequestException;
+import com.comprasco.bakeprofit.exception.PriceNotFoundException;
+import com.comprasco.bakeprofit.exception.ReviewAlreadyExistsException;
+import com.comprasco.bakeprofit.exception.ReviewNotAllowedException;
+import com.comprasco.bakeprofit.exception.ReviewNotFoundException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -148,7 +157,9 @@ public class GlobalExceptionHandler {
             CategoryNotFoundException.class,
             StoreNotFoundException.class,
             ProductNotFoundException.class,
-            EntityNotFoundException.class
+            EntityNotFoundException.class,
+            PriceNotFoundException.class,
+            ReviewNotFoundException.class
     })
     public ResponseEntity<ErrorResponse> handleNotFound(
             RuntimeException ex,
@@ -258,6 +269,105 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
+        /**
+     * Maneja conflictos al opinar: opinion duplicada, producto o tienda
+     * inactivos, plazo de edicion vencido, comentario que ya no se puede
+     * editar o reporte duplicado simultaneo.
+     *
+     * @param ex      excepcion de opinion duplicada o no permitida
+     * @param request peticion HTTP actual
+     * @return respuesta HTTP 409 Conflict
+     */
+    @ExceptionHandler({ ReviewAlreadyExistsException.class, ReviewNotAllowedException.class })
+    public ResponseEntity<ErrorResponse> handleReviewConflict(
+            RuntimeException ex,
+            HttpServletRequest request) {
+
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    /**
+     * Maneja acciones no permitidas por el rol del usuario o por no ser el
+     * autor del recurso.
+     *
+     * @param ex      excepcion de accion prohibida
+     * @param request peticion HTTP actual
+     * @return respuesta HTTP 403 Forbidden
+     */
+    @ExceptionHandler(ForbiddenActionException.class)
+    public ResponseEntity<ErrorResponse> handleForbiddenAction(
+            ForbiddenActionException ex,
+            HttpServletRequest request) {
+
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.FORBIDDEN.value())
+                .error(HttpStatus.FORBIDDEN.getReasonPhrase())
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    /**
+     * Maneja solicitudes de opiniones invalidas: listado sin productId ni
+     * storeId, reporte con razon OTRO sin detalle o reporte del propio
+     * comentario.
+     *
+     * @param ex      excepcion de solicitud de opinion invalida
+     * @param request peticion HTTP actual
+     * @return respuesta HTTP 400 Bad Request
+     */
+    @ExceptionHandler(InvalidReviewRequestException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidReviewRequest(
+            InvalidReviewRequestException ex,
+            HttpServletRequest request) {
+
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    /**
+     * Maneja peticiones mal formadas: JSON ilegible, parametro de tipo
+     * incorrecto o parametro obligatorio ausente.
+     *
+     * @param ex      excepcion de peticion mal formada
+     * @param request peticion HTTP actual
+     * @return respuesta HTTP 400 Bad Request
+     */
+    @ExceptionHandler({ HttpMessageNotReadableException.class,
+                        MethodArgumentTypeMismatchException.class,
+                        MissingServletRequestParameterException.class })
+    public ResponseEntity<ErrorResponse> handleBadRequest(
+            Exception ex,
+            HttpServletRequest request) {
+
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message("Solicitud inválida: revisa los parámetros y el cuerpo de la petición")
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
 
     /**
      * Maneja cualquier otra excepcion no controlada expliticamente.

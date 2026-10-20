@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import styles from './comparator.module.css';
+import ProductRating from '../components/ProductRating';
+import ReviewsSection from '../components/ReviewsSection';
+import StoreReviewBar from '../components/StoreReviewBar';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -16,8 +19,7 @@ function LinkIcon() {
 }
 
 // Tarjeta de precio: imagen | datos | botón de enlace
-function PriceCard({ item, isBest }) {
-    // Si la imagen no carga (o no existe) se muestra el espacio con un marcador
+function PriceCard({ item, isBest, productId, onShowReviews, onReviewsChanged }) {    // Si la imagen no carga (o no existe) se muestra el espacio con un marcador
     const [imageFailed, setImageFailed] = useState(false);
     const showImage = item.imageUrl && !imageFailed;
 
@@ -43,7 +45,7 @@ function PriceCard({ item, isBest }) {
             <div className={styles['price-card__body']}>
                 <h3 className={styles['price-card__name']}>{item.storeName}</h3>
                 {item.source && (
-                    <p className={styles['price-card__source']}>Fuente: {item.source}</p>
+                    <p className={styles['price-card__source']}>{item.source}</p>
                 )}
                 <p className={styles['price-card__value']}>
                     ${Number(item.value).toLocaleString('es-CO')}
@@ -51,6 +53,14 @@ function PriceCard({ item, isBest }) {
                 <p className={styles['price-card__date']}>
                     Actualizado: {new Date(item.registrationDate).toLocaleDateString('es-CO')}
                 </p>
+                <StoreReviewBar
+                    productId={productId}
+                    productName={item.productName}
+                    storeId={item.storeId}
+                    storeName={item.storeName}
+                    onShowReviews={onShowReviews}
+                    onChanged={onReviewsChanged}
+                />
             </div>
 
             {item.productUrl ? (
@@ -86,6 +96,10 @@ export default function Comparator() {
     const [status, setStatus] = useState(productId ? 'loading' : 'error');
     const [productName, setProductName] = useState('Comparando precios...');
 
+    // Opiniones: tienda elegida en la lista compartida (null = todas) y contador para refrescar
+    const [selectedStoreId, setSelectedStoreId] = useState(null);
+    const [reviewsVersion, setReviewsVersion] = useState(0);
+
     useEffect(() => {
         if (!productId) return;
 
@@ -107,6 +121,12 @@ export default function Comparator() {
         fetchPrices();
     }, [productId]);
 
+    // Al pulsar el promedio de una tarjeta: filtra la lista por esa tienda y baja hasta ella
+    const handleShowReviews = (storeId) => {
+        setSelectedStoreId(storeId);
+        document.getElementById('opiniones')?.scrollIntoView({ behavior: 'smooth' });
+    };
+
     return (
         <main className={styles.comparador}>
             <button className={styles.comparador__back} onClick={() => navigate(-1)}>
@@ -115,6 +135,7 @@ export default function Comparator() {
 
             <div className={styles.comparador__header}>
                 <h1 className={styles.comparador__title}>{productName}</h1>
+                {status === 'success' && <ProductRating productId={productId} refreshKey={reviewsVersion} />}
                 <p className={styles.comparador__subtitle}>
                     Precios ordenados de menor a mayor entre tiendas activas
                 </p>
@@ -126,15 +147,28 @@ export default function Comparator() {
             )}
 
             {status === 'success' && (
-                <div className={styles['price-list']}>
-                    {prices.map((item, index) => (
-                        <PriceCard
-                            key={`${item.storeName}-${index}`}
-                            item={item}
-                            isBest={index === 0}
-                        />
-                    ))}
-                </div>
+                <>
+                    <div className={styles['price-list']}>
+                        {prices.map((item, index) => (
+                            <PriceCard
+                                key={item.storeId}
+                                item={item}
+                                isBest={index === 0}
+                                productId={productId}
+                                onShowReviews={handleShowReviews}
+                                onReviewsChanged={() => setReviewsVersion((version) => version + 1)}
+                            />
+                        ))}
+                    </div>
+
+                    <ReviewsSection
+                        productId={productId}
+                        stores={prices.map((item) => ({ id: item.storeId, name: item.storeName }))}
+                        selectedStoreId={selectedStoreId}
+                        onSelectStore={setSelectedStoreId}
+                        refreshKey={reviewsVersion}
+                    />
+                </>
             )}
         </main>
     );

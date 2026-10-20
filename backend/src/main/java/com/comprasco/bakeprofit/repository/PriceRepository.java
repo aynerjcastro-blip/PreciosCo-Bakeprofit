@@ -35,4 +35,6 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
         )
     """)
     java.math.BigDecimal findMinPriceByProduct(@Param("productId") Long productId);
+
+    boolean existsByProductIdAndStoreId(Long productId, Long storeId);
 }
