@@ -41,3 +41,16 @@ export const clearAuthData = () => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
 };
+
+export const getUser = getStoredUser;
+
+export const isLoggedIn = () => getToken() !== null;
+
+export const saveSession = (token, user) => saveAuthData({ token, user });
+
+export const clearSession = clearAuthData;
+
+export const authHeader = () => {
+    const token = getToken();
+    return token ? { Authorization: 'Bearer ' + token } : {};
+};
