@@ -7,20 +7,23 @@ export default function Header() {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, isAuthenticated, logout } = useAuth();
+
     const [menuOpen, setMenuOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [query, setQuery] = useState('');
     const userMenuRef = useRef(null);
 
     const canFollow = isAuthenticated && user?.role === 'USER';
-    // La página de búsqueda ya trae su propio campo; dos juntos confunden
-    const showSearch = location.pathname !== '/buscar';
+
+    // Ocultamos el buscador del header en el Inicio (/) y en Buscar (/buscar)
+    // porque esas paginas ya tienen sus propios buscadores gigantes.
+    const showSearch = location.pathname !== '/' && location.pathname !== '/buscar';
+
     const firstName = user?.name?.split(' ')[0];
     const initial = user?.name?.charAt(0).toUpperCase();
 
     useEffect(() => {
         if (!userMenuOpen) return;
-
         const onClickOutside = (e) => {
             if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
                 setUserMenuOpen(false);
@@ -29,7 +32,6 @@ export default function Header() {
         const onEscape = (e) => {
             if (e.key === 'Escape') setUserMenuOpen(false);
         };
-
         document.addEventListener('mousedown', onClickOutside);
         document.addEventListener('keydown', onEscape);
         return () => {
@@ -41,22 +43,6 @@ export default function Header() {
     const closeMenus = () => {
         setMenuOpen(false);
         setUserMenuOpen(false);
-    };
-
-    const handleScrollTo = (e, elementId) => {
-        e.preventDefault();
-        closeMenus();
-
-        const scroll = () =>
-            document.getElementById(elementId)?.scrollIntoView({ behavior: 'smooth' });
-
-        if (location.pathname !== '/') {
-            navigate('/');
-            // Home todavía no se ha montado cuando navigate() retorna
-            setTimeout(scroll, 100);
-        } else {
-            scroll();
-        }
     };
 
     const handleSearch = (e) => {
@@ -78,7 +64,7 @@ export default function Header() {
                 <button
                     className="icon-button site-header__menu"
                     type="button"
-                    aria-label="Abrir menú"
+                    aria-label="Abrir menu"
                     aria-expanded={menuOpen}
                     onClick={() => setMenuOpen(!menuOpen)}
                 >
@@ -96,7 +82,7 @@ export default function Header() {
                             type="search"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
-                            placeholder="Buscar productos, marcas y más..."
+                            placeholder="Buscar productos, marcas y mas..."
                             aria-label="Buscar productos"
                         />
                         <button type="submit" aria-label="Buscar">
@@ -109,8 +95,6 @@ export default function Header() {
                     <button id="theme-toggle" className="theme-toggle" onClick={toggleTheme}>
                         Modo oscuro
                     </button>
-
-                    {/* Darwin: la campana de avisos va aquí, antes del menú de usuario */}
 
                     <div className="user-menu" ref={userMenuRef}>
                         <button
@@ -131,7 +115,6 @@ export default function Header() {
                                     <span className="user-menu__label">Ingresa</span>
                                 </>
                             )}
-                            <span className="user-menu__chevron" aria-hidden="true">▾</span>
                         </button>
 
                         {userMenuOpen && (
@@ -145,7 +128,6 @@ export default function Header() {
                                                 <small>{user?.email}</small>
                                             </div>
                                         </div>
-
                                         {canFollow && (
                                             <>
                                                 <div className="user-menu__divider"></div>
@@ -154,7 +136,6 @@ export default function Header() {
                                                 </Link>
                                             </>
                                         )}
-
                                         <div className="user-menu__divider"></div>
                                         <button type="button" className="user-menu__item" role="menuitem" onClick={handleLogout}>
                                             Salir
@@ -176,13 +157,14 @@ export default function Header() {
                 </div>
             </div>
 
+            {/* Enlaces con parametros de sector automatizados */}
             <nav className={`site-nav ${menuOpen ? 'site-nav--open' : ''}`} aria-label="Principal">
                 <ul className="site-nav__list">
-                    <li><Link to="/" onClick={closeMenus}>Inicio</Link></li>
-                    <li><Link to="/buscar" onClick={closeMenus}>Buscar</Link></li>
-                    <li><a href="#sobre-nosotros" onClick={(e) => handleScrollTo(e, 'sobre-nosotros')}>Sobre Nosotros</a></li>
-                    <li><a href="#como-funciona" onClick={(e) => handleScrollTo(e, 'como-funciona')}>Como funciona</a></li>
-                    <li><a href="#testimonios" onClick={(e) => handleScrollTo(e, 'testimonios')}>Testimonios</a></li>
+                    <li><Link to="/buscar?sector=supermercados" onClick={closeMenus}>Supermercados</Link></li>
+                    <li><Link to="/buscar?sector=droguerias" onClick={closeMenus}>Farmacia</Link></li>
+                    <li><Link to="/buscar?sector=repuestos" onClick={closeMenus}>Repuestos</Link></li>
+                    <li><Link to="/buscar?sector=cuidado-facial" onClick={closeMenus}>Belleza</Link></li>
+                    <li><Link to="/buscar" onClick={closeMenus}>Tecnologia</Link></li>
                 </ul>
             </nav>
         </header>

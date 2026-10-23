@@ -8,25 +8,30 @@ import {
     SearchIcon,
     EyeIcon,
 } from '../components/Sectoricons.jsx';
-
 import { Link, useSearchParams } from 'react-router-dom';
-// import { API_BASE } from '../config';
 
-const API_BASE = 'http://localhost:8080/api'; // Ajusta segun el entorno
+const API_BASE = 'http://localhost:8080/api';
 
-// Sectores que se muestran como tarjetas.
-// `available: false` -> la tarjeta se muestra, pero aun no hay datos en el backend.
-// Cuando existan productos de ese sector, basta con cambiarlo a true.
+/**
+ * Configuracion estatica de los sectores.
+ * Se define fuera del componente para evitar recrear el arreglo en cada render.
+ * El campo 'available' controla si el sector hace peticiones o muestra la pantalla "Llega pronto".
+ */
 const SECTORS = [
     { id: 'supermercados', label: 'Supermercados', Icon: CartIcon, available: true },
-    { id: 'droguerias', label: 'Droguerías', Icon: PillIcon, available: false },
+    { id: 'droguerias', label: 'Droguerias', Icon: PillIcon, available: false },
     { id: 'cuidado-facial', label: 'Cuidado facial', Icon: FaceIcon, available: false },
     { id: 'repuestos', label: 'Repuestos', Icon: GearIcon, available: false },
 ];
 
-// Estado guardado: al volver del comparador se restaura lo que tenias en pantalla
 const SAVED_KEY = 'searchState';
 
+/**
+ * Recupera el estado de busqueda anterior de la sesion del navegador.
+ * Por que: Mejora la experiencia del usuario al mantener sus filtros 
+ * si navega a otra pagina (como el comparador) y luego regresa.
+ * Se usa try/catch porque algunos navegadores bloquean sessionStorage en modo incognito.
+ */
 function loadSaved() {
     try {
         return JSON.parse(sessionStorage.getItem(SAVED_KEY)) || {};
@@ -37,30 +42,84 @@ function loadSaved() {
 
 export default function Search() {
     const saved = loadSaved();
+    const [searchParams, setSearchParams] = useSearchParams();
 
-    //Definicion de Estados
-    const [searchParams] = useSearchParams();
-    const [searchTerm, setSearchTerm] = useState(saved.searchTerm ?? searchParams.get('q') ?? '');
+    // 1. FUENTES DE VERDAD EXTERNAS (URL)
+    // Extraemos parametros de la URL para habilitar navegacion directa (ej. links desde el Header).
+    const urlQuery = searchParams.get('q');
+    const urlSector = searchParams.get('sector');
+
+    // 2. ESTADOS LOCALES
+    // Inicializacion inteligente: La prioridad es 1. URL, 2. Sesion guardada, 3. Valor por defecto.
+    // Por que: Garantiza que un link externo siempre sobreescriba una busqueda vieja guardada.
+    const [searchTerm, setSearchTerm] = useState(urlQuery ?? saved.searchTerm ?? '');
+    const [selectedSectorId, setSelectedSectorId] = useState(urlSector ?? saved.selectedSectorId ?? null);
+
     const [categories, setCategories] = useState([]);
     const [selectedCategoryId, setSelectedCategoryId] = useState(saved.selectedCategoryId ?? null);
-    const [selectedSectorId, setSelectedSectorId] = useState(saved.selectedSectorId ?? null);
     const [showAll, setShowAll] = useState(saved.showAll ?? false);
+
     const [fetchedProducts, setFetchedProducts] = useState([]);
-    const [fetchStatus, setFetchStatus] = useState('idle'); // 'idle', 'loading', 'empty', 'error', 'success'
+    // 'idle' = inactivo, 'loading' = cargando, 'empty' = vacio, 'error' = fallo de red, 'success' = exito
+    const [fetchStatus, setFetchStatus] = useState('idle');
 
+    // =========================================================================
+    // SINCRONIZACION CON LA URL
+    // =========================================================================
+    // Por que: Si el usuario usa los botones "Atras" o "Adelante" del navegador, 
+    // la URL cambiara, pero el componente no se recargara. Este efecto detecta esos 
+    // cambios y actualiza el estado local para que la UI refleje la URL.
+    const [prevUrlQuery, setPrevUrlQuery] = useState(urlQuery);
+    const [prevUrlSector, setPrevUrlSector] = useState(urlSector);
+
+    if (urlQuery !== prevUrlQuery) {
+        setPrevUrlQuery(urlQuery);
+        setSearchTerm(urlQuery ?? '');
+    }
+
+    if (urlSector !== prevUrlSector) {
+        setPrevUrlSector(urlSector);
+        setSelectedSectorId(urlSector ?? null);
+    }
+
+    /**
+     * Maneja el cambio de texto en el input de busqueda.
+     * Por que: Actualiza el estado local inmediatamente, pero limpia la URL. 
+     * Si no limpiaramos la URL, el historial del navegador se ensuciaria, 
+     * y el estado local chocaria con el parametro estatico '?q=' anterior.
+     */
+    const handleSearchChange = (e) => {
+        const newValue = e.target.value;
+        setSearchTerm(newValue);
+
+        if (urlQuery) {
+            // Limpia la barra de direcciones reemplazandola por la ruta base
+            setSearchParams(new URLSearchParams());
+        }
+    };
+
+    // =========================================================================
+    // VARIABLES DERIVADAS
+    // =========================================================================
+    // Por que: Se calculan en cada render en lugar de usar estados adicionales 
+    // para evitar problemas de sincronizacion ("React anti-pattern: derived state").
     const selectedSector = SECTORS.find((s) => s.id === selectedSectorId) || null;
-
     const hasTerm = searchTerm.trim() !== '';
     const hasFilter = selectedCategoryId !== null || selectedSectorId !== null || showAll;
+
+    // isIdle: Evita hacer peticiones a la API cuando el usuario no ha pedido nada.
     const isIdle = !hasTerm && !hasFilter;
+    // isSoon: Intercepta sectores en desarrollo para no enviar peticiones basura al backend.
     const isSoon = !isIdle && selectedSector !== null && !selectedSector.available;
 
-    // 'idle' y 'soon' no necesitan petición: se calculan al renderizar en vez de
-    // guardarse con setState dentro del efecto (regla react-hooks/set-state-in-effect)
-    const status = isIdle ? 'idle' : isSoon ? 'soon' : fetchStatus; // 'idle', 'loading', 'empty', 'error', 'soon', 'success'
+    const status = isIdle ? 'idle' : isSoon ? 'soon' : fetchStatus;
     const products = isIdle || isSoon ? [] : fetchedProducts;
 
-    // Guarda los filtros cada vez que cambian
+    // =========================================================================
+    // PERSISTENCIA DE SESION
+    // =========================================================================
+    // Por que: Guarda silenciosamente los filtros activos. Si el usuario hace clic 
+    // en un producto y luego decide volver atras, la pagina estara exactamente como la dejo.
     useEffect(() => {
         sessionStorage.setItem(
             SAVED_KEY,
@@ -68,32 +127,41 @@ export default function Search() {
         );
     }, [searchTerm, selectedCategoryId, selectedSectorId, showAll]);
 
-    // Carga inicial de categorías
+    // =========================================================================
+    // CARGA INICIAL: CATEGORIAS
+    // =========================================================================
     useEffect(() => {
         async function fetchCategories() {
             try {
                 const response = await fetch(`${API_BASE}/categories/active`);
-                if (!response.ok) throw new Error('Error al cargar categorías');
+                if (!response.ok) throw new Error('Error al cargar categorias');
                 const data = await response.json();
                 setCategories(data);
             } catch (error) {
                 console.error(error);
-                //Manejo silencioso: permitimos buscar por texto aunque fallen las categorías
+                // Por que: Falla silenciosamente porque la app aun es usable mediante
+                // busqueda por texto libre, no queremos bloquear al usuario entero.
             }
         }
         fetchCategories();
     }, []);
 
-    // Logica de busqueda con Debounce y AbortController
+    // =========================================================================
+    // MOTOR DE BUSQUEDA (DEBOUNCE + ABORT CONTROLLER)
+    // =========================================================================
     useEffect(() => {
-        // Sin termino ni filtros (idle) o sector sin datos todavia (soon): no hay nada que pedir
         if (isIdle || isSoon) return;
 
+        // Por que AbortController: Si el usuario escribe "caf" y luego "cafe" rapidamente, 
+        // habra 2 peticiones en vuelo. Si "caf" responde mas lento que "cafe", los 
+        // resultados en pantalla seran incorrectos (Condicion de carrera). 
+        // AbortController cancela peticiones antiguas instantaneamente.
         const controller = new AbortController();
 
         const fetchProducts = async () => {
             setFetchStatus('loading');
             const params = new URLSearchParams();
+
             if (hasTerm) params.set('name', searchTerm.trim());
             if (selectedCategoryId !== null) params.set('idCategory', selectedCategoryId);
 
@@ -101,12 +169,13 @@ export default function Search() {
                 const response = await fetch(`${API_BASE}/products/search?${params.toString()}`, {
                     signal: controller.signal,
                 });
-                if (!response.ok) throw new Error('Error en la petición');
+                if (!response.ok) throw new Error('Error en la peticion');
 
                 const data = await response.json();
                 setFetchedProducts(data);
                 setFetchStatus(data.length === 0 ? 'empty' : 'success');
             } catch (error) {
+                // Se ignora el AbortError porque es el comportamiento esperado al seguir escribiendo
                 if (error.name !== 'AbortError') {
                     console.error(error);
                     setFetchStatus('error');
@@ -114,16 +183,21 @@ export default function Search() {
             }
         };
 
-        // Debounce (400ms)
+        // Por que Debounce (400ms): Evita que se dispare una llamada a la base de datos 
+        // por cada letra que el usuario teclea, reduciendo enormemente los costos del servidor.
         const debounceTimer = setTimeout(fetchProducts, 400);
 
+        // Funcion de limpieza: Se ejecuta si las dependencias cambian ANTES de los 400ms,
+        // cancelando el timer actual y la peticion HTTP en vuelo.
         return () => {
             clearTimeout(debounceTimer);
             controller.abort();
         };
     }, [isIdle, isSoon, hasTerm, searchTerm, selectedCategoryId]);
 
-    // "Todas": limpia filtros y lista todos los productos
+    // =========================================================================
+    // MANEJADORES DE UI
+    // =========================================================================
     function showAllProducts() {
         setSelectedCategoryId(null);
         setSelectedSectorId(null);
@@ -142,10 +216,10 @@ export default function Search() {
             <div className={styles['search-page__container']}>
                 <h1 className={styles['search-page__title']}>Busca tu producto</h1>
                 <p className={styles['search-page__subtitle']}>
-                    Escribe un nombre o filtra por categoría
+                    Escribe un nombre o filtra por categoria
                 </p>
 
-                {/* Barra de búsqueda controlada por React */}
+                {/* BARRA DE BUSQUEDA */}
                 <div className={styles['search-bar']}>
                     <span className={styles['search-bar__icon']}>
                         <SearchIcon />
@@ -155,12 +229,12 @@ export default function Search() {
                         className={styles['search-bar__input']}
                         placeholder="Ej. Arroz, Leche, Chocolatina..."
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={handleSearchChange}
                         aria-label="Buscar producto por nombre"
                     />
                 </div>
 
-                {/* Filtros dinámicos de categoría */}
+                {/* FILTROS DE CATEGORIA */}
                 <div className={styles['category-filter']}>
                     <button
                         className={`${styles['category-filter__chip']} ${noFilters ? styles['category-filter__chip--active'] : ''}`}
@@ -182,7 +256,7 @@ export default function Search() {
                     ))}
                 </div>
 
-                {/* Tarjetas de sector */}
+                {/* TARJETAS DE SECTOR */}
                 <div className={styles['sector-grid']}>
                     {SECTORS.map(({ id, label, Icon }) => {
                         const active = selectedSectorId === id;
@@ -210,7 +284,8 @@ export default function Search() {
                     })}
                 </div>
 
-                {/* Renderizado Condicional del Estado de la Búsqueda */}
+                {/* RENDERIZADO DE RESULTADOS */}
+                {/* aria-live="polite" notifica a lectores de pantalla los cambios sin interrumpir */}
                 <div className={styles['search-results']} aria-live="polite">
                     {status === 'loading' && (
                         <div className={styles['search-state']}>
@@ -224,21 +299,21 @@ export default function Search() {
                             <p className={styles['search-state__title']}>
                                 {selectedSector.label} llega pronto
                             </p>
-                            <p>Todavía no tenemos precios de este sector. Mientras tanto, prueba con Supermercados.</p>
+                            <p>Todavia no tenemos precios de este sector. Mientras tanto, prueba con Supermercados.</p>
                         </div>
                     )}
 
                     {status === 'empty' && (
                         <div className={styles['search-state']}>
                             <p className={styles['search-state__title']}>Sin resultados</p>
-                            <p>No encontramos productos con esos filtros. Prueba con otro nombre o categoría.</p>
+                            <p>No encontramos productos con esos filtros. Prueba con otro nombre o categoria.</p>
                         </div>
                     )}
 
                     {status === 'error' && (
                         <div className={styles['search-state']}>
-                            <p className={styles['search-state__title']}>Algo salió mal</p>
-                            <p>No pudimos conectar con el servidor. Verifica tu conexión.</p>
+                            <p className={styles['search-state__title']}>Algo salio mal</p>
+                            <p>No pudimos conectar con el servidor. Verifica tu conexion.</p>
                         </div>
                     )}
 
