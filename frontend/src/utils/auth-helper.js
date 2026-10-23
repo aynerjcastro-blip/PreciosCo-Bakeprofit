@@ -1,72 +1,43 @@
-/*
- * auth-helper.js
- *
- * Este archivo centraliza todo lo relacionado con el manejo del JWT
- * en el navegador. Ninguna otra parte del codigo deberia leer o escribir
- * el token directo en localStorage, siempre a traves de estas funciones.
- *
- * Conceptos usados:
- * - localStorage: guarda datos en el navegador que persisten aunque
- *   se cierre la pestana o el navegador (a diferencia de sessionStorage).
- * - JSON.stringify / JSON.parse: convierten un objeto de JS a texto y
- *   viceversa, porque localStorage solo guarda strings.
- */
-
-const TOKEN_KEY = "preciosco_token";
-const USER_KEY = "preciosco_user";
+// Claves utilizadas en localStorage
+const TOKEN_KEY = 'token';
+const USER_KEY = 'user';
 
 /**
- * Guarda el token JWT y los datos basicos del usuario despues de un
- * login o registro exitoso.
- * @param {string} token - el JWT devuelto por el backend
- * @param {object} user - datos del usuario (name, email, role)
+ * Obtiene el token JWT almacenado.
  */
-export function saveSession(token, user) {
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-}
-
-/**
- * Obtiene el token guardado, o null si no hay sesion activa.
- * @returns {string|null}
- */
-export function getToken() {
+export const getToken = () => {
     return localStorage.getItem(TOKEN_KEY);
-}
+};
 
 /**
- * Obtiene los datos del usuario guardados, o null si no hay sesion.
- * @returns {object|null}
+ * Obtiene los datos del usuario almacenados.
  */
-export function getUser() {
-    const raw = localStorage.getItem(USER_KEY);
-    return raw ? JSON.parse(raw) : null;
-}
+export const getStoredUser = () => {
+    const user = localStorage.getItem(USER_KEY);
+    try {
+        return user ? JSON.parse(user) : null;
+    } catch {
+        return null;
+    }
+};
 
 /**
- * Indica si el usuario tiene una sesion activa.
- * @returns {boolean}
+ * Guarda el token y la información del usuario en localStorage.
  */
-export function isLoggedIn() {
-    return getToken() !== null;
-}
+export const saveAuthData = (data) => {
+    if (data.token) {
+        localStorage.setItem(TOKEN_KEY, data.token);
+    }
+    const userData = data.user || { name: data.name, email: data.email, role: data.role };
+    if (userData) {
+        localStorage.setItem(USER_KEY, JSON.stringify(userData));
+    }
+};
 
 /**
- * Elimina el token y los datos del usuario (logout).
+ * Elimina las credenciales del usuario de localStorage al cerrar sesión.
  */
-export function clearSession() {
+export const clearAuthData = () => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
-}
-
-/**
- * Arma el header de autorizacion listo para usar en fetch().
- * Ejemplo de uso:
- *   fetch(url, { headers: { ...authHeader() } })
- * Si no hay token, devuelve un objeto vacio para no romper la peticion.
- * @returns {object}
- */
-export function authHeader() {
-    const token = getToken();
-    return token ? { Authorization: "Bearer " + token } : {};
-}
+};

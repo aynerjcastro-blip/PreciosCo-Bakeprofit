@@ -1,15 +1,16 @@
 import { createContext, useState } from 'react';
-import {
-    getStoredUser,
-    getToken,
-    saveAuthData,
-    clearAuthData
+import { 
+    getStoredUser, 
+    getToken, 
+    saveAuthData, 
+    clearAuthData 
 } from '../utils/auth-helper';
 
-const AuthContext = createContext(null);
+// Se agrega 'export' a la constante del contexto para que useAuth.jsx pueda importarla
+export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-    // Carga el estado inicial de manera síncrona sin provocar renders en cascada
+    // Inicialización síncrona
     const [user, setUser] = useState(() => {
         const storedUser = getStoredUser();
         const token = getToken();
@@ -20,7 +21,12 @@ export function AuthProvider({ children }) {
 
     const login = (authData) => {
         saveAuthData(authData);
-        setUser(authData.user || { name: authData.name, email: authData.email, role: authData.role });
+        const userData = authData.user || { 
+            name: authData.name, 
+            email: authData.email, 
+            role: authData.role 
+        };
+        setUser(userData);
     };
 
     const logout = () => {
@@ -36,4 +42,3 @@ export function AuthProvider({ children }) {
         </AuthContext.Provider>
     );
 }
-
