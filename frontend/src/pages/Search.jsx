@@ -9,7 +9,7 @@ import {
     EyeIcon,
 } from '../components/Sectoricons.jsx';
 
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 // import { API_BASE } from '../config';
 
 const API_BASE = 'http://localhost:8080/api'; // Ajusta segun el entorno
@@ -39,7 +39,8 @@ export default function Search() {
     const saved = loadSaved();
 
     //Definicion de Estados
-    const [searchTerm, setSearchTerm] = useState(saved.searchTerm ?? '');
+    const [searchParams] = useSearchParams();
+    const [searchTerm, setSearchTerm] = useState(saved.searchTerm ?? searchParams.get('q') ?? '');
     const [categories, setCategories] = useState([]);
     const [selectedCategoryId, setSelectedCategoryId] = useState(saved.selectedCategoryId ?? null);
     const [selectedSectorId, setSelectedSectorId] = useState(saved.selectedSectorId ?? null);

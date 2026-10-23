@@ -1,6 +1,8 @@
 /* ============================================================
-   HEADER
+   HEADER · Contenedor
    Antes: #HeaderH1, #PreciosCo
+   Dos filas: .site-header__inner (logo, buscador, acciones)
+   y .site-nav (enlaces). Las dos quedan fijas al hacer scroll.
    ============================================================ */
 .site-header {
     background: var(--bg-surface);
@@ -13,10 +15,10 @@
 .site-header__inner {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 16px 24px;
+    padding: 10px 24px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 16px;
 }
 
 .site-header__inner img {
@@ -28,49 +30,245 @@
     opacity: 0.7;
 }
 
+/* El botón de menú solo existe en móvil; el doble selector gana a .icon-button */
+.icon-button.site-header__menu {
+    display: none;
+}
+
+/* Sin esto el título de la sección queda tapado por el header fijo */
+html {
+    scroll-padding-top: 120px;
+}
+
+
+/* ============================================================
+   HEADER · Logo
+   ============================================================ */
 .site-header__title {
     display: flex;
     align-items: center;
 }
 
-.header-actions {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-}
-
-/* ============================================================
-   Titulo
-   ============================================================ */
 .logo-img {
     height: 32px;
-    /* ajusta según el tamaño real que quieras en el header */
     width: auto;
     display: block;
 }
 
+.logo-text {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.75rem;
+    color: var(--text-primary); /* se invierte solo con el tema */
+}
+
+.logo-co {
+    height: 28px;
+    width: auto;
+    vertical-align: middle;
+}
+
 
 /* ============================================================
-   NAVEGACION
+   HEADER · Buscador
+   ============================================================ */
+.header-search {
+    display: flex;
+    flex: 1;
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+.header-search input {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-right: 0;
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+    background: var(--bg-main);
+    color: var(--text-primary);
+    font: inherit;
+}
+
+.header-search button {
+    padding: 0 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background: var(--bg-surface);
+    cursor: pointer;
+}
+
+
+/* ============================================================
+   HEADER · Acciones (derecha)
+   Contiene: modo oscuro, campana de Darwin (pendiente), menú de usuario
+   ============================================================ */
+.header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-left: auto; /* mantiene las acciones a la derecha aunque no haya buscador */
+}
+
+
+/* ============================================================
+   HEADER · Menú de usuario (desplegable)
+   ============================================================ */
+.user-menu {
+    position: relative;
+}
+
+.user-menu__button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 4px 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    cursor: pointer;
+}
+
+.user-menu__button:hover {
+    background: var(--bg-main);
+}
+
+.user-menu__label {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.user-menu__avatar {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: var(--text-alternative);
+    font-weight: 700;
+}
+
+.user-menu__avatar--lg {
+    width: 44px;
+    height: 44px;
+    font-size: 1.2rem;
+}
+
+/* Panel que se abre debajo del botón */
+.user-menu__panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 110;
+    width: 280px;
+    padding: 8px 0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+}
+
+/* Con sesión: avatar, nombre y correo */
+.user-menu__profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+}
+
+.user-menu__identity {
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* sin esto el ellipsis no funciona dentro de flex */
+}
+
+.user-menu__identity strong,
+.user-menu__identity small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-menu__identity small {
+    color: var(--text-muted);
+}
+
+.user-menu__divider {
+    height: 1px;
+    margin: 8px 0;
+    background: var(--border-color);
+}
+
+.user-menu__item {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    border: 0;
+    background: none;
+    color: var(--text-primary);
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.user-menu__item:hover {
+    background: var(--bg-main);
+}
+
+/* Sin sesión: botón "Ingresa" y enlace "Crea tu cuenta" */
+.user-menu__guest {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+}
+
+.user-menu__cta {
+    display: block;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    background: var(--color-primary);
+    color: var(--text-alternative);
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+}
+
+.user-menu__cta:hover {
+    background: var(--color-primary-hover);
+}
+
+
+/* ============================================================
+   HEADER · Navegación (fila 2)
    Antes: #Nav-Options
    ============================================================ */
 .site-nav {
     background: var(--bg-surface);
-    border-bottom: 1px solid var(--border-color);
-
+    border-top: 1px solid var(--border-color);
 }
 
 .site-nav__list {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 12px 24px;
     display: flex;
     justify-content: center;
-    gap: 32px;
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
     list-style: none;
 }
 
 .site-nav__list a {
+    display: block;
+    padding: 10px 0;
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-muted);
@@ -80,7 +278,6 @@
 .site-nav__list a:hover {
     color: var(--color-primary-hover);
 }
-
 
 
 /* ============================================================
@@ -122,17 +319,17 @@
     color: inherit;
 }
 
-/* ============================================================
-   Switch
-   ============================================================ */
 
+/* ============================================================
+   SWITCH · Botón de modo claro/oscuro
+   ============================================================ */
 .theme-toggle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
 
-    background: var(--surface-color);
+    background: var(--bg-surface);
     border: 1px solid var(--border-color);
     color: var(--text-primary);
 
@@ -153,11 +350,10 @@
 }
 
 .theme-toggle:hover {
-    background-color: var(--surface-hover);
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+    background-color: var(--bg-main);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    box-shadow: 0 4px 12px rgba(255, 159, 28, 0.15);
 }
 
 .theme-toggle:active {
@@ -165,14 +361,14 @@
 }
 
 .theme-toggle:focus-visible {
-    outline: 2px solid var(--primary-color);
+    outline: 2px solid var(--color-primary);
     outline-offset: 3px;
 }
 
-/* ============================================================
-   Icons: Con reactividad al cambio en el modo de visualizacion
-   ============================================================ */
 
+/* ============================================================
+   ÍCONOS · Reaccionan al cambio de tema
+   ============================================================ */
 .icon-button {
     background: none;
     border: none;
@@ -187,8 +383,7 @@
     display: inline-block;
     width: 24px;
     height: 24px;
-    background-color: var(--text-primary);
-    /* esto reacciona al tema */
+    background-color: var(--text-primary); /* el color sigue al tema */
     mask-size: contain;
     mask-repeat: no-repeat;
     mask-position: center;
@@ -216,19 +411,50 @@
     background-color: var(--color-primary-hover);
 }
 
-/* ============================================================
-   Logo: Con reactividad al cambio en el modo de visualizacion
-   ============================================================ */
-.logo-text {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.75rem;
-    color: var(--text-primary);
-    /* se invierte solo con el tema */
-}
 
-.logo-co {
-    height: 28px;
-    width: auto;
-    vertical-align: middle;
+/* ============================================================
+   RESPONSIVE · Header en móvil
+   Va al final a propósito: si estuviera antes, las reglas base de
+   .theme-toggle y .icon-button (más abajo) la pisarían.
+   ============================================================ */
+@media (max-width: 768px) {
+    .icon-button.site-header__menu {
+        display: inline-flex;
+    }
+
+    .site-header__inner {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    /* El buscador baja a su propia línea, a todo el ancho */
+    .header-search {
+        order: 3;
+        flex-basis: 100%;
+        max-width: none;
+    }
+
+    .theme-toggle,
+    .user-menu__label {
+        display: none;
+    }
+
+    /* Absolute respecto al header, que ya es sticky */
+    .site-nav {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .site-nav--open {
+        display: block;
+    }
+
+    .site-nav__list {
+        flex-direction: column;
+        gap: 0;
+    }
 }

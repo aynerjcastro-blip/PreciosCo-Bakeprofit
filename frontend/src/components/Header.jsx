@@ -1,120 +1,190 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { toggleTheme } from '../utils/theme';
-import { useAuth } from '../context/useAuth'; // Importamos el contexto de autenticación
+import { useAuth } from '../context/useAuth';
 
 export default function Header() {
     const location = useLocation();
     const navigate = useNavigate();
-
-    // Consumimos el estado reactivo de sesión desde AuthContext
     const { user, isAuthenticated, logout } = useAuth();
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [query, setQuery] = useState('');
+    const userMenuRef = useRef(null);
 
-    /**
-     * Maneja el desplazamiento suave (smooth scroll) hacia secciones de la página de inicio.
-     * Si el usuario se encuentra en otra ruta, navega a '/' y luego realiza el desplazamiento.
-     */
+    const canFollow = isAuthenticated && user?.role === 'USER';
+    // La página de búsqueda ya trae su propio campo; dos juntos confunden
+    const showSearch = location.pathname !== '/buscar';
+    const firstName = user?.name?.split(' ')[0];
+    const initial = user?.name?.charAt(0).toUpperCase();
+
+    useEffect(() => {
+        if (!userMenuOpen) return;
+
+        const onClickOutside = (e) => {
+            if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+                setUserMenuOpen(false);
+            }
+        };
+        const onEscape = (e) => {
+            if (e.key === 'Escape') setUserMenuOpen(false);
+        };
+
+        document.addEventListener('mousedown', onClickOutside);
+        document.addEventListener('keydown', onEscape);
+        return () => {
+            document.removeEventListener('mousedown', onClickOutside);
+            document.removeEventListener('keydown', onEscape);
+        };
+    }, [userMenuOpen]);
+
+    const closeMenus = () => {
+        setMenuOpen(false);
+        setUserMenuOpen(false);
+    };
+
     const handleScrollTo = (e, elementId) => {
         e.preventDefault();
+        closeMenus();
+
+        const scroll = () =>
+            document.getElementById(elementId)?.scrollIntoView({ behavior: 'smooth' });
 
         if (location.pathname !== '/') {
             navigate('/');
-            setTimeout(() => {
-                const element = document.getElementById(elementId);
-                if (element) {
-                    element.scrollIntoView({ behavior: 'smooth' });
-                }
-            }, 100);
+            // Home todavía no se ha montado cuando navigate() retorna
+            setTimeout(scroll, 100);
         } else {
-            const element = document.getElementById(elementId);
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth' });
-            }
+            scroll();
         }
     };
 
-    /**
-     * Maneja el cierre de sesión del usuario.
-     * Limpia los datos de autenticación y redirige a la página principal o login.
-     */
+    const handleSearch = (e) => {
+        e.preventDefault();
+        const term = query.trim();
+        closeMenus();
+        navigate(term ? `/buscar?q=${encodeURIComponent(term)}` : '/buscar');
+    };
+
     const handleLogout = () => {
+        closeMenus();
         logout();
-        navigate('/login');
+        navigate('/');
     };
 
     return (
-        <>
-            <header className="site-header">
-                <div className="site-header__inner">
-                    {/* Botón para la apertura del menú móvil */}
-                    <button className="icon-button" type="button" aria-label="Abrir menú">
-                        <span className="icon icon--menu"></span>
+        <header className="site-header">
+            <div className="site-header__inner">
+                <button
+                    className="icon-button site-header__menu"
+                    type="button"
+                    aria-label="Abrir menú"
+                    aria-expanded={menuOpen}
+                    onClick={() => setMenuOpen(!menuOpen)}
+                >
+                    <span className="icon icon--menu"></span>
+                </button>
+
+                <Link to="/" className="site-header__title">
+                    <span className="logo-text">Precios</span>
+                    <img src="/assets/images/co-badge.png" alt="Badge Colombia" className="logo-co" />
+                </Link>
+
+                {showSearch && (
+                    <form className="header-search" onSubmit={handleSearch} role="search">
+                        <input
+                            type="search"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder="Buscar productos, marcas y más..."
+                            aria-label="Buscar productos"
+                        />
+                        <button type="submit" aria-label="Buscar">
+                            <span className="icon icon--search"></span>
+                        </button>
+                    </form>
+                )}
+
+                <div className="header-actions">
+                    <button id="theme-toggle" className="theme-toggle" onClick={toggleTheme}>
+                        Modo oscuro
                     </button>
 
-                    {/* Marca / Logo principal */}
-                    <Link to="/" className="site-header__title">
-                        <span className="logo-text">Precios</span>
-                        <img src="/assets/images/co-badge.png" alt="Badge Colombia" className="logo-co" />
-                    </Link>
+                    {/* Darwin: la campana de avisos va aquí, antes del menú de usuario */}
 
-                    {/* Acciones de la barra superior */}
-                    <div className="header-actions">
-                        {/* Interruptor de modo oscuro */}
-                        <button id="theme-toggle" className="theme-toggle" onClick={toggleTheme}>
-                            Modo oscuro
+                    <div className="user-menu" ref={userMenuRef}>
+                        <button
+                            type="button"
+                            className="user-menu__button"
+                            aria-haspopup="menu"
+                            aria-expanded={userMenuOpen}
+                            onClick={() => setUserMenuOpen(!userMenuOpen)}
+                        >
+                            {isAuthenticated ? (
+                                <>
+                                    <span className="user-menu__avatar" aria-hidden="true">{initial}</span>
+                                    <span className="user-menu__label">{firstName}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="icon icon--user" aria-hidden="true"></span>
+                                    <span className="user-menu__label">Ingresa</span>
+                                </>
+                            )}
+                            <span className="user-menu__chevron" aria-hidden="true">▾</span>
                         </button>
 
-                        {/* Enlace de búsqueda */}
-                        <Link to="/buscar" className="icon-button" aria-label="Buscar">
-                            <span className="icon icon--search"></span>
-                        </Link>
+                        {userMenuOpen && (
+                            <div className="user-menu__panel" role="menu">
+                                {isAuthenticated ? (
+                                    <>
+                                        <div className="user-menu__profile">
+                                            <span className="user-menu__avatar user-menu__avatar--lg" aria-hidden="true">{initial}</span>
+                                            <div className="user-menu__identity">
+                                                <strong>{user?.name}</strong>
+                                                <small>{user?.email}</small>
+                                            </div>
+                                        </div>
 
-                        {/* Control de usuario: cambia dinámicamente si hay sesión activa */}
-                        {isAuthenticated ? (
-                            <button
-                                type="button"
-                                className="icon-button"
-                                onClick={handleLogout}
-                                aria-label="Cerrar sesión"
-                                title={`Cerrar sesión de ${user?.name || user?.email}`}
-                            >
-                                <span className="icon icon--user" style={{ color: 'var(--primary-color, #4f46e5)' }}></span>
-                            </button>
-                        ) : (
-                            <Link to="/login" className="icon-button" aria-label="Iniciar sesión">
-                                <span className="icon icon--user"></span>
-                            </Link>
+                                        {canFollow && (
+                                            <>
+                                                <div className="user-menu__divider"></div>
+                                                <Link to="/seguidos" className="user-menu__item" role="menuitem" onClick={closeMenus}>
+                                                    Seguidos
+                                                </Link>
+                                            </>
+                                        )}
+
+                                        <div className="user-menu__divider"></div>
+                                        <button type="button" className="user-menu__item" role="menuitem" onClick={handleLogout}>
+                                            Salir
+                                        </button>
+                                    </>
+                                ) : (
+                                    <div className="user-menu__guest">
+                                        <Link to="/login" className="user-menu__cta" role="menuitem" onClick={closeMenus}>
+                                            Ingresa
+                                        </Link>
+                                        <Link to="/register" className="user-menu__item" role="menuitem" onClick={closeMenus}>
+                                            Crea tu cuenta
+                                        </Link>
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>
-            </header>
+            </div>
 
-            {/* Barra de navegación de la aplicación */}
-            <nav className="site-nav">
+            <nav className={`site-nav ${menuOpen ? 'site-nav--open' : ''}`} aria-label="Principal">
                 <ul className="site-nav__list">
+                    <li><Link to="/" onClick={closeMenus}>Inicio</Link></li>
+                    <li><Link to="/buscar" onClick={closeMenus}>Buscar</Link></li>
                     <li><a href="#sobre-nosotros" onClick={(e) => handleScrollTo(e, 'sobre-nosotros')}>Sobre Nosotros</a></li>
                     <li><a href="#como-funciona" onClick={(e) => handleScrollTo(e, 'como-funciona')}>Como funciona</a></li>
                     <li><a href="#testimonios" onClick={(e) => handleScrollTo(e, 'testimonios')}>Testimonios</a></li>
-
-                    {/* Enlaces dinámicos según el estado de autenticación */}
-                    {isAuthenticated ? (
-                        <>
-                            {/* Ruta protegida disponible en sesión */}
-                            <li><Link to="/seguidos">Seguidos</Link></li>
-                            <li>
-                                <button
-                                    type="button"
-                                    onClick={handleLogout}
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', color: 'inherit' }}
-                                >
-                                    Cerrar sesión ({user?.name ? user.name.split(' ')[0] : 'Usuario'})
-                                </button>
-                            </li>
-                        </>
-                    ) : (
-                        <li><Link to="/register">Registrarse</Link></li>
-                    )}
                 </ul>
             </nav>
-        </>
+        </header>
     );
 }
