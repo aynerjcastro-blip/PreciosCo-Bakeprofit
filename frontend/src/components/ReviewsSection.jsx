@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import ReportDialog from './ReportDialog';
 import StarRating from './StarRating';
 import { getReviews } from '../api/reviews';
-import { isLoggedIn, getUser } from '../utils/auth-helper';
+import { useAuth } from '../context/useAuth'; // Importar el hook del contexto
 import { formatDate } from '../utils/format-helper';
 import styles from './ReviewsSection.module.css';
-
 const PAGE_SIZE = 10;
 
 /**
@@ -18,8 +17,11 @@ const PAGE_SIZE = 10;
  * @param {number} refreshKey - al cambiar, se vuelve a pedir la primera página
  */
 export default function ReviewsSection({ productId, stores, selectedStoreId, onSelectStore, refreshKey = 0 }) {
+    // Obtenemos user e isAuthenticated desde el AuthContext reactivo
+    const { user, isAuthenticated } = useAuth();
+
     // Solo el rol USER puede reportar
-    const canReport = isLoggedIn() && getUser()?.role === 'USER';
+    const canReport = isAuthenticated && user?.role === 'USER';
     const selectedStore = stores.find((store) => store.id === selectedStoreId) ?? null;
 
     const [items, setItems] = useState([]);
