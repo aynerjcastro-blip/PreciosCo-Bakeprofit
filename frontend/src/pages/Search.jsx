@@ -6,7 +6,6 @@ import {
     FaceIcon,
     GearIcon,
     SearchIcon,
-    EyeIcon,
 } from '../components/Sectoricons.jsx';
 import { Link, useSearchParams } from 'react-router-dom';
 
@@ -17,11 +16,60 @@ const API_BASE = 'http://localhost:8080/api';
  * Se define fuera del componente para evitar recrear el arreglo en cada render.
  * El campo 'available' controla si el sector hace peticiones o muestra la pantalla "Llega pronto".
  */
+// Añadimos las propiedades: subtitle, image y brands a cada sector
 const SECTORS = [
-    { id: 'supermercados', label: 'Supermercados', Icon: CartIcon, available: true },
-    { id: 'droguerias', label: 'Droguerias', Icon: PillIcon, available: false },
-    { id: 'cuidado-facial', label: 'Cuidado facial', Icon: FaceIcon, available: false },
-    { id: 'repuestos', label: 'Repuestos', Icon: GearIcon, available: false },
+    {
+        id: 'supermercados',
+        label: 'Supermercados',
+        subtitle: 'Compara precios y ahorra',
+        image: '/assets/images/cat-supermercados.png',
+        Icon: CartIcon,
+        available: true,
+        brands: [
+            { id: 'exito', name: 'Exito', logo: '/assets/images/brands/exito.png' },
+            { id: 'olimpica', name: 'Olimpica', logo: '/assets/images/brands/olimpica.png' },
+            { id: 'jumbo', name: 'Jumbo', logo: '/assets/images/brands/jumbo.png' }
+        ]
+    },
+    {
+        id: 'droguerias',
+        label: 'Droguerias',
+        subtitle: 'Encuentra mejores precios',
+        image: '/assets/images/cat-farmacia.png',
+        Icon: PillIcon,
+        available: false,
+        brands: [
+            { id: 'cruzverde', name: 'Cruz Verde', logo: '/assets/images/brands/cruzverde.png' },
+            { id: 'farmatodo', name: 'Farmatodo', logo: '/assets/images/brands/farmatodo.png' },
+            { id: 'larebaja', name: 'La Rebaja', logo: '/assets/images/brands/larebaja.png' }
+        ]
+    },
+    {
+        id: 'cuidado-facial',
+        label: 'Cuidado Facial',
+        subtitle: 'Encuentra el cuidado que mereces',
+        image: '/assets/images/cat-belleza.png',
+        Icon: FaceIcon,
+        available: false,
+        brands: [
+            { id: 'nivea', name: 'Nivea', logo: '/assets/images/brands/nivea.png' },
+            { id: 'loreal', name: 'LOREAL', logo: '/assets/images/brands/loreal.png' },
+            { id: 'ponds', name: 'Ponds', logo: '/assets/images/brands/ponds.png' }
+        ]
+    },
+    {
+        id: 'repuestos',
+        label: 'Repuestos',
+        subtitle: 'Encuentra la pieza que necesitas',
+        image: '/assets/images/cat-repuestos.png',
+        Icon: GearIcon,
+        available: false,
+        brands: [
+            { id: 'bosch', name: 'BOSCH', logo: '/assets/images/brands/bosch.png' },
+            { id: 'michelin', name: 'MICHELIN', logo: '/assets/images/brands/michelin.svg' },
+            { id: 'castrol', name: 'Castrol', logo: '/assets/images/brands/castrol.svg' }
+        ]
+    },
 ];
 
 const SAVED_KEY = 'searchState';
@@ -256,30 +304,55 @@ export default function Search() {
                     ))}
                 </div>
 
-                {/* TARJETAS DE SECTOR */}
+                {/* TARJETAS DE SECTOR (Nuevo diseño inmersivo) */}
                 <div className={styles['sector-grid']}>
-                    {SECTORS.map(({ id, label, Icon }) => {
-                        const active = selectedSectorId === id;
+                    {SECTORS.map((sector) => {
+                        const active = selectedSectorId === sector.id;
                         return (
-                            <article
-                                key={id}
+                            <button
+                                key={sector.id}
+                                type="button"
                                 className={`${styles['sector-card']} ${active ? styles['sector-card--active'] : ''}`}
+                                onClick={() => toggleSector(sector.id)}
+                                aria-pressed={active}
                             >
-                                <div className={styles['sector-card__icon']}>
-                                    <Icon />
+                                {/* Capa 1: Imagen de fondo (Collage) */}
+                                <img
+                                    src={sector.image}
+                                    alt={`Fondo de ${sector.label}`}
+                                    className={styles['sector-card__bg']}
+                                    loading="lazy"
+                                />
+
+                                {/* Capa 2: Gradiente oscuro para que el texto resalte */}
+                                <div className={styles['sector-card__overlay']}></div>
+
+                                {/* Capa 3: Contenido (Icono, Textos y Marcas) */}
+                                <div className={styles['sector-card__content']}>
+                                    <div className={styles['sector-card__header']}>
+                                        <sector.Icon />
+                                        <h2 className={styles['sector-card__title']}>{sector.label}</h2>
+                                    </div>
+                                    <p className={styles['sector-card__subtitle']}>{sector.subtitle}</p>
+
+                                    <div className={styles['sector-card__brands']}>
+                                        {sector.brands.map(brand => (
+                                            <div key={brand.id} className={styles['brand-pill']} title={brand.name}>
+                                                {/* Fallback por si no tienes las imagenes aun */}
+                                                <img
+                                                    src={brand.logo}
+                                                    alt={brand.name}
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        e.target.nextSibling.style.display = 'inline';
+                                                    }}
+                                                />
+                                                <span style={{ display: 'none', fontSize: '0.7rem', fontWeight: 'bold' }}>{brand.name}</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                                <h2 className={styles['sector-card__title']}>{label}</h2>
-                                <button
-                                    type="button"
-                                    className={styles['sector-card__button']}
-                                    onClick={() => toggleSector(id)}
-                                    aria-pressed={active}
-                                    aria-label={`Ver ${label}`}
-                                >
-                                    <EyeIcon />
-                                    <span>Ver</span>
-                                </button>
-                            </article>
+                            </button>
                         );
                     })}
                 </div>
