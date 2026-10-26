@@ -37,4 +37,11 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
     java.math.BigDecimal findMinPriceByProduct(@Param("productId") Long productId);
 
     boolean existsByProductIdAndStoreId(Long productId, Long storeId);
+
+        /** Los dos precios más recientes de un producto en una tienda (el último y el anterior). */
+    List<Price> findTop2ByProductIdAndStoreIdOrderByRegistrationDateDescIdDesc(Long productId, Long storeId);
+
+    /** Tiendas que tienen al menos un precio del producto. */
+    @Query("SELECT DISTINCT p.store.id FROM Price p WHERE p.product.id = :productId")
+    List<Long> findStoreIdsByProductId(@Param("productId") Long productId);
 }
