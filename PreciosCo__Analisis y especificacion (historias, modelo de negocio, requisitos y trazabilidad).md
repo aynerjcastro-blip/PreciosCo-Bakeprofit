@@ -71,8 +71,10 @@ Describe lo desarrollado hasta la Fase 2 (octubre de 2026). Reconstruye el model
 ### Glosario
 
 - **Consumidor:** persona registrada que consulta y compara precios (rol USER). **Visitante:** consumidor sin sesión.
-- **Proveedor:** establecimiento con cuenta comercial (rol SUPPLIER). **Administrador:** rol ADMIN.
-- **Calificación:** puntaje de un producto en una tienda. Una opinión es la calificación y el comentario que se registran juntos. **Borrado lógico:** el registro se conserva con estado ELIMINADO y deja de mostrarse.
+- **Proveedor:** establecimiento con cuenta comercial (rol SUPPLIER).&#32;
+- **Administrador:** rol ADMIN.
+- **Calificación:** puntaje de un producto en una tienda. Una opinión es la calificación y el comentario que se registran juntos.&#32;
+- **Borrado lógico:** el registro se conserva con estado ELIMINADO y deja de mostrarse.
 - **Nombres internos:** el repositorio usa BakeProfit (backend) y ComprasCo (paquete Java); el nombre del producto es PreciosCo.
 
 ## 2. Objetivos del negocio
@@ -123,7 +125,7 @@ Siete procesos recorren el servicio, desde la cuenta del consumidor hasta la adm
 
 ## 5. Historias de usuario
 
-Las 23 historias cubren las Fases 1 y 2 con el formato Como…, quiero…, para…; cada una trae criterios de aceptación comprobables, el requisito que la origina (RF), su objetivo (OB) y su tamaño.
+Las 24 historias cubren las Fases 1 y 2 con el formato Como…, quiero…, para…; cada una trae criterios de aceptación comprobables, el requisito que la origina (RF), su objetivo (OB) y su tamaño.
 
 ### Cómo leerlas: INVEST y SMART
 
@@ -182,12 +184,22 @@ Como visitante, quiero ver los productos agrupados por categoría, para explorar
 - Combinar categoría y texto filtra por ambos (mínimo 2 casos probados).
 - Las categorías se muestran con su jerarquía de categoría y subcategoría.
 
-**HU-06 · Filtrar resultados** — RF06 · OB-01, OB-02 · M · Parcial
+**HU-06a · Filtrar por nombre y categoría** — RF06 (parcial; se completa con HU-06b) · OB-01, OB-02 · S
 
-Como visitante, quiero filtrar los resultados por categoría, tienda y rango de precio, para quedarme solo con lo que me conviene.
+Como visitante, quiero filtrar los resultados por nombre y categoría, para quedarme solo con lo que me conviene.
 
-- Estado: hoy la API filtra por nombre y categoría; tienda y rango de precio están pendientes.
-- Cada filtro cambia los resultados en el backend y no solo en pantalla.
+- El filtro combinado (nombre y categoría) se aplica en una sola consulta.
+- Cada filtro se resuelve en el backend, no con una manipulación visual del cliente.
+- Se separó de HU-06 por alcance del Sprint 1; los filtros por tienda y por rango de precio pasaron a HU-06b, planificada para el siguiente sprint.
+
+**HU-06b · Filtrar por tienda y rango de precio** — RF06 · OB-01, OB-02 · S
+
+Como visitante, quiero filtrar los resultados por tienda y por rango de precio, para quedarme solo con lo que me conviene.
+
+- Filtrar por una tienda deja solo los productos con un precio registrado en esa tienda.
+- Filtrar por precio mínimo y máximo deja solo los productos cuyo precio más reciente está dentro del rango.
+- Cada filtro se resuelve en el backend, no con una manipulación visual del cliente.
+- Combinado con nombre y categoría (HU-06a), el resultado cumple todos los filtros a la vez.
 
 **HU-07 · Comparar precios por tienda** — RF07, RF10, RF12 · OB-01, OB-02, OB-03 · M
 
@@ -337,7 +349,7 @@ Como consumidor que sigue un producto, quiero recibir un correo cuando su precio
 
 ### Verificación INVEST
 
-Las 23 historias cumplen Valiosa, Negociable y Testeable; estas son las excepciones y la acción para cada una.
+Las 24 historias cumplen Valiosa, Negociable y Testeable; estas son las excepciones y la acción para cada una.
 
 | Historia | Principio | Observación | Acción |
 | --- | --- | --- | --- |
@@ -360,8 +372,6 @@ Las 23 historias cumplen Valiosa, Negociable y Testeable; estas son las excepcio
 | Temporal | Débil: cada historia tiene fase, pero no fecha; falta fijar la fecha de entrega de cada fase |
 
 ## 6. Reglas de negocio
-
-Treinta reglas, escritas en lenguaje del negocio, cubren los cinco tipos: restricción, validación, autorización, cálculo y transición de estado.
 
 | ID | Tipo | Regla | Estado |
 | --- | --- | --- | --- |
@@ -396,8 +406,6 @@ Treinta reglas, escritas en lenguaje del negocio, cubren los cinco tipos: restri
 | RN-29 | Restricción | Una calificación y su comentario pueden modificarse por su autor hasta 1 día (24 horas) después de registrados; pasado ese plazo quedan definitivos. Solo el autor puede editar, y solo mientras el comentario siga PUBLICADO (uno reportado, oculto o eliminado no se reescribe); fuera de esas condiciones se responde 409. | Definida; el conteo del plazo está por confirmar |
 | RN-30 | Restricción | Calificar y comentar un producto en una tienda son una sola acción: no se puede calificar sin comentar ni comentar sin calificar, y ambos se registran al mismo tiempo. El id de una opinión es el de su calificación y es el que usan editar, eliminar y reportar. | Definida |
 | RN-31 | Restricción | El estado del comentario (incluido OCULTO) no afecta el promedio del producto ni del establecimiento; retirar una calificación del promedio exige una razón propia de la calificación (indicio de fraude), no la moderación de su comentario. | Definida |
-
-**Origen de los cambios recientes:** RN-20 pasó de aprobación previa a revisión posterior porque esperar la aprobación del administrador era tedioso para él y lento para el proveedor (decisión del equipo). RN-25, RN-29 y RN-30 nacieron de tres decisiones: calificar y comentar son una sola acción, se puede editar durante 1 día y borrar el comentario impide volver a comentar.
 
 ## 7. Requisitos funcionales
 
@@ -509,8 +517,6 @@ Diez requisitos de calidad condicionan cómo funciona el sistema; las pruebas y 
 | RNF09 | Seguridad | El sistema DEBE mostrar los textos escritos por usuarios (comentarios y reportes) como texto plano, sin interpretarlos como HTML. | Un comentario con una etiqueta de script se ve literal |
 | RNF10 | Rendimiento | La búsqueda de productos y la comparación de precios DEBEN responder en menos de 3 segundos\* en el 95% de las consultas, con hasta 20 usuarios concurrentes\*. | En 30 consultas consecutivas sobre la plataforma publicada, al menos 29 responden en menos de 3 s |
 
-**Sobre RNF10:** el valor es una propuesta realista para una base de datos en la nube de nivel gratuito y debe confirmarse con una prueba de carga antes de comprometerlo; la primera consulta tras un periodo de inactividad puede tardar más. RNF07 a RNF09 salen de las decisiones tomadas durante la Fase 2 y RNF06 es una propuesta del equipo todavía sin criterio medible.
-
 ## 9. Matrices de trazabilidad
 
 Cuatro matrices conectan cada objetivo con sus procesos, reglas, requisitos e historias; solo RF04 y RF46 carecen de una regla directa, y se justifican por necesidad de gestión.
@@ -523,7 +529,7 @@ Cuatro matrices conectan cada objetivo con sus procesos, reglas, requisitos e hi
 | OB-02 | P-02, P-04, P-05 | RN-02 a RN-07, RN-15, RN-16, RN-18 | RF05–RF09, RF12, RF23, RF24, RF27 a RF30, RF53, RF54 |
 | OB-03 | P-02, P-06, P-07 | RN-01, 04, 09, 19, 20, 22, 23 | RF10, RF36, RF39 a RF42, RF44, RF46, RF48, RF51 |
 | OB-04 | P-02, P-05, P-06, P-07 | RN-05, 09, 17, 18, 20, 21 | RF11, RF31, RF32, RF35, RF43, RF52 |
-| OB-05 | P-01, P-03, P-07 | RN-07 a RN-14, RN-23 a RN-30 | RF01–RF04, RF13–RF22, RF40, RF45, RF47, RF48, RF49 |
+| OB-05 | P-01, P-03, P-07 | RN-07 a RN-14, RN-23 a RN-31 | RF01–RF04, RF13–RF22, RF40, RF45, RF47, RF48, RF49 |
 | OB-06 | P-06, P-07 | RN-01, 05, 09, 19 a 23 | RF33–RF39, RF41, RF42, RF46 |
 
 ### 9.2 Historia → requisitos → reglas → objetivos
@@ -535,7 +541,8 @@ Cuatro matrices conectan cada objetivo con sus procesos, reglas, requisitos e hi
 | HU-03 Conocer la plataforma | RF50 | — | OB-01 |
 | HU-04 Buscar por nombre | RF05 | RN-05 | OB-01 |
 | HU-05 Explorar por categoría | RF05, RF11 | RN-05 | OB-04 |
-| HU-06 Filtrar resultados | RF06 | RN-05 | OB-01, OB-02 |
+| HU-06a Filtrar por nombre y categoría | RF06 | RN-05 | OB-01, OB-02 |
+| HU-06b Filtrar por tienda y rango de precio | RF06 | RN-05 | OB-01, OB-02 |
 | HU-07 Comparar precios | RF07, RF10, RF12 | RN-01, 02, 04, 06 | OB-01, OB-02, OB-03 |
 | HU-08 Ver la mejor opción | RF08, RF09 | RN-03 | OB-02 |
 | HU-09 Ver mi sesión y cerrarla | RF02, RF49 | RN-09 | OB-05 |
@@ -556,6 +563,8 @@ Cuatro matrices conectan cada objetivo con sus procesos, reglas, requisitos e hi
 
 Sin historia todavía: RF03 y RF04 (sin fase asignada) y RF29 a RF48 (Fases 4 a 6).
 
+Sin historia tampoco RF51 (carga desde fuente externa, sin actor humano) y RF52 (comparar droguerías y cuidado facial, Fase 3).
+
 ### 9.3 Regla → requisitos
 
 | Regla | Requisitos | Regla | Requisitos |
@@ -575,6 +584,7 @@ Sin historia todavía: RF03 y RF04 (sin fase asignada) y RF29 a RF48 (Fases 4 a 
 | RN-13 | RF15 | RN-28 | RF14, RF18 |
 | RN-14 | RF17, RF21, RF22, RF45 | RN-29 | RF19 |
 | RN-15 | RF23, RF25, RF26, RF27, RF28 | RN-30 | RF13, RF14 |
+| RN-31 | RF15 | — | — |
 
 ### 9.4 Requisitos no funcionales → objetivos y requisitos afectados
 
@@ -593,56 +603,7 @@ Sin historia todavía: RF03 y RF04 (sin fase asignada) y RF29 a RF48 (Fases 4 a 
 
 ## Anexos
 
-### Anexo A. Equivalencia de IDs
-
-La numeración de este documento es la definitiva; estas tablas permiten rastrear lo escrito en el alcance y en el plan de la Fase 2.
-
-**Requisitos funcionales del alcance → este documento**
-
-| ID en el alcance | ID en este documento | Observación |
-| --- | --- | --- |
-| RF01 a RF12 | RF01 a RF12 | Sin cambio de ID |
-| RF13 a RF18 | RF13 a RF18 | Contenido modificado: calificación de un producto en una tienda y razón del reporte |
-| — | RF19 a RF22 | Nuevos: modificar opinión, consultar mi opinión, consultar comentarios y eliminar comentario |
-| RF19 a RF22 | RF23 a RF26 | Seguimiento de productos |
-| RF23 | RF27 y RF28 | Dividido: aviso en la plataforma y aviso por correo |
-| RF24 a RF27 | RF29 a RF32 | Inteligencia artificial |
-| RF28 a RF34 | RF33 a RF39 | Módulo de proveedores |
-| RF35 | RF40 | Gestionar cuentas |
-| RF36 | RF41 y RF42 | Dividido: proveedores y productos publicados (revisión posterior) |
-| RF37 a RF40 | RF43 a RF46 | Categorías y marcas, precios, moderación y reportes |
-| RF41 | RF47 y RF48 | Dividido: bloquear cuentas y consultar historial |
-
-**IDs usados en el plan de trabajo de la Fase 2 → este documento**
-
-| ID en el plan | ID en este documento | Contenido |
-| --- | --- | --- |
-| RF13 a RF18 | RF13 a RF18 | Calificaciones y comentarios |
-| RF19 a RF24 | RF23 a RF28 | Seguimiento y notificaciones |
-| RF44 | RF20 | Consultar mi calificación |
-| RF45 | RF21 | Consultar comentarios |
-| RF46 | RF19 | Modificar calificación |
-| RF47 | RF22 | Eliminar comentario |
-| RF40 (moderación) | RF45 | Moderar comentarios |
-| RF42 (bloqueo) | RF47 | Bloquear cuentas |
-
-**Requisitos no funcionales del alcance → este documento**
-
-| ID en el alcance | Destino |
-| --- | --- |
-| RNF01, RNF02 | RNF01, RNF02 |
-| RNF04 | RNF03 |
-| RNF08 | RNF04 |
-| RNF14 | RNF05 |
-| RNF03 | Regla RN-09 |
-| RNF05, RNF09, RNF10 | Restricciones del proyecto RP-01, RP-02 y RP-03 |
-| RNF06 | Eliminado: lo cubren RF10 y RN-01 |
-| RNF07 | Regla RN-04 |
-| RNF11, RNF12 | Entregables E-01 y E-02 |
-| RNF13 | Regla RN-17 |
-| (nuevos) | RNF06 (propuesto por el equipo) y RNF07 a RNF10 |
-
-### Anexo B. Criterios de prueba por requisito
+### Anexo A. Criterios de prueba por requisito
 
 Cada requisito se verifica con un criterio de «pasa si…»; los valores con asterisco siguen por confirmar.
 
@@ -703,7 +664,7 @@ Cada requisito se verifica con un criterio de «pasa si…»; los valores con as
 | RF53 | OB-02 | RN-15, RN-16 | La lista de mis avisos incluye los generados por RF27 con su cantidad de no leídos |
 | RF54 | OB-02 | — | Marcar un aviso como leído baja el contador del encabezado |
 
-### Anexo C. Decisiones pendientes
+### Anexo B. Decisiones pendientes
 
 Diecinueve decisiones siguen abiertas; cada una tiene un valor provisional con el que el documento ya funciona. Desde RF49 (incluido), los IDs de requisito ya no se renumeran: lo nuevo se agrega al final del módulo que le corresponde, aunque quede fuera de orden en la página.
 
