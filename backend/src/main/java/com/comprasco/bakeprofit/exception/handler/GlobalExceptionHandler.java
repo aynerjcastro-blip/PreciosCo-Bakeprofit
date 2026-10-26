@@ -18,6 +18,10 @@ import com.comprasco.bakeprofit.exception.PriceNotFoundException;
 import com.comprasco.bakeprofit.exception.ReviewAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.ReviewNotAllowedException;
 import com.comprasco.bakeprofit.exception.ReviewNotFoundException;
+import com.comprasco.bakeprofit.exception.FollowAlreadyExistsException;
+import com.comprasco.bakeprofit.exception.FollowNotAllowedException;
+import com.comprasco.bakeprofit.exception.FollowNotFoundException;
+import com.comprasco.bakeprofit.exception.NotificationNotFoundException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -159,7 +163,10 @@ public class GlobalExceptionHandler {
             ProductNotFoundException.class,
             EntityNotFoundException.class,
             PriceNotFoundException.class,
-            ReviewNotFoundException.class
+            ReviewNotFoundException.class,
+            FollowNotFoundException.class,
+            NotificationNotFoundException.class 
+            
     })
     public ResponseEntity<ErrorResponse> handleNotFound(
             RuntimeException ex,
@@ -278,7 +285,7 @@ public class GlobalExceptionHandler {
      * @param request peticion HTTP actual
      * @return respuesta HTTP 409 Conflict
      */
-    @ExceptionHandler({ ReviewAlreadyExistsException.class, ReviewNotAllowedException.class })
+    @ExceptionHandler({ ReviewAlreadyExistsException.class, ReviewNotAllowedException.class, FollowAlreadyExistsException.class, FollowNotAllowedException.class  })
     public ResponseEntity<ErrorResponse> handleReviewConflict(
             RuntimeException ex,
             HttpServletRequest request) {

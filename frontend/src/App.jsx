@@ -6,6 +6,7 @@ import Search from './pages/Search';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ProtectedRoute from './components/ProtectedRoute';
+import Followed from './pages/Followed';
 
 export default function App() {
   return (
@@ -24,12 +25,8 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route
               path="seguidos"
-              element={
-                <div style={{ padding: '2rem', textAlign: 'center' }}>
-                  <h2>Mis Tiendas y Productos Seguidos</h2>
-                  <p>Esta sección solo es accesible para usuarios autenticados.</p>
-                </div>
-              }
+              element={<Followed />}
+              
             />
           </Route>
         </Route>
