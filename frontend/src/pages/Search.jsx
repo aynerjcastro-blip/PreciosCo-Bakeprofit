@@ -10,7 +10,14 @@ import {
     EyeIcon,
 } from '../components/Sectoricons.jsx';
 
+
 import { Link } from 'react-router-dom';
+=======
+import { Link, useSearchParams } from 'react-router-dom';
+// import { API_BASE } from '../config';
+
+const API_BASE = 'http://localhost:8080/api'; // Ajusta segun el entorno
+
 
 // Sectores que se muestran como tarjetas.
 // `available: false` -> la tarjeta se muestra, pero aun no hay datos en el backend.
@@ -37,15 +44,26 @@ export default function Search() {
     const saved = loadSaved();
 
     //Definicion de Estados
-    const [searchTerm, setSearchTerm] = useState(saved.searchTerm ?? '');
+    const [searchParams] = useSearchParams();
+    const [searchTerm, setSearchTerm] = useState(saved.searchTerm ?? searchParams.get('q') ?? '');
     const [categories, setCategories] = useState([]);
     const [selectedCategoryId, setSelectedCategoryId] = useState(saved.selectedCategoryId ?? null);
     const [selectedSectorId, setSelectedSectorId] = useState(saved.selectedSectorId ?? null);
     const [showAll, setShowAll] = useState(saved.showAll ?? false);
-    const [products, setProducts] = useState([]);
-    const [status, setStatus] = useState('idle'); // 'idle', 'loading', 'empty', 'error', 'soon', 'success'
+    const [fetchedProducts, setFetchedProducts] = useState([]);
+    const [fetchStatus, setFetchStatus] = useState('idle'); // 'idle', 'loading', 'empty', 'error', 'success'
 
     const selectedSector = SECTORS.find((s) => s.id === selectedSectorId) || null;
+
+    const hasTerm = searchTerm.trim() !== '';
+    const hasFilter = selectedCategoryId !== null || selectedSectorId !== null || showAll;
+    const isIdle = !hasTerm && !hasFilter;
+    const isSoon = !isIdle && selectedSector !== null && !selectedSector.available;
+
+    // 'idle' y 'soon' no necesitan petición: se calculan al renderizar en vez de
+    // guardarse con setState dentro del efecto (regla react-hooks/set-state-in-effect)
+    const status = isIdle ? 'idle' : isSoon ? 'soon' : fetchStatus; // 'idle', 'loading', 'empty', 'error', 'soon', 'success'
+    const products = isIdle || isSoon ? [] : fetchedProducts;
 
     // Guarda los filtros cada vez que cambian
     useEffect(() => {
@@ -72,27 +90,13 @@ export default function Search() {
 
     // Logica de busqueda con Debounce y AbortController
     useEffect(() => {
-        const hasTerm = searchTerm.trim() !== '';
-        const hasFilter = selectedCategoryId !== null || selectedSectorId !== null || showAll;
-
-        // Sin termino ni filtros: solo se ven las tarjetas de sector
-        if (!hasTerm && !hasFilter) {
-            setProducts([]);
-            setStatus('idle');
-            return;
-        }
-
-        // Sector sin datos todavia
-        if (selectedSector && !selectedSector.available) {
-            setProducts([]);
-            setStatus('soon');
-            return;
-        }
+        // Sin termino ni filtros (idle) o sector sin datos todavia (soon): no hay nada que pedir
+        if (isIdle || isSoon) return;
 
         const controller = new AbortController();
 
         const fetchProducts = async () => {
-            setStatus('loading');
+            setFetchStatus('loading');
             const params = new URLSearchParams();
             if (hasTerm) params.set('name', searchTerm.trim());
             if (selectedCategoryId !== null) params.set('idCategory', selectedCategoryId);
@@ -102,13 +106,21 @@ export default function Search() {
                 const data = await apiClient.get(`/api/products/search?${params.toString()}`, {
                     signal: controller.signal,
                 });
+
                 
                 setProducts(data);
                 setStatus(data.length === 0 ? 'empty' : 'success');
+
+                if (!response.ok) throw new Error('Error en la petición');
+
+                const data = await response.json();
+                setFetchedProducts(data);
+                setFetchStatus(data.length === 0 ? 'empty' : 'success');
+
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error(error);
-                    setStatus('error');
+                    setFetchStatus('error');
                 }
             }
         };
@@ -120,7 +132,7 @@ export default function Search() {
             clearTimeout(debounceTimer);
             controller.abort();
         };
-    }, [searchTerm, selectedCategoryId, selectedSectorId, selectedSector, showAll]);
+    }, [isIdle, isSoon, hasTerm, searchTerm, selectedCategoryId]);
 
     // "Todas": limpia filtros y lista todos los productos
     function showAllProducts() {

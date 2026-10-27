@@ -1,0 +1,79 @@
+/* ============================================================
+   DIÁLOGO DE SEGUIMIENTO
+   Reutiliza ReviewForm.module.css para campos, notas, errores y botones;
+   aquí solo va lo propio: campo de precio, casilla del aviso y "dejar de seguir".
+   Solo tokens del sistema de diseño, sin colores propios.
+   ============================================================ */
+.follow-form__price {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.follow-form__currency {
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.follow-form__input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-main);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.follow-form__input:focus {
+    border-color: var(--color-primary);
+}
+
+.follow-form__input:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+.follow-form__toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.follow-form__toggle input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
+.follow-form__toggle label {
+    cursor: pointer;
+}
+
+.follow-form__toggle input:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+/* "Dejar de seguir" va a la izquierda y no compite con Guardar */
+.follow-form__unfollow {
+    margin-right: auto;
+    color: var(--state-error-text);
+}
+
+.follow-form__unfollow:hover:not(:disabled) {
+    color: var(--state-error-text);
+    text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+    .follow-form__unfollow {
+        margin-right: 0;
+    }
+}

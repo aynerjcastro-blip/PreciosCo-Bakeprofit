@@ -23,6 +23,12 @@
     --color-primary-soft: #FFF7ED;
     --color-secondary: #10B981;
 
+    /* 1. Calificación (estrellas) */
+    --color-star: #FF9F1C;
+    --color-star-stroke: #B45309;
+    --color-star-empty: #E2E8F0;
+    /* Añadido para estado vacío */
+
     /* Bordes */
     --border-color: #E2E8F0;
 
@@ -36,11 +42,53 @@
     --radius-lg: 24px;
     --shadow-soft: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
     --shadow-card: 0 20px 30px -10px rgba(15, 23, 42, 0.08);
+
+    /* ============================================================
+       FASE 2: COMPONENTES BASE (SISTEMA DE DISEÑO)
+       Nota para Abisael y Darwin: Utilicen obligatoriamente estas variables.
+       ============================================================ */
+
+    /* 2. Badges de Estado (Fondo pastel con texto oscuro - WCAG AA) */
+    --badge-pendiente-bg: #FEF3C7;
+    --badge-pendiente-text: #92400E;
+
+    --badge-resuelto-bg: #DCFCE7;
+    --badge-resuelto-text: #166534;
+
+    --badge-reportado-bg: #FEE2E2;
+    --badge-reportado-text: #991B1B;
+
+    --badge-eliminado-bg: #F3F4F6;
+    --badge-eliminado-text: #374151;
+
+    /* 3. Alertas / Toasts */
+    --alert-success-bg: #ECFDF5;
+    --alert-success-border: #10B981;
+
+    --alert-error-bg: #FEF2F2;
+    --alert-error-border: #EF4444;
+
+    --alert-info-bg: #EFF6FF;
+    --alert-info-border: #3B82F6;
+
+    /* 4. Modal de Confirmación */
+    --modal-overlay-bg: rgba(15, 23, 42, 0.6);
+    --modal-surface-bg: var(--bg-surface);
+
+    /* 5. Estados UI (Vacío, Cargando, Error) */
+    --state-empty-text: var(--text-muted);
+    --state-loading-spinner: var(--color-primary);
+    --state-error-text: #DC2626;
+
+    /* 6. Accesibilidad básica (Focus Rings) */
+    --focus-ring-color: var(--color-primary);
 }
 
-/* 1. Si el SISTEMA operativo del usuario está en oscuro, Y todavía
-    no eligió nada manualmente (no hay data-theme="light" puesto),
-   usa oscuro por defecto. Esto es un "fallback" automático. */
+/* ============================================================
+   TEMA OSCURO (Fallback OS y Manual)
+   ============================================================ */
+
+/* 1. Preferencia del sistema operativo */
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
         --bg-main: #121212;
@@ -49,12 +97,31 @@
         --text-primary: #F1F5F9;
         --text-muted: #94A3B8;
         --border-color: #334155;
+
+        --color-star-stroke: #FF9F1C;
+        --color-star-empty: #334155;
+
+        /* Badges invertidos (Fondo oscuro con texto claro - WCAG AA) */
+        --badge-pendiente-bg: #78350F;
+        --badge-pendiente-text: #FDE68A;
+        --badge-resuelto-bg: #064E3B;
+        --badge-resuelto-text: #A7F3D0;
+        --badge-reportado-bg: #7F1D1D;
+        --badge-reportado-text: #FECACA;
+        --badge-eliminado-bg: #374151;
+        --badge-eliminado-text: #E5E7EB;
+
+        /* Alertas Dark */
+        --alert-success-bg: #064E3B;
+        --alert-error-bg: #7F1D1D;
+        --alert-info-bg: #1E3A8A;
+
+        --modal-overlay-bg: rgba(0, 0, 0, 0.8);
+        --state-error-text: #F87171;
     }
 }
 
-
-/* 2. Si el usuario ELIGIÓ oscuro manualmente con el switch,
-   esto gana sin importar lo que diga el sistema operativo. */
+/* 2. Switch manual del usuario */
 :root[data-theme="dark"] {
     --bg-main: #121212;
     --bg-surface: #1E1E1E;
@@ -62,4 +129,23 @@
     --text-primary: #F1F5F9;
     --text-muted: #94A3B8;
     --border-color: #334155;
+
+    --color-star-stroke: #FF9F1C;
+    --color-star-empty: #334155;
+
+    --badge-pendiente-bg: #78350F;
+    --badge-pendiente-text: #FDE68A;
+    --badge-resuelto-bg: #064E3B;
+    --badge-resuelto-text: #A7F3D0;
+    --badge-reportado-bg: #7F1D1D;
+    --badge-reportado-text: #FECACA;
+    --badge-eliminado-bg: #374151;
+    --badge-eliminado-text: #E5E7EB;
+
+    --alert-success-bg: #064E3B;
+    --alert-error-bg: #7F1D1D;
+    --alert-info-bg: #1E3A8A;
+
+    --modal-overlay-bg: rgba(0, 0, 0, 0.8);
+    --state-error-text: #F87171;
 }

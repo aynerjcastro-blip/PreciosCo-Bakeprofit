@@ -23,6 +23,11 @@
 	</properties>
 
 	<dependencies>
+			<!-- Envío de correos (JavaMailSender): avisos de baja de precio por correo (RF28) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
 
 		<!-- ============================================================
 		     WEB / API REST

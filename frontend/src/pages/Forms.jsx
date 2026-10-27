@@ -1,27 +1,50 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import styles from './Forms.module.css';
-import { login, register } from '../api/auth';
-import { saveSession } from '../utils/auth-helper';
+
+// Funciones que hablan con el backend. Se renombra `login` a `loginRequest`
+// porque el contexto tambien expone una funcion `login` con otro proposito.
+import { login as loginRequest, register } from '../api/auth';
+
+// Hook de sesion: expone login(), logout(), user, isAuthenticated, etc.
+import { useAuth } from '../context/useAuth';
 
 export default function Forms({ type = 'login' }) {
     const isLogin = type === 'login';
     const navigate = useNavigate();
+    const location = useLocation();
+// Una ruta protegida manda aquí al usuario; al entrar lo devolvemos a donde iba
+const from = location.state?.from?.pathname || '/';
 
+    /*
+     * login() del CONTEXTO: recibe la respuesta (AuthResponse) que ya devolvio
+     * el backend, la guarda en localStorage y actualiza el estado global.
+     * NO hace ninguna peticion HTTP. Para eso esta loginRequest().
+     */
+    const { login } = useAuth();
+
+    // Valores de los campos del formulario.
     const [formData, setFormData] = useState({
         name: '',
         email: '',
-        phone: '',
         password: '',
         terms: false
     });
 
+    // Mensaje de error para mostrar al usuario (null = sin error).
     const [error, setError] = useState(null);
+
+    // true mientras se espera la respuesta del backend (deshabilita el boton).
     const [isLoading, setIsLoading] = useState(false);
 
-    // Nuevo estado para controlar la visibilidad de la contraseña
+    // Controla si la contrasena se ve en texto plano o con puntos.
     const [showPassword, setShowPassword] = useState(false);
 
+    /**
+     * Actualiza un campo del formulario.
+     * Funciona para todos los inputs usando el atributo `name` como clave.
+     * Los checkbox guardan `checked` (boolean) en vez de `value` (string).
+     */
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData((prev) => ({
@@ -30,42 +53,57 @@ export default function Forms({ type = 'login' }) {
         }));
     };
 
+    /**
+     * Validaciones que no necesitan al backend.
+     * @returns {string|null} mensaje de error, o null si todo esta bien
+     */
     const validateClientSide = () => {
         if (!isLogin && !formData.terms) {
-            return "Debes aceptar los términos y condiciones";
+            return 'Debes aceptar los términos y condiciones';
         }
         return null;
     };
 
+    /**
+     * Envia el formulario.
+     * 1) Valida en el cliente.
+     * 2) Pide al backend el login o el registro.
+     * 3) Entrega la respuesta al contexto (guarda la sesion).
+     * 4) Redirige al inicio.
+     * Si el backend rechaza la peticion (credenciales invalidas, correo
+     * duplicado, cuenta inactiva...), api/auth.js lanza un Error con el
+     * mensaje del backend y aqui se muestra en pantalla.
+     */
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(null);
+
         const clientError = validateClientSide();
         if (clientError) {
             setError(clientError);
             return;
         }
+
         setIsLoading(true);
         try {
-            let authResponse;
-            if (isLogin) {
-                authResponse = await login(formData.email, formData.password);
-            } else {
-                authResponse = await register({
+            // Paso 1: peticion al backend (devuelve token, name, email, role).
+            const authResponse = isLogin
+                ? await loginRequest(formData.email, formData.password)
+                : await register({
                     name: formData.name,
                     email: formData.email,
                     password: formData.password
                 });
-            }
-            saveSession(authResponse.token, {
-                name: authResponse.name,
-                email: authResponse.email,
-                role: authResponse.role,
-            });
-            navigate('/');
+
+            // Paso 2: el contexto guarda la sesion y notifica a la app.
+            login(authResponse);
+
+            // Paso 3: volver al inicio con la sesion ya activa.
+            navigate(from, { replace: true });
         } catch (err) {
             setError(err.message);
         } finally {
+            // Se ejecuta siempre, haya error o no: reactiva el boton.
             setIsLoading(false);
         }
     };
@@ -74,6 +112,7 @@ export default function Forms({ type = 'login' }) {
         <div className={styles['auth-form-wrapper']}>
             <form className={styles['auth-form']} onSubmit={handleSubmit}>
 
+                {/* Nombre: solo se pide al registrarse */}
                 {!isLogin && (
                     <div className={styles['auth-form__field']}>
                         <label className={styles['auth-form__label']} htmlFor="register-name">Nombre:</label>
@@ -83,11 +122,13 @@ export default function Forms({ type = 'login' }) {
                             name="name"
                             value={formData.name}
                             onChange={handleChange}
+                            autoComplete="name"
                             required
                         />
                     </div>
                 )}
 
+                {/* Correo */}
                 <div className={styles['auth-form__field']}>
                     <label className={styles['auth-form__label']} htmlFor="email">Correo:</label>
                     <input
@@ -96,28 +137,29 @@ export default function Forms({ type = 'login' }) {
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
+                        autoComplete="email"
                         required
                     />
                 </div>
 
-                
-
+                {/* Contrasena con boton para mostrar u ocultar */}
                 <div className={styles['auth-form__field']}>
                     <label className={styles['auth-form__label']} htmlFor="password">Contraseña:</label>
                     <div style={{ display: 'flex', position: 'relative' }}>
                         <input
-                            type={showPassword ? "text" : "password"}
+                            type={showPassword ? 'text' : 'password'}
                             id="password"
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
+                            autoComplete={isLogin ? 'current-password' : 'new-password'}
                             required
                             style={{ width: '100%', paddingRight: '40px' }}
                         />
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                             style={{
                                 position: 'absolute',
                                 right: '10px',
@@ -133,13 +175,13 @@ export default function Forms({ type = 'login' }) {
                             }}
                         >
                             {showPassword ? (
-                                // Ícono de ojo tachado (Ocultar)
+                                // Icono de ojo tachado (ocultar)
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                                     <line x1="1" y1="1" x2="23" y2="23"></line>
                                 </svg>
                             ) : (
-                                // Ícono de ojo abierto (Mostrar)
+                                // Icono de ojo abierto (mostrar)
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
@@ -149,6 +191,7 @@ export default function Forms({ type = 'login' }) {
                     </div>
                 </div>
 
+                {/* Terminos y condiciones: solo al registrarse */}
                 {!isLogin && (
                     <div className={styles['auth-form__terms']}>
                         <input
@@ -163,7 +206,12 @@ export default function Forms({ type = 'login' }) {
                     </div>
                 )}
 
-                {error && <p className={styles['auth-form__error']}>{error}</p>}
+                {/* role="alert": los lectores de pantalla anuncian el error al aparecer */}
+                {error && (
+                    <p className={styles['auth-form__error']} role="alert">
+                        {error}
+                    </p>
+                )}
 
                 <button
                     type="submit"
@@ -173,6 +221,7 @@ export default function Forms({ type = 'login' }) {
                     {isLoading ? 'Procesando...' : (isLogin ? 'Iniciar sesión' : 'Registrarse')}
                 </button>
 
+                {/* Enlace para cambiar entre login y registro */}
                 {isLogin ? (
                     <p className={styles['auth-form__switch']}>
                         ¿No tienes cuenta? <Link to="/register">Regístrate</Link>
