@@ -1,0 +1,154 @@
+/* ============================================================
+   SECCIÓN DE OPINIONES (compartida por todas las tiendas)
+   Una sola superficie con divisores: las tarjetas de precio
+   siguen siendo lo único que destaca en la página.
+   ============================================================ */
+.reviews {
+    margin-top: 56px;
+    scroll-margin-top: 24px;
+}
+
+.reviews__title {
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+.reviews__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 16px 0 20px;
+}
+
+/* Mismo chip que el filtro de categorías de la búsqueda */
+.reviews__chip {
+    padding: 8px 20px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.reviews__chip:hover {
+    border-color: var(--color-dark);
+}
+
+.reviews__chip--active {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: var(--text-alternative);
+}
+
+.reviews__chip:focus-visible,
+.reviews__more:focus-visible,
+.review__report:focus-visible {
+    outline: 3px solid var(--color-dark);
+    outline-offset: 2px;
+}
+
+.reviews__message {
+    padding: 32px 0;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.reviews__list {
+    list-style: none;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+}
+
+.review {
+    padding: 20px 24px;
+}
+
+.review + .review {
+    border-top: 1px solid var(--border-color);
+}
+
+.review__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+}
+
+.review__author {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.review__store,
+.review__date {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.review__date {
+    margin-left: auto;
+}
+
+.review__text {
+    max-width: 70ch;
+    margin-top: 8px;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.review__report {
+    margin-top: 10px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.review__report:hover {
+    color: var(--text-primary);
+}
+
+.reviews__more {
+    display: block;
+    margin: 20px auto 0;
+    padding: 10px 24px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.reviews__more:hover:not(:disabled) {
+    border-color: var(--color-dark);
+}
+
+.reviews__more:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+    .review {
+        padding: 18px 16px;
+    }
+
+    .review__date {
+        margin-left: 0;
+    }
+}

@@ -1,0 +1,288 @@
+/* ============================================================
+   PÁGINA DE PRODUCTOS SEGUIDOS
+   Solo tokens del sistema de diseño: estados vacío/cargando/error, badges y alertas.
+   Rejilla: 1 columna en móvil, 2 en tablet, 3 en escritorio.
+   ============================================================ */
+.followed {
+    max-width: 1100px;
+    margin: 60px auto;
+    padding: 0 24px;
+}
+
+.followed__header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.followed__title {
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.followed__subtitle {
+    color: var(--text-muted);
+    margin-top: 8px;
+}
+
+/* Alerta de error de una acción (cambiar el aviso) */
+.followed__alert {
+    margin-bottom: 20px;
+    padding: 10px 16px;
+    border-left: 4px solid var(--alert-error-border);
+    border-radius: var(--radius-sm);
+    background: var(--alert-error-bg);
+    color: var(--text-primary);
+}
+
+/* Estados vacío, cargando y error */
+.followed__state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 40px;
+    text-align: center;
+    color: var(--state-empty-text);
+}
+
+.followed__state--error {
+    color: var(--state-error-text);
+}
+
+.followed__state a {
+    font-weight: 700;
+    color: inherit;
+    text-decoration: underline;
+}
+
+.followed__spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--state-loading-spinner);
+    border-radius: 50%;
+    animation: followed-spin 0.8s linear infinite;
+}
+
+@keyframes followed-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .followed__spinner {
+        animation: none;
+    }
+}
+
+.followed__button {
+    display: inline-flex;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 999px;
+    background: var(--color-dark);
+    color: var(--bg-surface);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.followed__state .followed__button {
+    color: var(--bg-surface);
+    text-decoration: none;
+}
+
+.followed__button:hover {
+    background: var(--color-primary-hover);
+}
+
+.followed__button:focus-visible,
+.follow-card__edit:focus-visible,
+.switch:focus-visible,
+.follow-card__name a:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+/* ---------- Lista de tarjetas ---------- */
+.follow-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+@media (min-width: 640px) {
+    .follow-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1000px) {
+    .follow-list {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.follow-card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 22px 24px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-soft);
+}
+
+.follow-card__head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.follow-card__name {
+    font-size: 1.15rem;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+}
+
+.follow-card__name a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.follow-card__name a:hover {
+    text-decoration: underline;
+}
+
+/* Badge del estado del aviso (mismos tokens que los badges de estado del sistema) */
+.badge {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.badge--active {
+    background: var(--badge-resuelto-bg);
+    color: var(--badge-resuelto-text);
+}
+
+.badge--paused {
+    background: var(--badge-eliminado-bg);
+    color: var(--badge-eliminado-text);
+}
+
+.follow-card__data {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+}
+
+.follow-card__data dt {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.follow-card__data dd {
+    margin: 2px 0 0;
+    color: var(--text-primary);
+}
+
+.follow-card__price {
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+
+.follow-card__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-color);
+}
+
+.follow-card__edit {
+    padding: 8px 18px;
+    border: 1.5px solid var(--color-primary);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.follow-card__edit:hover {
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+/* ---------- Interruptor del aviso ---------- */
+.switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.switch:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.switch__track {
+    position: relative;
+    flex-shrink: 0;
+    width: 44px;
+    height: 26px;
+    border: 2px solid var(--text-muted);
+    border-radius: 999px;
+    background: transparent;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.switch__thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: transform 0.15s, background 0.15s;
+}
+
+.switch[aria-checked="true"] .switch__track {
+    background: var(--color-dark);
+    border-color: var(--color-dark);
+}
+
+.switch[aria-checked="true"] .switch__thumb {
+    background: var(--bg-surface);
+    transform: translateX(18px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .switch__track,
+    .switch__thumb {
+        transition: none;
+    }
+}
