@@ -19,7 +19,6 @@ import com.comprasco.bakeprofit.dto.ReviewCommentResponse;
 import com.comprasco.bakeprofit.dto.ReviewResponse;
 import com.comprasco.bakeprofit.entity.Comment;
 import com.comprasco.bakeprofit.entity.CommentReport;
-import com.comprasco.bakeprofit.entity.CommentStatus;
 import com.comprasco.bakeprofit.entity.Product;
 import com.comprasco.bakeprofit.entity.Rating;
 import com.comprasco.bakeprofit.entity.ReportReason;
@@ -47,8 +46,8 @@ import com.comprasco.bakeprofit.repository.RatingStats;
 public class ReviewService {
 
     private static final int MAX_PAGE_SIZE = 50;
-    private static final List<CommentStatus> VISIBLE_STATUSES =
-            List.of(CommentStatus.PUBLICADO, CommentStatus.REPORTADO, CommentStatus.CONSERVADO);
+    private static final List<Comment.CommentStatus> VISIBLE_STATUSES =
+            List.of(Comment.CommentStatus.PUBLICADO, Comment.CommentStatus.REPORTADO, Comment.CommentStatus.CONSERVADO);
 
     private final RatingRepository ratingRepository;
     private final CommentRepository commentRepository;
@@ -121,7 +120,7 @@ public class ReviewService {
     public ReviewResponse update(User user, Long reviewId, Integer score, String text) {
         Rating rating = findOwnedRating(user, reviewId);
         Comment comment = commentOf(rating);
-        if (comment.getStatus() != CommentStatus.PUBLICADO) {
+        if (comment.getStatus() != Comment.CommentStatus.PUBLICADO) {
             throw new ReviewNotAllowedException(
                     "No se puede editar: el comentario fue reportado, ocultado o eliminado.");
         }
@@ -254,7 +253,7 @@ public class ReviewService {
 
     private ReviewResponse toResponse(Rating rating, Comment comment) {
         LocalDateTime deadline = editDeadline(rating);
-        boolean editable = comment.getStatus() == CommentStatus.PUBLICADO
+        boolean editable = comment.getStatus() == Comment.CommentStatus.PUBLICADO
                 && LocalDateTime.now().isBefore(deadline);
         return ReviewResponse.from(rating, comment, editable ? deadline : null);
     }

@@ -3,7 +3,6 @@ package com.comprasco.bakeprofit.dto;
 import java.time.LocalDateTime;
 
 import com.comprasco.bakeprofit.entity.Comment;
-import com.comprasco.bakeprofit.entity.CommentStatus;
 import com.comprasco.bakeprofit.entity.Rating;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -26,7 +25,7 @@ public record ReviewResponse(
     String text,
     
     @Schema(description = "Estado del comentario (ELIMINADO: no se puede volver a comentar)") 
-    CommentStatus commentStatus,
+    Comment.CommentStatus commentStatus,
 
     @Schema(description = "Fecha de registro") 
     LocalDateTime registrationDate,
