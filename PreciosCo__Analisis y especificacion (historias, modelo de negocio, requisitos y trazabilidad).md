@@ -12,7 +12,7 @@ Valledupar, Colombia · octubre de 2026
 
 ## 1. Planteamiento y contexto
 
-PreciosCo compara los precios de productos del hogar entre supermercados y señala dónde comprar más barato, para que quien hace su mercado no tenga que ir de tienda en tienda.
+PreciosCo compara los precios de productos del hogar, de droguería, de cuidado facial y de repuestos para vehículos y motos entre establecimientos, y señala dónde comprar más barato, para que quien compra no tenga que ir de tienda en tienda.
 
 **El problema.** Quien hace su mercado no sabe en qué establecimiento están las mejores opciones de compra y no puede recorrer supermercado por supermercado para comparar. Pierde tiempo y transporte, y termina pagando más de lo necesario.
 
@@ -25,7 +25,7 @@ PreciosCo compara los precios de productos del hogar entre supermercados y seña
 | PB-3 | Los precios cambian con frecuencia y no se entera de las bajadas | Por validar con usuarios |
 | PB-4 | No sabe si el precio que ve está vigente ni de dónde proviene | Por validar con usuarios |
 | PB-5 | No conoce la opinión de otros compradores sobre productos y tiendas | Por validar con usuarios |
-| PB-6 | La comparación existente solo cubre supermercados; droguería y cuidado facial quedan fuera | Observado en el bot actual |
+| PB-6 | La comparación existente solo cubre supermercados; droguería, cuidado facial y repuestos de vehículos y motos quedan fuera | Observado en el bot actual |
 | PB-7 | Los establecimientos no tienen un canal propio para mantener sus precios al día | Por validar con usuarios |
 
 ### Estado actual (AS-IS)
@@ -38,7 +38,7 @@ PreciosCo compara los precios de productos del hogar entre supermercados y seña
 
 ### Estado deseado (TO-BE)
 
-Una plataforma web (React, Spring Boot y PostgreSQL) que conserva la comparación del bot y suma cuentas de usuario, calificaciones y comentarios de un producto en una tienda con sus promedios, y seguimiento de productos con avisos de baja de precio. Las fases posteriores agregan droguerías, cuidado facial, IA especializada y un módulo para que los proveedores publiquen sus precios.
+Una plataforma web (React, Spring Boot y PostgreSQL) que conserva la comparación del bot y suma cuentas de usuario, calificaciones y comentarios de un producto en una tienda con sus promedios, y seguimiento de productos con avisos de baja de precio. Las fases posteriores agregan droguerías, cuidado facial, repuestos para vehículos y motos, IA especializada y un módulo para que los proveedores publiquen sus precios.
 
 ### Alcance por fases
 
@@ -46,7 +46,7 @@ Una plataforma web (React, Spring Boot y PostgreSQL) que conserva la comparació
 | --- | --- | --- |
 | 1 (MVP) | Usuarios, categorías, productos, precios y comparación de supermercados | Con historias |
 | 2 | Calificaciones, comentarios, seguimiento de productos y notificaciones | Con historias |
-| 3 | Comparadores de droguerías y cuidado facial | Solo requisitos |
+| 3 | Comparadores de droguerías, cuidado facial y repuestos para vehículos y motos | Solo requisitos |
 | 4 | IA especializada: supermercados, recetas, droguerías y cuidado facial | Solo requisitos |
 | 5 | Módulo de proveedores y panel administrativo | Solo requisitos |
 | 6 | Reportes, mejoras e integraciones externas | Solo requisitos |
@@ -86,7 +86,7 @@ Seis objetivos, independientes de la tecnología, cubren el problema desde el ah
 | OB-01 | Reducir el tiempo y esfuerzo que una persona invierte en comparar precios para su mercado | PB-1, PB-2 | Minutos para decidir dónde comprar una lista |
 | OB-02 | Aumentar el ahorro que logra al elegir dónde comprar | PB-1, PB-3 | Diferencia entre el precio promedio y el de la mejor opción |
 | OB-03 | Mejorar la confianza en la información de precios (vigencia y origen) | PB-4 | % de precios actualizados dentro de un plazo definido |
-| OB-04 | Ampliar las compras del hogar cubiertas, de supermercados a droguería y cuidado facial | PB-6 | Tipos de establecimiento y categorías comparables |
+| OB-04 | Ampliar las compras cubiertas, de supermercados a droguería, cuidado facial y repuestos de vehículos y motos | PB-6 | Tipos de establecimiento y categorías comparables |
 | OB-05 | Mejorar la confianza en la calidad de productos y establecimientos | PB-5 | % de productos con al menos una calificación |
 | OB-06 | Facilitar que los establecimientos mantengan su oferta actualizada | PB-7 | % de productos de proveedores actualizados en plazo |
 
@@ -106,6 +106,7 @@ Intervienen cuatro actores humanos y cuatro actores automáticos; los roles de a
 | ACT-06 | Servicio de correo | Sistema externo | Secundario | — |
 | ACT-07 | Revisión periódica de precios | Tiempo | Iniciador | Tarea programada |
 | ACT-08 | Fuente externa de precios | Sistema externo | Secundario | Scraper que carga precios (GitHub Actions) |
+| ACT-09 | Proveedor de identidad (Google) | Sistema externo | Secundario | Valida la cuenta de Google al iniciar sesión |  
 
 Solo el rol USER puede calificar, comentar y reportar: ADMIN y SUPPLIER reciben 403. No se consideran actores «el sistema», la base de datos, el bot de Telegram, el panel administrativo ni «el usuario» genérico.
 
@@ -115,7 +116,7 @@ Siete procesos recorren el servicio, desde la cuenta del consumidor hasta la adm
 
 | ID | Proceso | Actor | Entrada | Salida |
 | --- | --- | --- | --- | --- |
-| P-01 | Gestionar cuenta de consumidor | Consumidor | Datos personales y credenciales | Cuenta activa y acceso |
+| P-01 | Gestionar cuenta de consumidor | Consumidor, proveedor de identidad | Datos personales y credenciales, o cuenta de Google | Cuenta activa y acceso |
 | P-02 | Consultar y comparar precios | Visitante o consumidor | Producto o categoría, filtros | Precios comparados, mejor opción y fecha de cada precio |
 | P-03 | Calificar, comentar y reportar | Consumidor registrado | Producto, tienda, puntaje, comentario, razón del reporte | Calificación o comentario registrado y promedio actualizado |
 | P-04 | Seguir productos y recibir alertas | Consumidor registrado, revisión periódica | Producto seguido, precio objetivo | Aviso de baja de precio |
@@ -125,7 +126,7 @@ Siete procesos recorren el servicio, desde la cuenta del consumidor hasta la adm
 
 ## 5. Historias de usuario
 
-Las 24 historias cubren las Fases 1 y 2 con el formato Como…, quiero…, para…; cada una trae criterios de aceptación comprobables, el requisito que la origina (RF), su objetivo (OB) y su tamaño.
+Las 28 historias cubren las Fases 1 y 2 con el formato Como…, quiero…, para…; cada una trae criterios de aceptación comprobables, el requisito que la origina (RF), su objetivo (OB) y su tamaño.
 
 ### Cómo leerlas: INVEST y SMART
 
@@ -218,6 +219,14 @@ Como visitante, quiero que se resalte la tienda más barata y ver los precios de
 - Cada precio de la lista es menor o igual al siguiente.
 - En un empate se resaltan todas las tiendas empatadas (por confirmar).
 
+**HU-27 · Ir a la tienda desde la comparación** — RF57 · OB-01 · S
+
+Como visitante, quiero abrir la página del producto en la tienda desde la comparación, para comprar donde está más barato sin buscarlo de nuevo.
+
+- Cada precio con página registrada muestra un enlace que abre la página del producto en la tienda, en una pestaña nueva.
+- Un precio sin página registrada se muestra sin enlace, nunca con un enlace roto.
+- El enlace funciona sin iniciar sesión.
+
 ### Fase 2: sesión
 
 **HU-09 · Ver mi sesión y cerrarla** — RF02, RF49 · OB-05 · S
@@ -227,6 +236,32 @@ Como consumidor registrado, quiero ver mi nombre en el encabezado y poder cerrar
 - El encabezado cambia al iniciar y cerrar sesión sin recargar la página (RF49).
 - Cerrar sesión borra mi token y mis datos del navegador.
 - Sin sesión, entrar a una ruta protegida como /seguidos me lleva a /login.
+
+**HU-24 · Iniciar sesión con Google** — RF56 · OB-01, OB-05 · M
+ 
+Como visitante, quiero iniciar sesión con mi cuenta de Google, para entrar sin crear ni recordar otra contraseña.
+ 
+- Con una cuenta de Google cuyo correo no está registrado, se crea una cuenta con rol USER y quedo con sesión iniciada.
+- Si el correo ya está registrado, entro a esa misma cuenta y no se crea otra (provisional, DP-22).
+- Si cancelo en Google o la validación falla, vuelvo a /login con un mensaje claro.
+- Una cuenta desactivada no puede iniciar sesión, tampoco con Google.
+- La sesión recibe el mismo token de 24 horas que el inicio de sesión normal.
+
+**HU-25 · Recuperar mi contraseña** — RF03 · OB-05 · M
+ 
+Como consumidor registrado, quiero recibir en mi correo un enlace para crear una contraseña nueva, para volver a entrar si la olvidé.
+ 
+- El enlace llega solo al correo registrado y deja de servir a los 30 minutos\*.
+- Un enlace usado o vencido se rechaza con un mensaje claro.
+- Si el correo no está registrado, la respuesta es la misma que si lo estuviera, para no revelar qué correos existen.
+
+**HU-26 · Modificar mi perfil** — RF04 (DEBERÍA) · OB-05 · S
+ 
+Como consumidor registrado, quiero cambiar mi nombre y mi correo, para mantener mis datos al día.
+ 
+- El nombre nuevo aparece en el encabezado sin volver a iniciar sesión.
+- Un correo que ya usa otra cuenta devuelve 409.
+- Una cuenta creada con Google no cambia su correo desde el perfil (provisional, DP-23).
 
 ### Fase 2: calificaciones y comentarios
 
@@ -349,11 +384,11 @@ Como consumidor que sigue un producto, quiero recibir un correo cuando su precio
 
 ### Verificación INVEST
 
-Las 24 historias cumplen Valiosa, Negociable y Testeable; estas son las excepciones y la acción para cada una.
+Las 28 historias cumplen Valiosa, Negociable y Testeable; estas son las excepciones y la acción para cada una.
 
 | Historia | Principio | Observación | Acción |
 | --- | --- | --- | --- |
-| HU-09 a HU-12 y HU-15 a HU-23 | Independiente | Requieren sesión: dependen de HU-02 y del PR de seguridad | Dependencia aceptada; el orden de merge ya la refleja |
+| HU-09 a HU-12, HU-15 a HU-23, HU-25 y HU-26 | Independiente | Requieren sesión: dependen de HU-02 y del PR de seguridad | Dependencia aceptada; el orden de merge ya la refleja |
 | HU-11, HU-12, HU-15, HU-16 | Independiente | Necesitan HU-10: sin opinión no hay comentario que corregir, ver, eliminar o reportar | Implementar HU-10 primero |
 | HU-10 | Pequeña | Une calificar y comentar por decisión del equipo (RN-30) | Mantener unidas; no dividir por tipo de dato |
 | HU-21 y HU-23 | Independiente | Comparten el mismo evento y solo cambia el canal | Se mantienen separadas: el correo es DEBERÍA y puede aplazarse, el aviso en la plataforma no |
@@ -379,10 +414,10 @@ Las 24 historias cumplen Valiosa, Negociable y Testeable; estas son las excepcio
 | RN-02 | Restricción | Solo se comparan precios de un mismo producto y presentación entre establecimientos distintos. | Definida |
 | RN-03 | Cálculo | La mejor opción de compra es el establecimiento cuyo precio registrado más reciente sea el menor. | Definida |
 | RN-04 | Restricción | Los precios son informativos y no vinculantes: no se garantiza su actualización en tiempo real. | Definida |
-| RN-05 | Validación | Todo producto pertenece a una categoría y todo establecimiento a un tipo (supermercado, droguería o cuidado facial). | Definida |
+| RN-05 | Validación | Todo producto pertenece a una categoría y todo establecimiento a un tipo (supermercado, droguería, cuidado facial o repuestos para vehículos y motos). | Definida |
 | RN-06 | Restricción | Los supermercados comparables en la etapa inicial son D1, Jumbo, Éxito y Olímpica; otros establecimientos se incorporan por fases. | Definida |
 | RN-07 | Autorización | Solo un consumidor registrado (rol USER) puede calificar, comentar, reportar comentarios y seguir productos; ADMIN y SUPPLIER no. | Definida |
-| RN-08 | Validación | Cada cuenta se identifica con un correo único, y la recuperación de contraseña solo se envía a ese correo. | Definida |
+| RN-08 | Validación | Cada cuenta se identifica con un correo único, también cuando se inicia sesión con Google, y la recuperación de contraseña solo se envía a ese correo. | Definida |
 | RN-09 | Autorización | Cada rol (consumidor, proveedor, administrador) accede solo a las funciones de su rol. | Definida |
 | RN-10 | Restricción | Una cuenta bloqueada/desactivada no puede acceder a la plataforma. | Definida |
 | RN-11 | Validación | El puntaje de una calificación va de 1 a 5 estrellas y toda opinión conserva su fecha de registro. | Definida |
@@ -390,7 +425,7 @@ Las 24 historias cumplen Valiosa, Negociable y Testeable; estas son las excepcio
 | RN-13 | Cálculo | El promedio de un producto, de una tienda o de un producto en una tienda es la media aritmética de las calificaciones registradas; la tienda no se califica directamente: su promedio se deriva de las calificaciones de sus productos. El promedio se calcula sobre todas las calificaciones registradas, sin importar el estado de su comentario (PUBLICADO, REPORTADO, CONSERVADO, OCULTO o ELIMINADO): ocultar un comentario es una decisión sobre el texto, no sobre el puntaje. | Definida |
 | RN-14 | Transición | Un comentario pasa de PUBLICADO o CONSERVADO a REPORTADO cuando recibe un reporte; el administrador decide si queda CONSERVADO u OCULTO; el autor puede pasarlo a ELIMINADO mientras no esté OCULTO (un comentario oculto por el administrador no puede ser eliminado por el autor; permanece OCULTO). Solo OCULTO y ELIMINADO dejan de ser visibles. | Definida |
 | RN-15 | Restricción | Solo se notifica sobre productos seguidos con la notificación activa. | Definida |
-| RN-16 | Cálculo | SI el consumidor definió un precio objetivo, ENTONCES se notifica cuando el precio sea menor o igual a ese objetivo; SI no lo definió, ENTONCES se notifica ante cualquier reducción del precio. | Definida |
+| RN-16 | Cálculo | SI el consumidor definió un precio objetivo, ENTONCES se notifica cuando el precio sea menor o igual a ese objetivo, sin embargo si el precio ya es menor al objetivo no se notificará como baja en el momento; SI no lo definió, ENTONCES se notifica ante cualquier reducción del precio. | Definida |
 | RN-17 | Restricción | Las recomendaciones sobre droguería y cuidado facial son orientativas: no constituyen diagnóstico ni prescripción ni sustituyen a un profesional de la salud. | Definida |
 | RN-18 | Restricción | Las recomendaciones del servicio solo incluyen productos y precios registrados en el catálogo. | Definida |
 | RN-19 | Transición | Un proveedor pasa de PENDIENTE a APROBADO o RECHAZADO por decisión del administrador; solo un proveedor aprobado publica. | Definida |
@@ -406,10 +441,11 @@ Las 24 historias cumplen Valiosa, Negociable y Testeable; estas son las excepcio
 | RN-29 | Restricción | Una calificación y su comentario pueden modificarse por su autor hasta 1 día (24 horas) después de registrados; pasado ese plazo quedan definitivos. Solo el autor puede editar, y solo mientras el comentario siga PUBLICADO (uno reportado, oculto o eliminado no se reescribe); fuera de esas condiciones se responde 409. | Definida; el conteo del plazo está por confirmar |
 | RN-30 | Restricción | Calificar y comentar un producto en una tienda son una sola acción: no se puede calificar sin comentar ni comentar sin calificar, y ambos se registran al mismo tiempo. El id de una opinión es el de su calificación y es el que usan editar, eliminar y reportar. | Definida |
 | RN-31 | Restricción | El estado del comentario (incluido OCULTO) no afecta el promedio del producto ni del establecimiento; retirar una calificación del promedio exige una razón propia de la calificación (indicio de fraude), no la moderación de su comentario. | Definida |
+| RN-32 | Restricción | Un repuesto solo se compara con el mismo repuesto, identificado por su referencia o código del fabricante; dos repuestos con nombre parecido y distinta referencia no se comparan. | Por confirmar |
 
 ## 7. Requisitos funcionales
 
-Son 54 requisitos en siete módulos. DEBE indica obligación y DEBERÍA una función recomendable que puede aplazarse; la columna Fase dice cuándo se construye. Los IDs ya no se renumeran: RF49 a RF54 cubren funcionalidades que faltaban en las Fases 1 a 3 y se agregaron al final de su módulo, aunque eso rompa el orden estrictamente consecutivo dentro de la página.
+Son 57 requisitos en siete módulos. DEBE indica obligación y DEBERÍA una función recomendable que puede aplazarse; la columna Fase dice cuándo se construye. Los IDs ya no se renumeran: RF49 a RF57 cubren funcionalidades que faltaban en las Fases 1 a 3 y se agregaron al final de su módulo, aunque eso rompa el orden estrictamente consecutivo dentro de la página.
 
 ### Gestión de usuarios
 
@@ -417,9 +453,10 @@ Son 54 requisitos en siete módulos. DEBE indica obligación y DEBERÍA una func
 | --- | --- | --- | --- | --- |
 | RF01 | Registrar cuenta | ACT-01 | 1 | El sistema DEBE permitir al visitante registrar una cuenta con nombre, correo y contraseña. |
 | RF02 | Iniciar sesión | ACT-02, 03, 04 | 1 | El sistema DEBE permitir iniciar sesión con correo y contraseña a toda cuenta registrada y no bloqueada. |
-| RF03 | Recuperar contraseña | ACT-02, ACT-06 | Sin asignar | El sistema DEBE enviar al correo registrado un enlace de recuperación válido por 30 minutos\* cuando el consumidor lo solicite. |
-| RF04 | Modificar perfil | ACT-02 | Sin asignar | El sistema DEBERÍA permitir al consumidor modificar su nombre y correo. |
+| RF03 | Recuperar contraseña | ACT-02, ACT-06 | 2 | El sistema DEBE enviar al correo registrado un enlace de recuperación válido por 30 minutos\* cuando el consumidor lo solicite. |
+| RF04 | Modificar perfil | ACT-02 | 2 | El sistema DEBERÍA permitir al consumidor modificar su nombre y correo. |
 | RF49 | Cerrar sesión | ACT-02, 03, 04 | 1 | El sistema DEBE permitir al consumidor cerrar su sesión e invalidar su token. |
+| RF56 | Iniciar sesión con Google | ACT-01, ACT-02, ACT-09 | 2 | El sistema DEBE permitir iniciar sesión con una cuenta de Google y crear la cuenta del consumidor si su correo no está registrado. |
 
 ### Búsqueda y comparación
 
@@ -436,6 +473,8 @@ Son 54 requisitos en siete módulos. DEBE indica obligación y DEBERÍA una func
 | RF50 | Mostrar página de inicio | ACT-01 | 1 | El sistema DEBE mostrar una página de inicio con buscador y las 8 secciones acordadas (alcance 4.A). |
 | RF51 | Cargar precios de fuente externa | ACT-08 | 1 | El sistema DEBE registrar los precios recibidos de una fuente externa con su valor, fecha y fuente (RN-01). |
 | RF52 | Comparar droguerías y cuidado facial | ACT-01, 02 | 3 | El sistema DEBE incluir en la comparación los precios de droguerías y de tiendas de cuidado facial. |
+| RF55 | Comparar repuestos | ACT-01, 02 | 3 | El sistema DEBE incluir en la comparación los precios de tiendas de repuestos para vehículos y motos. |
+| RF57 | Enlazar a la tienda | ACT-01, 02 | 1 | El sistema DEBE mostrar junto a cada precio un enlace a la página del producto en la tienda, cuando la fuente la haya registrado. |
 
 ### Calificaciones y comentarios
 
@@ -525,11 +564,11 @@ Cuatro matrices conectan cada objetivo con sus procesos, reglas, requisitos e hi
 
 | Objetivo | Procesos | Reglas | Requisitos |
 | --- | --- | --- | --- |
-| OB-01 | P-01, P-02, P-04, P-05 | RN-02, 04, 05, 06, 07, 08, 09, 10, 15, 18 | RF01–RF07, RF12, RF23, RF25, RF26, RF29, RF30, RF50 |
+| OB-01 | P-01, P-02, P-04, P-05 | RN-02, 04, 05, 06, 07, 08, 09, 10, 15, 18 | RF01–RF07, RF12, RF23, RF25, RF26, RF29, RF30, RF50, RF56, RF57 |
 | OB-02 | P-02, P-04, P-05 | RN-02 a RN-07, RN-15, RN-16, RN-18 | RF05–RF09, RF12, RF23, RF24, RF27 a RF30, RF53, RF54 |
 | OB-03 | P-02, P-06, P-07 | RN-01, 04, 09, 19, 20, 22, 23 | RF10, RF36, RF39 a RF42, RF44, RF46, RF48, RF51 |
-| OB-04 | P-02, P-05, P-06, P-07 | RN-05, 09, 17, 18, 20, 21 | RF11, RF31, RF32, RF35, RF43, RF52 |
-| OB-05 | P-01, P-03, P-07 | RN-07 a RN-14, RN-23 a RN-31 | RF01–RF04, RF13–RF22, RF40, RF45, RF47, RF48, RF49 |
+| OB-04 | P-02, P-05, P-06, P-07 | RN-02, 05, 09, 17, 18, 20, 21, 32 | RF11, RF31, RF32, RF35, RF43, RF52, RF55 |
+| OB-05 | P-01, P-03, P-07 | RN-07 a RN-14, RN-23 a RN-30 | RF01–RF04, RF13–RF22, RF40, RF45, RF47, RF48, RF49, RF56 |
 | OB-06 | P-06, P-07 | RN-01, 05, 09, 19 a 23 | RF33–RF39, RF41, RF42, RF46 |
 
 ### 9.2 Historia → requisitos → reglas → objetivos
@@ -560,31 +599,33 @@ Cuatro matrices conectan cada objetivo con sus procesos, reglas, requisitos e hi
 | HU-21 Recibir un aviso de baja | RF27 | RN-15, RN-16 | OB-02 |
 | HU-22 Ver mis avisos | RF27, RF53, RF54 | RN-15 | OB-02 |
 | HU-23 Recibir un correo de baja | RF28 | RN-15, RN-16 | OB-02 |
+| HU-24 Iniciar sesión con Google | RF56 | RN-08, RN-09, RN-10 | OB-01, OB-05 |
+| HU-25 Recuperar mi contraseña | RF03 | RN-08 | OB-05 |
+| HU-26 Modificar mi perfil | RF04 | RN-08 | OB-05 |
+| HU-27 Ir a la tienda | RF57 | RN-01 | OB-01 |
 
-Sin historia todavía: RF03 y RF04 (sin fase asignada) y RF29 a RF48 (Fases 4 a 6).
-
-Sin historia tampoco RF51 (carga desde fuente externa, sin actor humano) y RF52 (comparar droguerías y cuidado facial, Fase 3).
+Sin historia todavía: RF29 a RF48, RF52 y RF55 (Fases 3 a 6).
 
 ### 9.3 Regla → requisitos
 
 | Regla | Requisitos | Regla | Requisitos |
 | --- | --- | --- | --- |
-| RN-01 | RF10, RF36, RF44, RF51 | RN-16 | RF24, RF27, RF28 |
-| RN-02 | RF07 | RN-17 | RF31, RF32 |
+| RN-01 | RF10, RF36, RF44, RF51, RF57 | RN-16 | RF24, RF27, RF28 |
+| RN-02 | RF07, RF55 | RN-17 | RF31, RF32 |
 | RN-03 | RF08, RF09 | RN-18 | RF29 a RF32 |
 | RN-04 | RF07, RF10 | RN-19 | RF33, RF34, RF41 |
-| RN-05 | RF05, RF06, RF11, RF35, RF43 | RN-20 | RF35, RF42 |
+| RN-05 | RF05, RF06, RF11, RF35, RF43, RF55 | RN-20 | RF35, RF42 |
 | RN-06 | RF12 | RN-21 | RF35, RF37, RF38 |
 | RN-07 | RF13, RF14, RF17, RF19, RF20, RF22, RF23 | RN-22 | RF36, RF39 |
-| RN-08 | RF01, RF03 | RN-23 | RF40, RF41, RF42, RF45, RF47, RF48 |
-| RN-09 | RF02, RF33, RF40, RF43 | RN-24 | RF13, RF14 |
-| RN-10 | RF02, RF47 | RN-25 | RF19, RF21, RF22 |
+| RN-08 | RF01, RF03, RF04, RF56 | RN-23 | RF40, RF41, RF42, RF45, RF47, RF48 |
+| RN-09 | RF02, RF33, RF40, RF43, RF56 | RN-24 | RF13, RF14 |
+| RN-10 | RF02, RF47, RF56 | RN-25 | RF19, RF21, RF22 |
 | RN-11 | RF13, RF16 | RN-26 | RF17 |
 | RN-12 | RF13, RF18, RF20 | RN-27 | RF17, RF45 |
 | RN-13 | RF15 | RN-28 | RF14, RF18 |
 | RN-14 | RF17, RF21, RF22, RF45 | RN-29 | RF19 |
 | RN-15 | RF23, RF25, RF26, RF27, RF28 | RN-30 | RF13, RF14 |
-| RN-31 | RF15 | — | — |
+| RN-31 | RF15 | RN-32 | RF55 |
 
 ### 9.4 Requisitos no funcionales → objetivos y requisitos afectados
 
@@ -593,10 +634,10 @@ Sin historia tampoco RF51 (carga desde fuente externa, sin actor humano) y RF52 
 | RNF01 | OB-01 | Todos los requisitos con interfaz | — |
 | RNF02 | OB-05 | RF01, RF02, RF03, RF33 | — |
 | RNF03 | OB-01 | Todos | — |
-| RNF04 | OB-04 | RF11, RF12, RF43 | RN-06 |
+| RNF04 | OB-04 | RF11, RF12, RF43, RF52, RF55 | RN-06 |
 | RNF05 | OB-04, OB-06 | Módulos por fase | — |
 | RNF06 | OB-03 | RF36, RF44 | RN-01 |
-| RNF07 | OB-05 | RF02 | RN-09 |
+| RNF07 | OB-05 | RF02, RF56 | RN-09 |
 | RNF08 | OB-01 | Todos los requisitos con API | RN-09 |
 | RNF09 | OB-05 | RF14, RF17, RF21 | — |
 | RNF10 | OB-01 | RF05 a RF09 | — |
@@ -663,10 +704,13 @@ Cada requisito se verifica con un criterio de «pasa si…»; los valores con as
 | RF52 | OB-04 | — | Un producto de droguería o de cuidado facial aparece en la comparación de precios |
 | RF53 | OB-02 | RN-15, RN-16 | La lista de mis avisos incluye los generados por RF27 con su cantidad de no leídos |
 | RF54 | OB-02 | — | Marcar un aviso como leído baja el contador del encabezado |
+| RF55 | OB-04 | RN-02, RN-05, RN-32 | Un repuesto con la misma referencia en dos tiendas muestra los dos precios; uno con distinta referencia no se compara con él |
+| RF56 | OB-01, OB-05 | RN-08, RN-10 | Una cuenta de Google nueva crea una cuenta USER e inicia sesión; un correo ya registrado entra a la misma cuenta; una cuenta desactivada no entra |
+| RF57 | OB-01 | RN-01 | Un precio con página registrada muestra el enlace y abre la página del producto en la tienda; un precio sin página registrada no muestra enlace |
 
 ### Anexo B. Decisiones pendientes
 
-Diecinueve decisiones siguen abiertas; cada una tiene un valor provisional con el que el documento ya funciona. Desde RF49 (incluido), los IDs de requisito ya no se renumeran: lo nuevo se agrega al final del módulo que le corresponde, aunque quede fuera de orden en la página.
+Veinticuatro decisiones siguen abiertas; cada una tiene un valor provisional con el que el documento ya funciona. Desde RF49 (incluido), los IDs de requisito ya no se renumeran: lo nuevo se agrega al final del módulo que le corresponde, aunque quede fuera de orden en la página.
 
 | ID | Decisión | Valor provisional | Afecta |
 | --- | --- | --- | --- |
@@ -681,7 +725,7 @@ Diecinueve decisiones siguen abiertas; cada una tiene un valor provisional con e
 | DP-09 | Producto de proveedor visible de inmediato (RN-20): ¿se muestra una etiqueta «en revisión»? | No. Riesgo: precios erróneos visibles hasta la revisión; se mitiga con proveedor aprobado (RN-19) y con fuente y fecha obligatorias (RN-01) | RF35, RF42 |
 | DP-10 | RNF06: definir «oficial» y «verificable» y cómo se mide | Pendiente | RNF06 |
 | DP-11 | Marca en RF05, RF06, RF35 y RF43 (el modelo actual no la incluye) | Se mantiene en los requisitos por decisión del equipo | RF05, RF06, RF35, RF43 |
-| DP-12 | Fase de RF03 y RF04 | Sin asignar | RF03, RF04 |
+| DP-12 | Fase de RF03 y RF04 | Fase 2 (Sprint 2, épica Cuenta de usuario) | RF03, RF04 |
 | DP-13 | La Fase 6 incluye «aplicación móvil» y el alcance excluye la app móvil nativa | Aclarar si es web adaptable o nativa | Fase 6 |
 | DP-14 | Valores de RNF10 (3 segundos, 20 usuarios) | Propuestos; validar con una prueba de carga | RNF10 |
 | DP-15 | Moderación y bloqueo manuales hasta la Fase 5 | Manual en la base de datos | RF45, RF47 |
@@ -689,3 +733,8 @@ Diecinueve decisiones siguen abiertas; cada una tiene un valor provisional con e
 | DP-17 | Exigir un comentario para calificar (RN-30) puede reducir el número de calificaciones | Se mantiene; medirlo con el indicador de OB-05 | RN-30, OB-05 |
 | DP-18 | Catálogo cerrado de razones de reporte | SPAM, LENGUAJE\_OFENSIVO, INFORMACION\_FALSA, OTRO (hasta ahora) | RN-27, RF17 |
 | DP-19 | ¿Bajo qué criterio de fraude se puede retirar una calificación del promedio? | Ninguno todavía: el estado del comentario (incluido OCULTO) no retira la calificación; moderar el texto no debe cambiar el promedio | RN-13, RF40 |
+| DP-20 | Compatibilidad de un repuesto con un modelo de vehículo o moto | Fuera del alcance: se compara solo por referencia | RF55, RN-32 |
+| DP-21 | ¿Repuestos tiene un asistente de IA en la Fase 4? | No | RF29 a RF32 |
+| DP-22 | Inicio de sesión con Google con un correo ya registrado | Entra a la cuenta existente si Google confirma el correo | RF56, RN-08 |
+| DP-23 | Cuenta creada con Google: ¿tiene contraseña y puede cambiar su correo? | No tiene contraseña hasta que la cree con RF03; no cambia su correo desde el perfil | RF03, RF04, RF56 |
+| DP-24 | ¿Proveedores y administradores pueden iniciar sesión con Google? | No: Google solo crea o abre cuentas con rol USER | RF56, RN-09 |

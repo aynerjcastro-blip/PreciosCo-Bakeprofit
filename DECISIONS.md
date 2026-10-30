@@ -4,7 +4,7 @@ Registro de decisiones de equipo: desviaciones deliberadas del MVP y acuerdos to
 
 ## Modelo de datos
 
-- **Jerarquía de categorías**: `category.parent_id` autorreferenciada. Las filas raíz son dominios (Supermercado hoy; Droguería y Cuidado facial más adelante). `store` apunta a una categoría raíz; `product` apunta a una categoría hoja. Reemplaza la idea de una tabla `establishment_type` separada.
+- **Jerarquía de categorías**: `category.parent_id` autorreferenciada. Las filas raíz son dominios (Supermercado hoy; Droguería, Cuidado facial y Repuestos más adelante). `store` apunta a una categoría raíz; `product` apunta a una categoría hoja. Reemplaza la idea de una tabla `establishment_type` separada.
 - **Campo "marca"**: excluido deliberadamente del modelo actual (`Product`, `Category`, etc.). No es un vacío frente al MVP, es una decisión documentada.
 - **Convención de FK**: `fk_tabla_tabla` (por ejemplo `fk_ratings_products`).
 
@@ -28,8 +28,6 @@ Registro de decisiones de equipo: desviaciones deliberadas del MVP y acuerdos to
 
 ### Pendientes de confirmar con el equipo (Fase 2)
 
-- Los códigos de estado de opiniones de arriba, sobre todo `409` por plazo vencido y `400` por reportar el propio comentario (el plan solo decía "se rechaza").
-- Seguridad (Ayner): abrir `GET /api/reviews` y `GET /api/reviews/summary` sin sesión, devolver el `403` en JSON (`AccessDeniedHandler`) y limitar a ADMIN la escritura de catálogo.
 - Criterio de fraude para retirar una calificación del promedio (ver "Promedio y moderación").
 
 ## Fase 2 — Frontend
@@ -48,6 +46,9 @@ Registro de decisiones de equipo: desviaciones deliberadas del MVP y acuerdos to
 ## Alcance y fases
 
 - La moderación de comentarios y el bloqueo de cuentas del panel administrativo **no** pasan a la Fase 2: se quedan en fases posteriores (manual en la BD hasta entonces).
+- **Comparador de repuestos**: se agrega a la Fase 3 un comparador de repuestos para vehículos y motos (RF55). Fuentes preseleccionadas para el scraper: Importadoras Asociadas, Autoplanet y Zona Repuestera. Los repuestos se comparan por referencia o código del fabricante (RN-32); la compatibilidad con un modelo de vehículo queda fuera del alcance.
+- **Inicio de sesión con Google**: se agrega como RF56 en la épica Cuenta de usuario (Sprint 2), junto con RF03 y RF04. El backend valida la cuenta de Google y emite su propio JWT; solo crea o abre cuentas con rol USER.
+- **Enlace a la tienda**: se documenta como RF57 (HU-27) una funcionalidad implementada el 17-oct-2026 sin requisito asociado. Junto a cada precio se muestra un enlace a la página del producto en la tienda (`prices.product_url`, que guarda el scraper); un precio sin URL se muestra sin enlace.
 
 ## Documentación (Ingeniería de Software I)
 
