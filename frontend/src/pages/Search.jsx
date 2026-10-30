@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import styles from './Search.module.css';
-import apiClient from '../api/client'; // Importamos el cliente API centralizado
 import {
     CartIcon,
     PillIcon,
@@ -10,14 +9,10 @@ import {
     EyeIcon,
 } from '../components/Sectoricons.jsx';
 
-
-import { Link } from 'react-router-dom';
-=======
 import { Link, useSearchParams } from 'react-router-dom';
 // import { API_BASE } from '../config';
 
 const API_BASE = 'http://localhost:8080/api'; // Ajusta segun el entorno
-
 
 // Sectores que se muestran como tarjetas.
 // `available: false` -> la tarjeta se muestra, pero aun no hay datos en el backend.
@@ -73,12 +68,13 @@ export default function Search() {
         );
     }, [searchTerm, selectedCategoryId, selectedSectorId, showAll]);
 
-    // Carga inicial de categorías usando apiClient.get
+    // Carga inicial de categorías
     useEffect(() => {
         async function fetchCategories() {
             try {
-                // Usamos el cliente centralizado en lugar de fetch con URL dura
-                const data = await apiClient.get('/api/categories/active');
+                const response = await fetch(`${API_BASE}/categories/active`);
+                if (!response.ok) throw new Error('Error al cargar categorías');
+                const data = await response.json();
                 setCategories(data);
             } catch (error) {
                 console.error(error);
@@ -102,21 +98,14 @@ export default function Search() {
             if (selectedCategoryId !== null) params.set('idCategory', selectedCategoryId);
 
             try {
-                // Usamos apiClient.get pasando la señal del AbortController en las opciones
-                const data = await apiClient.get(`/api/products/search?${params.toString()}`, {
+                const response = await fetch(`${API_BASE}/products/search?${params.toString()}`, {
                     signal: controller.signal,
                 });
-
-                
-                setProducts(data);
-                setStatus(data.length === 0 ? 'empty' : 'success');
-
                 if (!response.ok) throw new Error('Error en la petición');
 
                 const data = await response.json();
                 setFetchedProducts(data);
                 setFetchStatus(data.length === 0 ? 'empty' : 'success');
-
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error(error);

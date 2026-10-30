@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import apiClient from '../api/client'; // Importamos el cliente API centralizado
 import styles from './comparator.module.css';
 import ProductRating from '../components/ProductRating';
 import ReviewsSection from '../components/ReviewsSection';
 import StoreReviewBar from '../components/StoreReviewBar';
 import FollowButton from '../components/FollowButton';
 
-
-=======
 const API_BASE = 'http://localhost:8080';
 
 // Icono de enlace (cadena)
@@ -91,7 +88,6 @@ function PriceCard({ item, isBest, productId, onShowReviews, onReviewsChanged })
     );
 }
 
-
 export default function Comparator() {
     const [searchParams] = useSearchParams();
     const productId = searchParams.get('productId');
@@ -110,19 +106,15 @@ export default function Comparator() {
 
         const fetchPrices = async () => {
             try {
-                // Usamos apiClient.get en lugar de fetch manual y BASE_URL
-                const data = await apiClient.get(`/api/prices/compare?productId=${productId}`);
-                
-                if (!data || data.length === 0) { 
-                    setStatus('empty'); 
-                    return; 
-                }
-                
+                const res = await fetch(`${API_BASE}/api/prices/compare?productId=${productId}`);
+                if (!res.ok) throw new Error('Error al consultar precios');
+                const data = await res.json();
+                if (data.length === 0) { setStatus('empty'); return; }
                 setProductName(data[0].productName);
                 setPrices(data);
                 setStatus('success');
             } catch (err) {
-                console.error("Error al consultar precios:", err.message);
+                console.error(err);
                 setStatus('error');
             }
         };
