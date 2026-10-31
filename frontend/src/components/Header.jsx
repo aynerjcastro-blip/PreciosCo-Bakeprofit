@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { toggleTheme } from '../utils/theme';
 import { useAuth } from '../context/useAuth';
+import NotificationBell from './NotificationBell';
 
 export default function Header() {
     const location = useLocation();
@@ -95,6 +96,9 @@ export default function Header() {
                     <button id="theme-toggle" className="theme-toggle" onClick={toggleTheme}>
                         Modo oscuro
                     </button>
+
+                    {/* Campana de avisos: solo con sesión y rol USER (los demás roles no tienen avisos) */}
+                    {canFollow && <NotificationBell />}
 
                     <div className="user-menu" ref={userMenuRef}>
                         <button

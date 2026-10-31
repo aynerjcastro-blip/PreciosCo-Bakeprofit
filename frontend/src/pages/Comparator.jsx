@@ -4,6 +4,7 @@ import styles from './comparator.module.css';
 import ProductRating from '../components/ProductRating';
 import ReviewsSection from '../components/ReviewsSection';
 import StoreReviewBar from '../components/StoreReviewBar';
+import FollowButton from '../components/FollowButton';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -136,6 +137,8 @@ export default function Comparator() {
             <div className={styles.comparador__header}>
                 <h1 className={styles.comparador__title}>{productName}</h1>
                 {status === 'success' && <ProductRating productId={productId} refreshKey={reviewsVersion} />}
+                {status === 'success' && <ProductRating productId={productId} refreshKey={reviewsVersion} />}
+                {status === 'success' && <FollowButton productId={productId} productName={productName} />}
                 <p className={styles.comparador__subtitle}>
                     Precios ordenados de menor a mayor entre tiendas activas
                 </p>

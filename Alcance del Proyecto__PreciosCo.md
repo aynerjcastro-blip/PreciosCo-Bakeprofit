@@ -6,7 +6,7 @@ Plataforma web para comparación de productos y precios
 
 ## 1. Descripción del proyecto
 
-**Descripción general:** transformar un bot de Telegram en una plataforma web que permita comparar productos y precios de supermercados, droguerías y tiendas de cuidado facial, incorporando notificaciones, calificaciones, inteligencia artificial especializada y participación directa de proveedores.
+**Descripción general:** transformar un bot de Telegram en una plataforma web que permita comparar productos y precios de supermercados, droguerías, tiendas de cuidado facial y tiendas de repuestos para vehículos y motos, incorporando notificaciones, calificaciones, inteligencia artificial especializada y participación directa de proveedores.
 
 Diseñar y desarrollar una plataforma web que permita a los usuarios consultar, comparar y calificar productos de diferentes establecimientos comerciales. La plataforma mostrará los precios disponibles por supermercado o tienda, identificará las mejores opciones de compra y ofrecerá recomendaciones mediante inteligencia artificial.
 
@@ -16,7 +16,7 @@ El sistema es una evolución del bot de Telegram existente, conservando su funci
 
 ## 2. Objetivo general
 
-Desarrollar una plataforma web que centralice y compare los precios de productos de supermercados, droguerías y tiendas de cuidado facial, permitiendo a los usuarios encontrar las mejores ofertas, recibir alertas de cambios de precio, consultar recomendaciones mediante IA y calificar los productos o establecimientos.
+Desarrollar una plataforma web que centralice y compare los precios de productos de supermercados, droguerías, tiendas de cuidado facial y tiendas de repuestos para vehículos y motos, permitiendo a los usuarios encontrar las mejores ofertas, recibir alertas de cambios de precio, consultar recomendaciones mediante IA y calificar los productos o establecimientos.
 
 ## 3. Objetivos específicos
 
@@ -26,25 +26,26 @@ Desarrollar una plataforma web que centralice y compare los precios de productos
 - Permitir consultas por nombre, marca o categoría y mostrar la mejor opción de compra.
 - Incorporar calificaciones y opiniones de los usuarios.
 - Implementar notificaciones cuando disminuya el precio de un producto seguido.
-- Añadir comparadores para droguerías y tiendas de cuidado facial.
+- Añadir comparadores para droguerías, tiendas de cuidado facial y tiendas de repuestos para vehículos y motos.
 - Incorporar asistentes de IA especializados según la categoría consultada.
 - Permitir que las tiendas registren sus productos, precios y disponibilidad como proveedores.
 - Facilitar la actualización de la información de productos y precios.
 
-Objetivos del negocio asociados (ver el documento de Análisis y especificación): OB-01 reducir el tiempo y esfuerzo para comparar precios; OB-02 aumentar el ahorro al elegir dónde comprar; OB-03 mejorar la confianza en la información de precios; OB-04 ampliar las compras del hogar cubiertas; OB-05 mejorar la confianza en la calidad de productos y establecimientos; OB-06 facilitar que los establecimientos mantengan su oferta actualizada.
+Objetivos del negocio asociados (ver el documento de Análisis y especificación): OB-01 reducir el tiempo y esfuerzo para comparar precios; OB-02 aumentar el ahorro al elegir dónde comprar; OB-03 mejorar la confianza en la información de precios; OB-04 ampliar las compras cubiertas, de supermercados a droguería, cuidado facial y repuestos de vehículos y motos; OB-05 mejorar la confianza en la calidad de productos y establecimientos; OB-06 facilitar que los establecimientos mantengan su oferta actualizada.
 
 ## 4. Funcionalidades incluidas
 
 ### A. Plataforma web para usuarios
 
 - Página de inicio con buscador.
-- Registro, inicio de sesión, cierre de sesión y recuperación de contraseña.
+- Registro, inicio de sesión (con correo y contraseña o con una cuenta de Google), cierre de sesión y recuperación de contraseña.
 - Perfil básico del usuario.
 - Búsqueda por nombre, marca o categoría.
 - Filtros por precio, tienda, marca y categoría.
 - Comparación de precios entre establecimientos.
 - Ordenamiento de resultados del menor al mayor precio.
 - Visualización de la fecha de actualización del precio.
+- Enlace a la página del producto en la tienda, junto a cada precio.
 - Diseño adaptable para computador, tableta y celular.
 
 ### B. Categorías de productos
@@ -56,6 +57,7 @@ Objetivos del negocio asociados (ver el documento de Análisis y especificación
 - Aseo para el hogar.
 - Droguería.
 - Cuidado facial.
+- Repuestos para vehículos y motos.
 - Otras categorías definidas durante el análisis.
 
 ### C. Comparación de establecimientos
@@ -63,6 +65,7 @@ Objetivos del negocio asociados (ver el documento de Análisis y especificación
 - Supermercados: D1, Jumbo, Éxito y Olímpica.
 - Droguerías.
 - Tiendas de productos para cuidado facial.
+- Tiendas de repuestos para vehículos y motos.
 - Otros proveedores comerciales en fases posteriores.
 
 ### D. Calificaciones y comentarios
@@ -135,7 +138,7 @@ Se documentan por separado, con numeración, trazabilidad hacia los objetivos y 
 | --- | --- |
 | Fase 1: MVP | Plataforma web, usuarios, categorías, productos, precios y comparación de supermercados. |
 | Fase 2 | Calificaciones, comentarios, seguimiento de productos y notificaciones. |
-| Fase 3 | Comparadores de droguerías y cuidado facial. |
+| Fase 3 | Comparadores de droguerías, cuidado facial y repuestos para vehículos y motos. |
 | Fase 4 | IA especializada para recetas, supermercados, droguerías y cuidado facial. |
 | Fase 5 | Módulo de proveedores para publicar productos y actualizar precios, y panel administrativo (gestión de cuentas, aprobaciones, revisión de productos, categorías, revisión de precios, moderación, bloqueo e historial). |
 | Fase 6 | Mejoras, reportes e integraciones externas. |
@@ -156,6 +159,7 @@ Hasta que el panel administrativo (Fase 5) esté construido, la moderación de c
 - Garantía de actualización de precios en tiempo real.
 - Publicidad o monetización avanzada, salvo definición explícita.
 - Expansión internacional.
+- Verificación de compatibilidad de un repuesto con un modelo específico de vehículo o moto (provisional).
 
 **Nota:** el sistema mostrará los precios registrados o suministrados por las fuentes disponibles, pero no será responsable de variaciones, errores o diferencias entre el precio publicado y el precio final aplicado por cada establecimiento.
 
@@ -188,6 +192,7 @@ Inicialmente, el sistema no incluye compras, pagos, domicilios, aplicación móv
 | Autenticación | Spring Security + JWT | Cubre registro, inicio de sesión, cierre de sesión y recuperación de contraseña del alcance |
 | Documentación de API | Swagger / OpenAPI (springdoc-openapi) | Genera documentación interactiva automática de los endpoints |
 | Pruebas manuales de API | Postman | Probar endpoints (GET/POST/PUT/DELETE) antes de tener el frontend listo |
+| Inicio de sesión con Google | Spring Security OAuth2 Client | Valida la cuenta de Google y, tras validarla, el backend emite su propio JWT como en el inicio de sesión normal |
 
 ### 2. Frontend — MVP (Fase 1)
 
@@ -207,7 +212,7 @@ Inicialmente, el sistema no incluye compras, pagos, domicilios, aplicación móv
 
 ### 4. Fase 3 — Nuevos comparadores (droguerías, cuidado facial)
 
-No se agrega tecnología nueva: se extiende el modelo de datos (Categoría, Establecimiento) reutilizando la misma base Spring Boot + PostgreSQL.
+No se agrega tecnología nueva: se extiende el modelo de datos (categorías raíz Droguería, Cuidado facial y Repuestos) reutilizando la misma base Spring Boot + PostgreSQL, y se agregan scrapers para las nuevas fuentes de precios.
 
 ### 5. Fase 4 — Inteligencia artificial especializada
 
@@ -242,3 +247,5 @@ DBeaver o pgAdmin para inspeccionar la base de datos; Docker, opcional, para emp
 | 16-oct-2026 | Todo el documento | Versión 2.0: se agregó el glosario; las secciones 6 y 7 se reemplazan por una referencia al documento de Análisis y especificación | Evitar que dos documentos describan los mismos requisitos con distinto detalle |
 | 16-oct-2026 | 3, 4.A, 4.D, 4.E, 4.G, 4.H | Objetivos del negocio referenciados; cierre de sesión agregado; calificación y comentario unificados en una sola acción, con edición de 1 día y eliminación lógica; dos canales de aviso; fecha de actualización como consulta; revisión posterior de productos de proveedor; bloqueo e historial separados | Alinear con las decisiones tomadas durante la Fase 2 |
 | 16-oct-2026 | 8, 10 | Nota de moderación manual hasta la Fase 5; supuestos y restricciones del proyecto (RP) agregados | Resolver inconsistencias de fases y dejar explícitas las restricciones del proyecto |
+| 26-oct-2026 | 1, 2, 3, 4.A, 4.B, 4.C, 8, 9, Stack | Comparador de repuestos para vehículos y motos en la Fase 3; inicio de sesión con Google | Decisión del equipo |
+| 27-oct-2026 | 4.A | Enlace a la tienda junto a cada precio (RF57) | Funcionalidad ya implementada que no estaba documentada; las plataformas de los antecedentes también la ofrecen |
