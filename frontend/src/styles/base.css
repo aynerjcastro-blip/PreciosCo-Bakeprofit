@@ -1,6 +1,4 @@
-/* ============================================================
-   RESET Y BASE
-   ============================================================ */
+/* src/styles/base.css */
 *,
 *::before,
 *::after {
@@ -12,10 +10,21 @@
 body {
     background-color: var(--bg-main);
     color: var(--text-primary);
-    font-family: var(--font-main);
+    font-family: var(--font-body);
+    /* Aplica Mona Sans */
     line-height: 1.6;
     overflow-x: hidden;
-    font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+    line-height: 1.2;
+    color: var(--text-primary);
+    font-family: var(--font-heading);
+    /* Corregido: apunta a Hubot Sans en tokens.css */
 }
 
 img {
@@ -27,14 +36,4 @@ img {
 a {
     text-decoration: none;
     color: inherit;
-}
-
-h1,
-h2,
-h3,
-h4,
-h5 {
-    line-height: 1.2;
-    color: var(--text-primary);
-    font-family: var(--font-display);
 }

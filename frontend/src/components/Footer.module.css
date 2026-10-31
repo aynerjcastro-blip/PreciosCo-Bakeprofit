@@ -1,11 +1,10 @@
 /* ============================================================
-   ESTILOS DEL FOOTER (Adaptable al Modo Oscuro/Claro nativo)
+    ESTILOS DEL FOOTER (Adaptable al Modo Oscuro/Claro nativo)
    ============================================================ */
+
 .site-footer {
     background-color: var(--bg-surface);
-    /* Usa el fondo de las tarjetas de tu app */
     border-top: 1px solid var(--border-color);
-    /* Separador sutil */
     color: var(--text-primary);
     padding: 60px 24px 20px;
     font-family: var(--font-body);
@@ -39,14 +38,16 @@
     letter-spacing: -0.05em;
 }
 
-.site-footer__logo .logo-text {
+.logo-text {
     color: var(--text-primary);
-    /* El logo cambia de negro a blanco segun el tema */
 }
 
-.site-footer__logo .logo-co {
+/* FIX: Control estricto de dimensiones para el logo circular */
+.logo-co {
     height: 24px;
+    width: auto;
     border-radius: 50%;
+    object-fit: contain;
 }
 
 .site-footer__slogan {
@@ -78,7 +79,6 @@
 
 .site-footer__nav-group a:hover {
     color: var(--color-primary);
-    /* Hover naranja corporativo */
 }
 
 /* Redes Sociales */
@@ -88,7 +88,7 @@
     gap: 16px;
 }
 
-.site-footer__social a {
+.social-link {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -96,13 +96,13 @@
     height: 40px;
     border-radius: 50%;
     background: var(--bg-main);
-    /* Fondo de la red social */
     border: 1px solid var(--border-color);
     color: var(--text-muted);
     transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.2s;
+    text-decoration: none;
 }
 
-.site-footer__social a:hover {
+.social-link:hover {
     background: var(--color-primary-soft);
     color: var(--color-primary);
     border-color: var(--color-primary);

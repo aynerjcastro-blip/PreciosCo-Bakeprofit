@@ -306,3 +306,86 @@ html {
         text-align: center;
     }
 }
+
+/* ============================================================
+   ACCIONES DEL HEADER (Modo Oscuro y Menú de Usuario)
+   ============================================================ */
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Botón de Modo Oscuro */
+.theme-toggle {
+    background-color: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.theme-toggle:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background-color: var(--color-primary-soft, rgba(249, 115, 22, 0.1));
+}
+
+/* Menú de Usuario (Guest / Autenticado) */
+.user-menu {
+    position: relative;
+}
+
+.user-menu__button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.user-menu__button:hover {
+    background-color: var(--bg-surface);
+}
+
+.user-menu__label {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+/* Enlaces directos para invitados (Ingresa / Regístrate) */
+.user-menu__guest {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.user-menu__cta {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.user-menu__cta:hover {
+    color: var(--color-primary);
+}
+
+.user-menu__item {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-primary);
+    text-decoration: none;
+}
