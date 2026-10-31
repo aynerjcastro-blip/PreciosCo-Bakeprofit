@@ -64,10 +64,10 @@ public class SecurityConfig {
                                                         response.getWriter()
                                                                         .write("""
                                                                                         {
-                                                                                                "status": 401,
-                                                                                                "error": "Unauthorized",
-                                                                                                "message": "Acceso no autorizado o cuenta desactivada",
-                                                                                                "path": "%s"
+                                                                                        "status": 401,
+                                                                                        "error": "Unauthorized",
+                                                                                        "message": "Acceso no autorizado o cuenta desactivada",
+                                                                                        "path": "%s"
                                                                                         }
                                                                                         """
                                                                                         .formatted(request
