@@ -105,11 +105,9 @@ public class SecurityConfig {
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
 
-                // CORRECCIÓN: Se actualizó el puerto de 5173 a 5174 para coincidir con tu
-                // servidor de desarrollo Vite.
                 configuration.setAllowedOrigins(List.of(
-                                "http://localhost:5174",
-                                "http://127.0.0.1:5174"));
+                                "http://localhost:5173",
+                                "http://127.0.0.1:5173"));
 
                 configuration.setAllowedMethods(List.of(
                                 "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
@@ -120,7 +118,6 @@ public class SecurityConfig {
                 configuration.setAllowCredentials(true);
 
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-
                 source.registerCorsConfiguration("/**", configuration);
                 return source;
         }
