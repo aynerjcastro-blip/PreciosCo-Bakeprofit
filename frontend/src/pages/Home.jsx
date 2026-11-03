@@ -1,75 +1,105 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './Home.module.css';
 
 export default function Home() {
-    // Categorias para los filtros rapidos
+    const navigate = useNavigate();
+    const [query, setQuery] = useState('');
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        const term = query.trim();
+        if (term) {
+            navigate(`/buscar?q=${encodeURIComponent(term)}`);
+        } else {
+            navigate('/buscar');
+        }
+    };
+
+    // Convertimos las categorias a objetos para tener el 'id' que lee el buscador
     const filterCategories = [
-        "Comida",
-        "Electrodomésticos",
-        "Ropa",
-        "Otros Más"
+        { id: 'supermercados', label: 'Supermercados' },
+        { id: 'droguerias', label: 'Farmacia' },
+        { id: 'repuestos', label: 'Repuestos' },
+        { id: 'cuidado-facial', label: 'Belleza' },
+        { id: 'tecnologia', label: 'Tecnologia' }
     ];
 
-    // Datos estructurados de prueba para los testimonios
+    // Datos estructurados de prueba para los testimonios (se mantienen igual)
     const testimonialsData = [
         {
             id: 1,
-            company: "Nombre de la empresa",
-            quote: "Opinión de la empresa",
+            company: "Tech Solutions",
+            quote: "Ahorramos un 20% en insumos tecnológicos el primer mes.",
             avatarUrl: "/assets/images/default-avatar.png",
-            authorName: "Nombre de la persona",
-            role: "Cargo de la persona"
+            authorName: "Carlos Restrepo",
+            role: "Gerente de Compras"
         },
         {
             id: 2,
-            company: "Nombre de la empresa",
-            quote: "Opinión de la empresa",
+            company: "Familia García",
+            quote: "Excelente para comparar los precios del mercado antes de hacer la compra mensual.",
             avatarUrl: "/assets/images/default-avatar.png",
-            authorName: "Nombre de la persona",
-            role: "Cargo de la persona"
+            authorName: "Laura García",
+            role: "Ama de Casa"
         },
         {
             id: 3,
-            company: "Nombre de la empresa",
-            quote: "Opinión de la empresa",
+            company: "AutoPartes Bogotá",
+            quote: "Poder cotizar repuestos rápidamente nos ha dado una ventaja enorme.",
             avatarUrl: "/assets/images/default-avatar.png",
-            authorName: "Nombre de la persona",
-            role: "Cargo de la persona"
+            authorName: "Andrés Medina",
+            role: "Mecánico Independiente"
         }
     ];
 
     return (
         <section>
-            {/* Seccion Hero / Llamada a la accion */}
+            {/* NUEVO: Hero Section Centrado con Buscador Gigante */}
             <div className={styles.hero}>
-                <img
-                    className={styles.hero__image}
-                    src="/assets/images/isometric-flat-3d-illustration-online-shopping-concept-with-ecommerce-app_18660-4570-removebg-preview.png"
-                    alt="Ilustración de compra en línea"
-                />
-                <h2 className={styles.hero__title}>Encuentra Tu Producto al Mejor Precio</h2>
-                <p className={styles.hero__text}>Rápido y Sencillo</p>
-                <div className={styles.hero__actions}>
-                    <Link to="/buscar" className={styles.hero__button}>
-                        Compara YA
-                    </Link>
-                </div>
+                <h2 className={styles.hero__title}>Encuentra el mejor precio antes de comprar</h2>
+                <p className={styles.hero__text}>
+                    Compara al instante entre miles de productos de supermercado, farmacia, tecnología y más.
+                </p>
+
+                <form className={styles.hero__search} onSubmit={handleSearch} role="search">
+                    <span className={`icon icon--search ${styles['hero__search-icon']}`}></span>
+                    <input
+                        type="search"
+                        placeholder="Ej. Arroz Premium, Ibuprofeno, Aceite..."
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        className={styles.hero__input}
+                        aria-label="Buscar productos"
+                    />
+                    <button type="submit" className={styles.hero__submit}>Buscar</button>
+                </form>
             </div>
 
             {/* Seccion de Filtros Rapidos */}
             <div className={styles['quick-filters']}>
-                <h2 className={styles['quick-filters__title']}>Los Mejores Precios Del Mercado</h2>
+                <h2 className={styles['quick-filters__title']}>Explora nuestras categorias</h2>
                 {filterCategories.map((category, index) => (
-                    <button key={index} className={styles['quick-filters__chip']}>
-                        {category}
+                    <button
+                        key={index}
+                        className={styles['quick-filters__chip']}
+                        onClick={() => {
+                            // Si es tecnologia (que aun no tiene ID asignado), mandamos a /buscar general
+                            const path = category.id === 'tecnologia'
+                                ? '/buscar'
+                                : `/buscar?sector=${category.id}`;
+                            navigate(path);
+                        }}
+                    >
+                        {category.label}
                     </button>
                 ))}
-                <p className={styles['quick-filters__note']}>Imágenes de referencia</p>
+                <p className={styles['quick-filters__note']}>Amplia cobertura para comparar en Colombia</p>
             </div>
 
-            {/* Seccion Sobre Nosotros */}
+            {/* Sección Sobre Nosotros */}
             <div id="sobre-nosotros" className={styles.about}>
-                <h2 className={styles.about__title}>Quienes Somos</h2>
+                <h2 className={styles.about__title}>Quiénes Somos</h2>
                 <img
                     className={styles.about__image}
                     src="/assets/images/LogoPreciosCo.png"
@@ -77,19 +107,14 @@ export default function Home() {
                     width="400"
                 />
                 <p className={styles.about__eslogan}>
-                    Somos PreciosCo, nacimos con una misión clara: ayudarte a tomar
-                    mejores decisiones de compra, cuidando tu bolsillo y ahorrándote
-                    tiempo.
+                    Somos PreciosCo, nacimos con una misión clara: ayudarte a tomar mejores decisiones de compra, cuidando tu bolsillo y ahorrándote tiempo.
                 </p>
                 <p className={styles.about__eslogan}>
-                    Evolucionamos desde una herramienta de consulta ágil en Telegram hacia
-                    una plataforma web completa diseñada para centralizar, comparar y
-                    transparentar la información de precios de los principales
-                    establecimientos del país.
+                    Evolucionamos desde una herramienta de consulta ágil en Telegram hacia una plataforma web completa diseñada para centralizar, comparar y transparentar la información de precios de los principales establecimientos del país.
                 </p>
             </div>
 
-            {/* Seccion Como Funciona */}
+            {/* Sección Cómo Funciona */}
             <div id="como-funciona" className={styles['how-it-works']}>
                 <div className={styles['section-heading']}>
                     <h2 className={styles['section-heading__title']}>¿Cómo funciona PreciosCo?</h2>
@@ -102,31 +127,26 @@ export default function Home() {
                         <li className={styles['steps-list__item']}>
                             <h3 className={styles['steps-list__item-title']}>Busca Y Compara</h3>
                             <p className={styles['steps-list__item-text']}>
-                                Ingresa el nombre, marca o categoría del producto. Compara
-                                precios al instante entre D1, Jumbo, Éxito y Olímpica ordenados
-                                de menor a mayor.
+                                Ingresa el nombre, marca o categoría del producto. Compara precios al instante ordenados de menor a mayor.
                             </p>
                         </li>
                         <li className={styles['steps-list__item']}>
                             <h3 className={styles['steps-list__item-title']}>Activa Alertas de Ahorro</h3>
                             <p className={styles['steps-list__item-text']}>
-                                Sigue tus productos favoritos y configura un precio objetivo. Te
-                                avisamos por correo o en la plataforma apenas bajen de precio.
+                                Sigue tus productos favoritos y configura un precio objetivo. Te avisamos apenas bajen de precio.
                             </p>
                         </li>
                         <li className={styles['steps-list__item']}>
                             <h3 className={styles['steps-list__item-title']}>Consulta a la IA</h3>
                             <p className={styles['steps-list__item-text']}>
-                                Usa nuestros asistentes de inteligencia artificial para recibir
-                                recomendaciones de cuidado facial, opciones de droguería o
-                                sugerencias de recetas.
+                                Usa nuestros asistentes de inteligencia artificial para recibir recomendaciones y alternativas económicas.
                             </p>
                         </li>
                     </ol>
                 </div>
             </div>
 
-            {/* Seccion de Testimonios */}
+            {/* Sección de Testimonios */}
             <div id="testimonios" className={styles.testimonials}>
                 <h2>Testimonios</h2>
                 <ul className={styles['testimonials__grid']}>
@@ -149,4 +169,4 @@ export default function Home() {
             </div>
         </section>
     );
-} 
+}

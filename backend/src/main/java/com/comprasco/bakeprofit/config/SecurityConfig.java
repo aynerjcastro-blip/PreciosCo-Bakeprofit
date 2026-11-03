@@ -63,11 +63,11 @@ public class SecurityConfig {
                                                         response.setContentType("application/json;charset=UTF-8");
                                                         response.getWriter()
                                                                         .write("""
-                                                                                {
-                                                                                "status": 401,
-                                                                                "error": "Unauthorized",
-                                                                                "message": "Acceso no autorizado o cuenta desactivada",
-                                                                                "path": "%s"
+                                                                                        {
+                                                                                        "status": 401,
+                                                                                        "error": "Unauthorized",
+                                                                                        "message": "Acceso no autorizado o cuenta desactivada",
+                                                                                        "path": "%s"
                                                                                         }
                                                                                         """
                                                                                         .formatted(request
@@ -80,7 +80,8 @@ public class SecurityConfig {
                                                 .permitAll()
                                                 .requestMatchers(HttpMethod.GET, catalog).permitAll()
                                                 .requestMatchers(HttpMethod.GET, "/api/prices/compare").permitAll()
-                                                .requestMatchers(HttpMethod.GET, "/api/reviews", "/api/reviews/summary").permitAll()
+                                                .requestMatchers(HttpMethod.GET, "/api/reviews", "/api/reviews/summary")
+                                                .permitAll()
                                                 .anyRequest().authenticated())
                                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -117,7 +118,6 @@ public class SecurityConfig {
                 configuration.setAllowCredentials(true);
 
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-
                 source.registerCorsConfiguration("/**", configuration);
                 return source;
         }

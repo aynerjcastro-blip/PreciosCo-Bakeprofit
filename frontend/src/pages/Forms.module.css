@@ -1,111 +1,451 @@
 /* ============================================================
-    Login
+   LAYOUT PRINCIPAL (2 Columnas)
    ============================================================ */
-.auth-form__switch {
-    text-align: center;
-    margin-top: 16px;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-}
-
-.auth-form__switch a {
-    color: var(--color-primary);
-    font-weight: 600;
+.auth-page {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    max-width: 1100px;
+    margin: 60px auto;
+    padding: 0 24px;
+    align-items: center;
 }
 
 /* ============================================================
-   FORMULARIO (login / registro)
-   Antes: #Sign-in-Form, #Terms-Conditions-Submit-Form, #Sign-in-Button
+   COLUMNA IZQUIERDA: HERO Y PROPUESTA DE VALOR
+   ============================================================ */
+.auth-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.auth-hero__title {
+    font-size: clamp(2.5rem, 4vw, 3.5rem);
+    font-weight: 900;
+    line-height: 1.1;
+    color: var(--color-dark);
+}
+
+.auth-hero__highlight {
+    color: var(--color-primary);
+}
+
+.auth-hero__subtitle {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.auth-hero__features {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-bottom: 30px;
+}
+
+.auth-hero__features li {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.feature-icon {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.auth-hero__features strong {
+    display: block;
+    font-size: 1rem;
+    color: var(--color-dark);
+}
+
+.auth-hero__features p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin: 4px 0 0 0;
+}
+
+/* ============================================================
+   TARJETA DINÁMICA DE AHORRO EN VIVO
+   ============================================================ */
+.savings-card {
+    position: relative;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s, box-shadow 0.2s;
+    max-width: 450px;
+}
+
+.savings-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15);
+}
+
+.savings-card__badge {
+    position: absolute;
+    top: -15px;
+    right: 20px;
+    background: #10B981;
+    /* Verde positivo */
+    color: white;
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.2;
+    transform: rotate(3deg);
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+}
+
+.savings-card__product {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.savings-card__img {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+}
+
+.savings-card__img-placeholder {
+    width: 60px;
+    height: 60px;
+    background: var(--border-color);
+    border-radius: var(--radius-sm);
+}
+
+.savings-card__name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-dark);
+}
+
+.savings-card__comparison {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-main);
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+}
+
+.savings-card__price-box {
+    display: flex;
+    flex-direction: column;
+}
+
+.savings-card__price--best {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--color-primary);
+}
+
+.savings-card__price--worst {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-decoration: line-through;
+}
+
+.savings-card__store {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.savings-card__line {
+    opacity: 0.5;
+}
+
+/* ============================================================
+   COLUMNA DERECHA: FORMULARIO
    ============================================================ */
 .auth-form-wrapper {
+    width: 100%;
     max-width: 480px;
-    margin: 80px auto;
-    padding: 0 24px;
+    justify-self: center;
+}
+
+.auth-form-wrapper--centered {
+    grid-column: 1 / -1;
+    /* Centra el form de login si no hay hero */
+    margin: 0 auto;
 }
 
 .auth-form {
     background: var(--bg-surface);
     padding: 40px 32px;
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-card);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
     border: 1px solid var(--border-color);
+}
+
+.auth-form__header {
+    margin-bottom: 24px;
+}
+
+.auth-form__header h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--color-dark);
+}
+
+.auth-form__header p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-top: 4px;
 }
 
 .auth-form__field {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     margin-bottom: 20px;
 }
 
 .auth-form__label {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 700;
     color: var(--color-dark);
 }
 
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 14px;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    pointer-events: none;
+}
+
 .auth-form input[type="text"],
 .auth-form input[type="email"],
-.auth-form input[type="number"],
 .auth-form input[type="password"] {
     width: 100%;
-    padding: 12px 16px;
+    padding: 14px 16px 14px 44px;
     border: 1.5px solid var(--border-color);
     border-radius: var(--radius-sm);
     background: var(--bg-main);
     font-size: 1rem;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .auth-form input:focus {
     border-color: var(--color-primary);
     background: #FFF;
+    box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.password-toggle {
+    position: absolute;
+    right: 14px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    opacity: 0.6;
+}
+
+.password-toggle:hover {
+    opacity: 1;
+}
+
+.auth-form__hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
 }
 
 .auth-form__terms {
-    display: grid;
-    grid-template-columns: 20px 1fr;
+    display: flex;
+    align-items: flex-start;
     gap: 12px;
-    align-items: center;
-    margin-top: 24px;
+    margin: 24px 0;
 }
 
-.auth-form__terms input[type="checkbox"] {
+.auth-form__terms input {
+    margin-top: 4px;
     width: 18px;
     height: 18px;
     accent-color: var(--color-primary);
     cursor: pointer;
 }
 
-.auth-form__terms span {
+.auth-form__terms label {
     font-size: 0.85rem;
-    font-weight: 500;
     color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.auth-form__terms a {
+    color: var(--color-primary);
+    font-weight: 600;
+    text-decoration: underline;
 }
 
 .auth-form__submit {
-    grid-column: 1 / -1;
-    background: var(--color-dark);
-    color:var(--bg-surface);
-    border: none;
-    padding: 14px;
-    border-radius: var(--radius-sm);
-    font-size: 1rem;
-    font-weight: 700;
-    cursor: pointer;
-    margin-top: 10px;
-    transition: background 0.2s;
     width: 100%;
+    background: var(--color-primary);
+    /* Naranja del mockup */
+    color: #FFF;
+    border: none;
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    font-size: 1.05rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    box-shadow: 0 8px 15px rgba(255, 159, 28, 0.2);
 }
 
-.auth-form__submit:hover {
+.auth-form__submit:hover:not(:disabled) {
     background: var(--color-primary-hover);
+    transform: translateY(-1px);
 }
 
 .auth-form__error {
     color: #DC2626;
+    background: #FEE2E2;
+    padding: 10px;
+    border-radius: var(--radius-sm);
     font-size: 0.85rem;
-    margin-top: 12px;
+    margin-bottom: 20px;
     text-align: center;
+}
+
+.auth-form__switch {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+.auth-form__switch a {
+    color: var(--color-primary);
+    font-weight: 700;
+}
+
+.auth-form__trust {
+    margin-top: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 900px) {
+    .auth-page {
+        grid-template-columns: 1fr;
+        gap: 60px;
+        margin: 40px auto;
+    }
+
+    .auth-hero {
+        text-align: center;
+        align-items: center;
+    }
+
+    .auth-hero__features li {
+        text-align: left;
+    }
+}
+
+/* ============================================================
+   ESTILOS ESPECIFICOS PARA EL LOGIN
+   ============================================================ */
+
+/* Enlace "Olvidaste tu contraseña" alineado a la derecha */
+.auth-form__forgot {
+    text-align: right;
+    margin-top: 8px;
+    font-size: 0.85rem;
+}
+
+.auth-form__forgot a {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.auth-form__forgot a:hover {
+    text-decoration: underline;
+}
+
+
+
+/* Separador "o continúa con" */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 24px 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.auth-divider span {
+    padding: 0 10px;
+}
+
+/* Boton de Google Adaptable */
+.auth-google-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    /* Se adapta al fondo */
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    /* Texto inteligente (negro en luz, blanco en sombra) */
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.auth-google-btn:hover {
+    background: var(--bg-main);
+    /* Efecto hover sutil */
+    border-color: var(--color-primary);
+}
+
+/* Ajuste del icono del escudo en el Footer */
+.auth-form__trust svg {
+    vertical-align: text-bottom;
+    margin-right: 4px;
 }
