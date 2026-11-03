@@ -1,0 +1,133 @@
+/* ============================================================
+   ESTRELLAS: mostrar (promedio o calificación fija)
+   Vacías: solo contorno gris. Rellenas: ámbar con borde oscuro
+   para que se distingan del fondo (contraste de 3:1 o más).
+   ============================================================ */
+.stars {
+    position: relative;
+    display: inline-block;
+    flex: none;
+    width: calc(var(--star-size) * 5);
+    height: var(--star-size);
+}
+
+.stars--sm { --star-size: 16px; }
+.stars--md { --star-size: 22px; }
+
+.stars__row {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    height: 100%;
+}
+
+.stars__row--filled {
+    overflow: hidden;
+}
+
+.stars__row svg {
+    flex: 0 0 var(--star-size);
+    width: var(--star-size);
+    height: var(--star-size);
+    fill: none;
+    stroke: var(--text-muted);
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+}
+
+.stars__row--filled svg {
+    fill: var(--color-star);
+    stroke: var(--color-star-stroke);
+}
+
+/* ============================================================
+   ESTRELLAS: selector (formulario de opinión)
+   ============================================================ */
+.picker {
+    border: 0;
+    min-width: 0;
+}
+
+.picker__legend {
+    padding: 0;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-dark);
+}
+
+.picker__stars {
+    display: flex;
+    gap: 2px;
+}
+
+.picker__star {
+    position: relative;
+    display: grid;
+    place-items: center;
+    padding: 4px;
+    cursor: pointer;
+}
+
+/* El radio real cubre toda la estrella: recibe el clic y el foco del teclado */
+.picker__input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.picker__icon {
+    width: 36px;
+    height: 36px;
+    fill: none;
+    stroke: var(--text-muted);
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+    pointer-events: none;
+    transition: fill 0.12s, stroke 0.12s;
+}
+
+.picker__star--on .picker__icon {
+    fill: var(--color-star);
+    stroke: var(--color-star-stroke);
+}
+
+/* Único movimiento del componente: responde a la elección del usuario */
+.picker__star--selected .picker__icon {
+    animation: star-pop 0.22s ease-out;
+}
+
+.picker__input:focus-visible + .picker__icon {
+    outline: 3px solid var(--color-dark);
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
+.picker__hint {
+    display: block;
+    min-height: 1.4em;
+    margin-top: 6px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+@keyframes star-pop {
+    0% { transform: scale(0.8); }
+    60% { transform: scale(1.18); }
+    100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .picker__star--selected .picker__icon { animation: none; }
+    .picker__icon { transition: none; }
+}
+
+@media (max-width: 600px) {
+    .picker__icon {
+        width: 40px;
+        height: 40px;
+    }
+}

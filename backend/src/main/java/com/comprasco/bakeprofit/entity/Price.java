@@ -2,15 +2,16 @@ package com.comprasco.bakeprofit.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -34,6 +35,14 @@ public class Price {
 
     @Column 
     private String source;
+
+    // Enlace directo al producto en la tienda
+    @Column(name = "product_url", columnDefinition = "text")
+    private String productUrl;
+
+    // Imagen del producto en la tienda
+    @Column(name = "image_url", columnDefinition = "text")
+    private String imageUrl;
 
     @ManyToOne
     @JoinColumn(name = "product_id", nullable = false, foreignKey = @ForeignKey(name = "fk_prices_products"))

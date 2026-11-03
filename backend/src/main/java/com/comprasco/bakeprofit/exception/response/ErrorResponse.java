@@ -1,17 +1,23 @@
 package com.comprasco.bakeprofit.exception.response;
 
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Body estándar para todos los errores HTTP que devuelve la API.
  */
-public record ErrorResponse(
-    int status,
-    String error,
-    String message,
-    LocalDateTime timestamp
-) {
-    public ErrorResponse(int status, String error, String message) {
-        this(status, error, message, LocalDateTime.now());
-    }
+
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class ErrorResponse {
+    private LocalDateTime timestamp;
+    private int status;
+    private String error;
+    private String message;
+    private String path;
 }

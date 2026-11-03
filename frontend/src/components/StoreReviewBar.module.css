@@ -1,0 +1,101 @@
+/* ============================================================
+   FRANJA DE OPINIONES DENTRO DE LA TARJETA DE PRECIO
+   Silenciosa a propósito: el protagonista de la tarjeta es el precio.
+   ============================================================ */
+.store-reviews {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.store-reviews__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
+}
+
+/* Botón secundario en píldora: borde ámbar, sin relleno */
+.store-reviews__action {
+    padding: 8px 18px;
+    border: 1.5px solid var(--color-primary);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.store-reviews__action:hover {
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+.store-reviews__action:focus-visible,
+.store-reviews__link:focus-visible {
+    outline: 3px solid var(--color-dark);
+    outline-offset: 2px;
+}
+
+.store-reviews__own {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+.store-reviews__own-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.store-reviews__own-title {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.store-reviews__own-text {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.store-reviews__own-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.store-reviews__link {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.store-reviews__link--danger {
+    color: var(--color-danger, #DC2626);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 600px) {
+    .store-reviews__action {
+        width: 100%;
+        min-height: 44px;
+        text-align: center;
+    }
+}

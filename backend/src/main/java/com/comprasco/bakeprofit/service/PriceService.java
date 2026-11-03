@@ -25,10 +25,13 @@ public class PriceService {
         return prices.stream()
                 .map(p -> new PriceCompareResponse(
                         p.getProduct().getName(),
+                        p.getStore().getId(),
                         p.getStore().getName(),
                         p.getValue(),
                         p.getSource(),
-                        p.getRegistrationDate()
+                        p.getRegistrationDate(),
+                        p.getProductUrl(),
+                        p.getImageUrl()
                 ))
                 .toList();
     }

@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-BakeprofitApplication<bakeprofit>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.comprasco.bakeprofit.BakeprofitApplication",
+            "projectName": "bakeprofit",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

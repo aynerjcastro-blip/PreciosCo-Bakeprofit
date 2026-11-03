@@ -1,0 +1,78 @@
+/* base.css reinicia todos los márgenes a 0: el margin auto centra el <dialog> */
+.dialog {
+    width: min(520px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 0;
+    overflow: auto;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+}
+
+.dialog::backdrop {
+    background: rgba(15, 23, 42, 0.55);
+}
+
+.dialog__panel {
+    padding: 28px 28px 24px;
+}
+
+.dialog__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.dialog__title {
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+
+.dialog__subtitle {
+    margin-top: 4px;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+}
+
+.dialog__close {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: var(--bg-main);
+    color: var(--text-muted);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.dialog__close:hover {
+    color: var(--text-primary);
+}
+
+.dialog__close:focus-visible {
+    outline: 3px solid var(--color-dark);
+    outline-offset: 2px;
+}
+
+/* ============================================================
+   RESPONSIVE: en móvil el diálogo es una hoja pegada abajo
+   ============================================================ */
+@media (max-width: 600px) {
+    .dialog {
+        width: 100%;
+        max-width: 100%;
+        margin: auto 0 0;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+
+    .dialog__panel {
+        padding: 24px 20px 20px;
+    }
+}

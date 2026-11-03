@@ -36,7 +36,7 @@ public class User {
     private Role role;
 
     @Column(nullable = false)
-    private boolean active = true;
+    private Boolean active = true;
 
     @Column(nullable = false)
     private String password;

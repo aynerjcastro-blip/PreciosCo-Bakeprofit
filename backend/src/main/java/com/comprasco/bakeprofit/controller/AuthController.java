@@ -6,8 +6,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.comprasco.bakeprofit.dto.AuthResponse;
 import com.comprasco.bakeprofit.dto.LoginRequest;
 import com.comprasco.bakeprofit.dto.RegisterRequest;
+import com.comprasco.bakeprofit.entity.User;
+import com.comprasco.bakeprofit.security.CurrentUser;
 import com.comprasco.bakeprofit.service.UserService;
 import jakarta.validation.Valid;
+
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -34,4 +38,21 @@ public class AuthController {
         return ResponseEntity.ok(userService.login(loginRequest));
     }
 
+    /**
+     * Obtiene los datos del usuario actualmente autenticado.
+     * Demuestra la inyeccion automatica de la entidad User mediante @CurrentUser
+     * (RN-10).
+     *
+     * @param user entidad de usuario inyectada desde el SecurityContext
+     * @return respuesta con los datos del perfil
+     */
+    @GetMapping("/me")
+    public ResponseEntity<AuthResponse> getAuthenticatedUser(@CurrentUser User user) {
+        AuthResponse response = new AuthResponse(
+                null,
+                user.getName(),
+                user.getEmail(),
+                user.getRole());
+        return ResponseEntity.ok(response);
+    }
 }

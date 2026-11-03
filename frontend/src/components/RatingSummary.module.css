@@ -1,0 +1,43 @@
+.rating-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: none;
+    background: none;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    text-align: left;
+}
+
+.rating-summary--centered {
+    display: flex;
+    justify-content: center;
+}
+
+button.rating-summary {
+    cursor: pointer;
+}
+
+button.rating-summary:hover .rating-summary__score {
+    text-decoration: underline;
+}
+
+button.rating-summary:focus-visible {
+    outline: 3px solid var(--color-dark);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+.rating-summary__score {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.rating-summary__count,
+.rating-summary__muted {
+    color: var(--text-muted);
+}

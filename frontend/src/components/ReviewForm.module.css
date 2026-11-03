@@ -1,0 +1,182 @@
+/* ============================================================
+   FORMULARIOS DE OPINIÓN (opinar, editar, reportar, eliminar)
+   Mismo lenguaje visual que el formulario de login y registro.
+   ============================================================ */
+.review-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.review-form__field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.review-form__label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-dark);
+}
+
+.review-form__textarea {
+    width: 100%;
+    min-height: 110px;
+    padding: 12px 16px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-main);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.review-form__textarea:focus {
+    border-color: var(--color-primary);
+}
+
+.review-form__meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.review-form__note,
+.review-form__text {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.review-form__error {
+    color: var(--color-danger, #DC2626);
+    font-size: 0.9rem;
+}
+
+.review-form__error a {
+    font-weight: 700;
+    text-decoration: underline;
+    color: inherit;
+}
+
+/* Grupo de opciones (razones de reporte) */
+.review-form__options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border: 0;
+    min-width: 0;
+}
+
+.review-form__legend {
+    padding: 0;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-dark);
+}
+
+.review-form__option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.review-form__option:hover {
+    border-color: var(--color-dark);
+}
+
+.review-form__option--selected {
+    border-color: var(--color-primary);
+}
+
+.review-form__option input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
+.review-form__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 6px;
+}
+
+.review-form__cancel {
+    padding: 12px 18px;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.review-form__cancel:hover {
+    color: var(--text-primary);
+}
+
+.review-form__submit {
+    padding: 12px 22px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--color-dark);
+    color: var(--bg-surface);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.review-form__submit:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+}
+
+.review-form__submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.review-form__submit--danger {
+    background: var(--color-danger, #DC2626);
+    color: #FFF;
+}
+
+.review-form__submit--danger:hover:not(:disabled) {
+    background: var(--color-danger, #DC2626);
+    filter: brightness(0.9);
+}
+
+.review-form__cancel:focus-visible,
+.review-form__submit:focus-visible,
+.review-form__option:has(input:focus-visible) {
+    outline: 3px solid var(--color-dark);
+    outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+    .review-form__actions {
+        flex-direction: column-reverse;
+    }
+
+    .review-form__submit,
+    .review-form__cancel {
+        width: 100%;
+    }
+}
