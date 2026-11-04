@@ -1,9 +1,12 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Hubot+Sans:ital,wdth,wght@0,75..125,200..900;1,75..125,200..900&family=Mona+Sans:ital,wdth,wght@0,75..125,200..900;1,75..125,200..900&display=swap');
+
 /* ============================================================
    DESIGN TOKENS (paleta, tipografía, espaciado, sombras)
    ============================================================ */
 :root {
+    /* ------------------------------------------------------------
+       TEMA CLARO (Variables por Defecto)
+       ------------------------------------------------------------ */
     /* Colores de fondo */
     --bg-main: #F8FAFC;
     --bg-surface: #FFFFFF;
@@ -16,7 +19,8 @@
 
     /* Texto */
     --text-primary: #0F172A;
-    --text-muted: #64748B;
+    --text-muted: #475569;
+    /* Oscurecido para mejor contraste en modo claro */
     --text-alternative: #FFF;
 
     /* Marca (nombres semánticos, no por apariencia) */
@@ -88,22 +92,31 @@
 
 /* ============================================================
    TEMA OSCURO (Fallback OS y Manual)
+   Aquí se reescriben las variables para adaptar la UI a modo oscuro.
    ============================================================ */
 
-/* 1. Preferencia del sistema operativo */
+/* 1. Preferencia del sistema operativo (Se activa si el usuario tiene su OS en modo oscuro) */
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
+        /* Fondos generales invertidos */
         --bg-main: #121212;
         --bg-surface: #1E1E1E;
+
+        /* Ajuste de color oscuro a claro para mantener coherencia en secciones invertidas */
         --color-dark: #F8FAFC;
-        --text-primary: #F1F5F9;
-        --text-muted: #94A3B8;
+
+        /* Textos aclarados para contraste sobre fondos oscuros */
+        --text-primary: #F8FAFC;
+        --text-muted: #CBD5E1;
+
+        /* Borde atenuado */
         --border-color: #334155;
 
+        /* Estrellas */
         --color-star-stroke: #FF9F1C;
         --color-star-empty: #334155;
 
-        /* Badges invertidos (Fondo oscuro con texto claro - WCAG AA) */
+        /* Badges invertidos (Fondo oscuro intenso con texto muy claro - WCAG AA) */
         --badge-pendiente-bg: #78350F;
         --badge-pendiente-text: #FDE68A;
         --badge-resuelto-bg: #064E3B;
@@ -113,28 +126,38 @@
         --badge-eliminado-bg: #374151;
         --badge-eliminado-text: #E5E7EB;
 
-        /* Alertas Dark */
+        /* Alertas adaptadas al modo oscuro */
         --alert-success-bg: #064E3B;
         --alert-error-bg: #7F1D1D;
         --alert-info-bg: #1E3A8A;
 
+        /* Overlays y estados de error con colores ajustados */
         --modal-overlay-bg: rgba(0, 0, 0, 0.8);
         --state-error-text: #F87171;
     }
 }
 
-/* 2. Switch manual del usuario */
+/* 2. Switch manual del usuario (Forzado mediante botón en la UI) */
 :root[data-theme="dark"] {
+    /* Fondos generales invertidos */
     --bg-main: #121212;
     --bg-surface: #1E1E1E;
+
+    /* Ajuste de color oscuro a claro para mantener coherencia en secciones invertidas */
     --color-dark: #F8FAFC;
-    --text-primary: #F1F5F9;
-    --text-muted: #94A3B8;
+
+    /* Textos aclarados para contraste sobre fondos oscuros */
+    --text-primary: #F8FAFC;
+    --text-muted: #CBD5E1;
+
+    /* Borde atenuado */
     --border-color: #334155;
 
+    /* Estrellas */
     --color-star-stroke: #FF9F1C;
     --color-star-empty: #334155;
 
+    /* Badges invertidos (Fondo oscuro intenso con texto muy claro - WCAG AA) */
     --badge-pendiente-bg: #78350F;
     --badge-pendiente-text: #FDE68A;
     --badge-resuelto-bg: #064E3B;
@@ -144,10 +167,12 @@
     --badge-eliminado-bg: #374151;
     --badge-eliminado-text: #E5E7EB;
 
+    /* Alertas adaptadas al modo oscuro */
     --alert-success-bg: #064E3B;
     --alert-error-bg: #7F1D1D;
     --alert-info-bg: #1E3A8A;
 
+    /* Overlays y estados de error con colores ajustados */
     --modal-overlay-bg: rgba(0, 0, 0, 0.8);
     --state-error-text: #F87171;
 }
