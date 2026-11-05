@@ -3,7 +3,7 @@ import MainLayout from './layouts/MainLayout';
 import Home from './pages/Home';
 import Comparator from './pages/Comparator';
 import Search from './pages/Search';
-import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedRoute from './components/layout/ProtectedRoute';
 import Followed from './pages/Followed';
 import AuthPage from './pages/AuthPage';
 

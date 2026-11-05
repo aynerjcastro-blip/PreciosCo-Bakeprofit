@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { login as loginRequest, register } from '../../api/auth';
 import { useAuth } from '../../context/useAuth';
-import GoogleSignInButton from '../GoogleSignInButton';
+import GoogleSignInButton from './GoogleSignInButton';
 import styles from '../../pages/AuthPage.module.css';
 
 /**

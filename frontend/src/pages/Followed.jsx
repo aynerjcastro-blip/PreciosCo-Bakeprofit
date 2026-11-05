@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import FollowDialog from '../components/FollowDialog';
+import FollowDialog from '../components/follows/FollowDialog/FollowDialog';
 import { getFollows, updateFollow } from '../api/follows';
 import { formatDate } from '../utils/format-helper';
 import { formatPrice, describeTarget } from '../utils/follow-helper';

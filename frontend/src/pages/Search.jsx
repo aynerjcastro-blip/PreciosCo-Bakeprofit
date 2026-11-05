@@ -6,7 +6,7 @@ import {
     FaceIcon,
     GearIcon,
     SearchIcon,
-} from '../components/Sectoricons.jsx';
+} from '../components/ui/icons/Sectoricons.jsx';
 import { Link, useSearchParams } from 'react-router-dom';
 
 const API_BASE = 'http://localhost:8080/api';

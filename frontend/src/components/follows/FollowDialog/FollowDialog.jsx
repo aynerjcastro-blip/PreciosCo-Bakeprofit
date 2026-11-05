@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Dialog from './Dialog';
-import { createFollow, updateFollow, deleteFollow } from '../api/follows';
+import { createFollow, updateFollow, deleteFollow } from "@/api/follows";
 import formStyles from './ReviewForm.module.css';
 import styles from './FollowDialog.module.css';
 
