@@ -1,6 +1,6 @@
+import { login as loginRequest, register, googleLogin } from '@/api/auth'
 import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { login as loginRequest, register } from '../../api/auth';
 import { useAuth } from '../../context/useAuth';
 import GoogleSignInButton from './GoogleSignInButton';
 import styles from '../../pages/AuthPage.module.css';
@@ -119,13 +119,33 @@ export default function AuthForm({ isLogin }) {
 
                 {isLogin && (
                     <>
-                        <div className={styles['auth-divider']}><span>o continua con</span></div>
+                        <div className={styles['auth-divider']}>
+                            <span>o continua con</span>
+                        </div>
+
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
-                            <GoogleSignInButton onCredential={(credential) => console.log('TOKEN DE GOOGLE:', credential)} onError={setError} />
+                            <GoogleSignInButton
+                                onCredential={async (credential) => {
+                                    try {
+                                        setError(null);
+                                        setIsLoading(true);
+                                        // 1. Enviamos el token de Google al backend
+                                        const authResponse = await googleLogin(credential);
+                                        // 2. Guardamos la sesión con el AuthContext
+                                        login(authResponse);
+                                        // 3. Redirigimos a la ruta protegida o inicio
+                                        navigate(from, { replace: true });
+                                    } catch (err) {
+                                        setError(err.message || 'Error al iniciar sesión con Google');
+                                    } finally {
+                                        setIsLoading(false);
+                                    }
+                                }}
+                                onError={setError}
+                            />
                         </div>
                     </>
                 )}
-
                 <div className={styles['auth-form__switch']}>
                     {isLogin ? (
                         <>

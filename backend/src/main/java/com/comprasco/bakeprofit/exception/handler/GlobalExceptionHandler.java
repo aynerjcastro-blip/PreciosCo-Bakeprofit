@@ -113,7 +113,6 @@ public class GlobalExceptionHandler {
         public ResponseEntity<ErrorResponse> handleInvalidCredentials(
                         InvalidCredentialsException ex,
                         HttpServletRequest request) {
-
                 ErrorResponse error = ErrorResponse.builder()
                                 .timestamp(LocalDateTime.now())
                                 .status(HttpStatus.UNAUTHORIZED.value())
@@ -403,6 +402,7 @@ public class GlobalExceptionHandler {
         /**
          * Maneja las peticiones a rutas que no existen (recursos estaticos o endpoints
          * inexistentes).
+         * 
          * @param ex      excepcion lanzada al no encontrar el recurso
          * @param request peticion HTTP actual
          * @return respuesta HTTP 404 Not Found

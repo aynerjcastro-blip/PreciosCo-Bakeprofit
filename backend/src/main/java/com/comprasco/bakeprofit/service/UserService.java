@@ -16,17 +16,16 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
-import com.google.api.client.util.Value;
-
-import io.jsonwebtoken.lang.Collections;
-
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.UUID;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 /**
  * Servicio encargado de la gestion de usuarios, registro y autenticacion.
  */
@@ -37,11 +36,10 @@ public class UserService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtSecurity jwtSecurity;
-
+private static final Logger log = LoggerFactory.getLogger(UserService.class);
     @Value("${google.client-id}")
     private String googleClientId;
 
-    
     public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, JwtSecurity jwtSecurity) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -155,6 +153,7 @@ public class UserService {
      */
     @Transactional
     public AuthResponse googleLogin(GoogleLoginRequest request) {
+        GoogleIdToken idToken;
         try {
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
                     new NetHttpTransport(),
@@ -162,37 +161,45 @@ public class UserService {
                     .setAudience(List.of(googleClientId))
                     .build();
 
-            GoogleIdToken idToken = verifier.verify(request.credential());
-            if (idToken == null) {
-                throw new InvalidCredentialsException();
-            }
-
-            GoogleIdToken.Payload payload = idToken.getPayload();
-            String email = payload.getEmail();
-            String name = (String) payload.get("name");
-
-            // Si el usuario no existe, lo creamos automáticamente
-            User user = userRepository.findByEmail(email).orElseGet(() -> {
-                User newUser = new User();
-                newUser.setName(name != null ? name : email.split("@")[0]);
-                newUser.setEmail(email);
-                newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString())); // Dummy password por restricción not-null
-                newUser.setRole(Role.USER);
-                newUser.setActive(true);
-                return userRepository.save(newUser);
-            });
-
-            // RN-10: Rechazar login de cuentas inactivas
-            if (!Boolean.TRUE.equals(user.getActive())) {
-                throw new InactiveUserException("La cuenta se encuentra desactivada. Contacte al administrador.");
-            }
-
-            String token = jwtSecurity.generateToken(user.getEmail(), user.getRole().name());
-
-            return new AuthResponse(token, user.getName(), user.getEmail(), user.getRole());
-
-        } catch (Exception e) {
+            idToken = verifier.verify(request.credential());
+        } catch (GeneralSecurityException | IOException e) {
+            log.error("No se pudo verificar el token de Google", e);
             throw new InvalidCredentialsException();
         }
+
+        if (idToken == null) {
+            log.warn("Token de Google inválido o con audience distinto al configurado");
+            throw new InvalidCredentialsException();
+        }
+
+        GoogleIdToken.Payload payload = idToken.getPayload();
+
+        // Sin esto, un correo no verificado podría entrar a una cuenta existente
+        // (DP-22)
+        if (!Boolean.TRUE.equals(payload.getEmailVerified())) {
+            throw new InvalidCredentialsException();
+        }
+
+        String email = payload.getEmail();
+        String name = (String) payload.get("name");
+
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            User newUser = new User();
+            newUser.setName(name != null ? name : email.split("@")[0]);
+            newUser.setEmail(email);
+            // La columna password es not-null; esta contraseña nunca se usa
+            newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+            newUser.setRole(Role.USER);
+            newUser.setActive(true);
+            return userRepository.save(newUser);
+        });
+
+        if (!Boolean.TRUE.equals(user.getActive())) {
+            throw new InactiveUserException("La cuenta se encuentra desactivada. Contacte al administrador.");
+        }
+
+        String token = jwtSecurity.generateToken(user.getEmail(), user.getRole().name());
+
+        return new AuthResponse(token, user.getName(), user.getEmail(), user.getRole());
     }
 }

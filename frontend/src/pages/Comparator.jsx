@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import styles from '@/pages/Comparator';
+import styles from '@/pages/Comparator.module.css';
 import ProductRating from '@/components/reviews/ProductRating';
 import ReviewsSection from '@/components/reviews/ReviewsSection/ReviewsSection';
 import StoreReviewBar from '@/components/reviews/StoreReviewBar/StoreReviewBar';

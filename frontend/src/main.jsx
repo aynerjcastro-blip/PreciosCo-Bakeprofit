@@ -11,8 +11,8 @@ import './styles/base.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    {/* 2. Envolvemos la app pasando el ID de cliente desde la variable de entorno */}
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+    {/***Envolvemos la app pasando el ID de cliente desde la variable de entorno */}
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENTE_ID}>
       <AuthProvider>
         <App />
       </AuthProvider>
