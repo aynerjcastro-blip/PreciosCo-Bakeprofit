@@ -61,20 +61,24 @@ export async function register(userData) {
  */
 
 export async function googleLogin(credential) {
-    const response = await fetch('http://localhost:8080/api/auth/google', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ credential }),
-    });
-
-    if(!response){
-        const errorData = response.json().catch(()=>({}));
-        throw new Error(errorData.message || 'No se pudo autenticar con Google')
+    let response;
+    try {
+        response = await fetch(`${API_BASE}/google`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ credential }),
+        });
+    } catch {
+        throw new Error("No se pudo conectar con el servidor. Intenta de nuevo en unos minutos.");
     }
 
-    return response.json();
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "No se pudo iniciar sesión con Google");
+    }
+
+    return data;
 }
 
 

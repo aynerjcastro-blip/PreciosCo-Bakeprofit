@@ -6,18 +6,23 @@ import GoogleSignInButton from './GoogleSignInButton';
 import styles from '../../pages/AuthPage.module.css';
 
 /**
- * Componente contenedor de la lógica del formulario interactivo.
- * ¿Por qué? Agrupa las variables de estado (input) y las peticiones de red (auth API) en un componente independiente.
- * Facilita el mantenimiento de validaciones complejas sin engordar la página principal.
+ * Formulario de inicio de sesión y registro.
+ * ¿Por qué? Concentra el estado de los campos y las peticiones a la API en un solo
+ * componente, para que la página solo decida cuál de los dos modos mostrar.
+ *
+ * @param {boolean} isLogin true = inicio de sesión, false = registro
  */
 export default function AuthForm({ isLogin }) {
     const navigate = useNavigate();
     const location = useLocation();
+    // Ruta protegida desde la que llegó el usuario; se le devuelve ahí al entrar
     const from = location.state?.from?.pathname || '/';
     const { login } = useAuth();
 
     const [formData, setFormData] = useState({ name: '', email: '', password: '', terms: false });
+    // Errores separados para mostrar cada uno junto al botón que el usuario pulsó
     const [error, setError] = useState(null);
+    const [googleError, setGoogleError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -29,9 +34,32 @@ export default function AuthForm({ isLogin }) {
         }));
     };
 
+    // replace evita que el botón "atrás" regrese a /login con la sesión ya iniciada
+    const finishLogin = (authResponse) => {
+        login(authResponse);
+        navigate(from, { replace: true });
+    };
+
+    const handleGoogleCredential = async (credential) => {
+        setError(null);
+        setGoogleError(null);
+        setIsLoading(true);
+        try {
+            // El token de Google se valida en el backend; el front nunca lo da por bueno
+            const authResponse = await googleLogin(credential);
+            finishLogin(authResponse);
+        } catch (err) {
+            // El backend explica el motivo (p. ej. cuenta desactivada); sin mostrarlo, el usuario no se entera
+            setGoogleError(err.message || 'Error al iniciar sesión con Google');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleSubmit = async (event) => {
         event.preventDefault();
         setError(null);
+        setGoogleError(null);
 
         if (!isLogin && !formData.terms) {
             setError('Debes aceptar los terminos y condiciones');
@@ -43,8 +71,7 @@ export default function AuthForm({ isLogin }) {
                 ? await loginRequest(formData.email, formData.password)
                 : await register({ name: formData.name, email: formData.email, password: formData.password });
 
-            login(authResponse);
-            navigate(from, { replace: true });
+            finishLogin(authResponse);
         } catch (requestError) {
             setError(requestError.message);
         } finally {
@@ -117,6 +144,7 @@ export default function AuthForm({ isLogin }) {
                     {isLoading ? 'Iniciando...' : isLogin ? 'Iniciar sesion' : 'Empezar a comparar'}
                 </button>
 
+                {/* Solo en login: Google crea la cuenta en el primer ingreso, no hace falta flujo de registro aparte */}
                 {isLogin && (
                     <>
                         <div className={styles['auth-divider']}>
@@ -125,27 +153,15 @@ export default function AuthForm({ isLogin }) {
 
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                             <GoogleSignInButton
-                                onCredential={async (credential) => {
-                                    try {
-                                        setError(null);
-                                        setIsLoading(true);
-                                        // 1. Enviamos el token de Google al backend
-                                        const authResponse = await googleLogin(credential);
-                                        // 2. Guardamos la sesión con el AuthContext
-                                        login(authResponse);
-                                        // 3. Redirigimos a la ruta protegida o inicio
-                                        navigate(from, { replace: true });
-                                    } catch (err) {
-                                        setError(err.message || 'Error al iniciar sesión con Google');
-                                    } finally {
-                                        setIsLoading(false);
-                                    }
-                                }}
-                                onError={setError}
+                                onCredential={handleGoogleCredential}
+                                onError={setGoogleError}
                             />
                         </div>
+
+                        {googleError && <p className={styles['auth-form__error']} role="alert">{googleError}</p>}
                     </>
                 )}
+
                 <div className={styles['auth-form__switch']}>
                     {isLogin ? (
                         <>
