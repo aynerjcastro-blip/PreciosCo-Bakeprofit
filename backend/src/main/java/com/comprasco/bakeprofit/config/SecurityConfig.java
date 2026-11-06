@@ -76,8 +76,8 @@ public class SecurityConfig {
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                                                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**",
-                                                                "/swagger-ui.html")
-                                                .permitAll()
+                                                                "/swagger-ui.html").permitAll()
+                                                .requestMatchers("/api/auth/**").permitAll()
                                                 .requestMatchers(HttpMethod.GET, catalog).permitAll()
                                                 .requestMatchers(HttpMethod.GET, "/api/prices/compare").permitAll()
                                                 .requestMatchers(HttpMethod.GET, "/api/reviews", "/api/reviews/summary")

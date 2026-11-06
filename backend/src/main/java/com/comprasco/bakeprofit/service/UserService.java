@@ -2,6 +2,7 @@ package com.comprasco.bakeprofit.service;
 
 import com.comprasco.bakeprofit.config.JwtSecurity;
 import com.comprasco.bakeprofit.dto.AuthResponse;
+import com.comprasco.bakeprofit.dto.GoogleLoginRequest;
 import com.comprasco.bakeprofit.dto.LoginRequest;
 import com.comprasco.bakeprofit.dto.RegisterRequest;
 import com.comprasco.bakeprofit.entity.Role;
@@ -11,11 +12,20 @@ import com.comprasco.bakeprofit.exception.InactiveUserException;
 import com.comprasco.bakeprofit.exception.InvalidCredentialsException;
 import com.comprasco.bakeprofit.exception.UserNotFoundException;
 import com.comprasco.bakeprofit.repository.UserRepository;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.client.util.Value;
+
+import io.jsonwebtoken.lang.Collections;
+
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Servicio encargado de la gestion de usuarios, registro y autenticacion.
@@ -28,10 +38,15 @@ public class UserService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtSecurity jwtSecurity;
 
+    @Value("${google.client-id}")
+    private String googleClientId;
+
+    
     public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, JwtSecurity jwtSecurity) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtSecurity = jwtSecurity;
+
     }
 
     /* CONSULTAS */
@@ -133,5 +148,51 @@ public class UserService {
         String token = jwtSecurity.generateToken(user.getEmail(), user.getRole().name());
 
         return new AuthResponse(token, user.getName(), user.getEmail(), user.getRole());
+    }
+
+    /**
+     * Autentica o registra un usuario mediante el token de Google OAuth.
+     */
+    @Transactional
+    public AuthResponse googleLogin(GoogleLoginRequest request) {
+        try {
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                    new NetHttpTransport(),
+                    GsonFactory.getDefaultInstance())
+                    .setAudience(List.of(googleClientId))
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(request.credential());
+            if (idToken == null) {
+                throw new InvalidCredentialsException();
+            }
+
+            GoogleIdToken.Payload payload = idToken.getPayload();
+            String email = payload.getEmail();
+            String name = (String) payload.get("name");
+
+            // Si el usuario no existe, lo creamos automáticamente
+            User user = userRepository.findByEmail(email).orElseGet(() -> {
+                User newUser = new User();
+                newUser.setName(name != null ? name : email.split("@")[0]);
+                newUser.setEmail(email);
+                newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString())); // Dummy password por restricción not-null
+                newUser.setRole(Role.USER);
+                newUser.setActive(true);
+                return userRepository.save(newUser);
+            });
+
+            // RN-10: Rechazar login de cuentas inactivas
+            if (!Boolean.TRUE.equals(user.getActive())) {
+                throw new InactiveUserException("La cuenta se encuentra desactivada. Contacte al administrador.");
+            }
+
+            String token = jwtSecurity.generateToken(user.getEmail(), user.getRole().name());
+
+            return new AuthResponse(token, user.getName(), user.getEmail(), user.getRole());
+
+        } catch (Exception e) {
+            throw new InvalidCredentialsException();
+        }
     }
 }
