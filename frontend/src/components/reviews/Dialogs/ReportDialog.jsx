@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
-import Dialog from '../../Dialog';
-import { reportReview } from '../../../api/reviews';
+import Dialog from '@/components/ui/Dialog/Dialog';
+import { reportReview } from '@/api/reviews';
 import styles from './ReviewForm.module.css';
 
 const MAX_DETAILS = 200;

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import ReportDialog from './ReportDialog';
-import StarRating from './StarRating';
-import { getReviews } from '../api/reviews';
-import { useAuth } from '../context/useAuth'; // Importar el hook del contexto
-import { formatDate } from '../utils/format-helper';
-import styles from './ReviewsSection.module.css';
+import ReportDialog from '@/components/reviews/Dialogs/ReportDialog';
+import StarRating from '@/components/ui/Rating/StarRating';
+import { getReviews } from '@/api/reviews';
+import { useAuth } from '@/context/useAuth'; // Importar el hook del contexto
+import { formatDate } from '@/utils/format-helper';
+import styles from '@/components/reviews/ReviewsSection/ReviewsSection.module.css';
 const PAGE_SIZE = 10;
 
 /**

@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { toggleTheme } from '../../../utils/theme';
 import { useAuth } from '../../../context/useAuth';
-import NotificationBell from "@/components/follows/NotificacionBell/NotificationBell";
+import NotificationBell from "@/components/follows/NotificationBell/NotificationBell";
 
 // Importación del módulo de CSS para garantizar el encapsulamiento de estilos
 import styles from './Header.module.css';

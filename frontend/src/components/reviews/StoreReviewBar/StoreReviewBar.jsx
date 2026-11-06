@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import Dialog from './Dialog';
-import RatingSummary from './RatingSummary';
-import ReviewDialog from './ReviewDialog';
-import StarRating from './StarRating';
-import { getSummary, getMyReview, deleteReviewComment } from '../api/reviews';
-import { isLoggedIn, getUser } from '../utils/auth-helper';
-import { formatDateTime } from '../utils/format-helper';
-import formStyles from './ReviewForm.module.css';
-import styles from './StoreReviewBar.module.css';
+import Dialog from '@/components/ui/Dialog/Dialog';
+import RatingSummary from '@/components/ui/Rating/RatingSummary';
+import ReviewDialog from '@/components/reviews/Dialogs/ReportDialog';
+import StarRating from '@/components/ui/Rating/StarRating';
+import { getSummary, getMyReview, deleteReviewComment } from '@/api/reviews';
+import { isLoggedIn, getUser } from '@/utils/auth-helper';
+import { formatDateTime } from '@/utils/format-helper';
+import formStyles from '@/components/reviews/Dialogs/ReviewForm.module.css';
+import styles from '@/components/reviews/StoreReviewBar/StoreReviewBar.module.css';
 
 // Qué decirle al autor según el estado de su comentario y qué puede hacer
 function describeOwnReview(review) {

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import FollowDialog from '../../FollowDialog';
-import { getMyFollow } from '../../../api/follows';
-import { isLoggedIn, getUser } from '../../../utils/auth-helper';
-import { describeTarget } from '../../../utils/follow-helper';
+import FollowDialog from '@/components/follows/FollowDialog/FollowDialog';
+import { getMyFollow } from '@/api/follows';
+import { isLoggedIn, getUser } from '@/utils/auth-helper';
+import { describeTarget } from '@/utils/follow-helper';
 import styles from './FollowButton.module.css';
 
 /**
