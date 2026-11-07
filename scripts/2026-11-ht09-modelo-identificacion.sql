@@ -104,4 +104,10 @@ CREATE TABLE scraped_offers (
 
 CREATE INDEX idx_scraped_offers_status ON scraped_offers (status);
 
+-- 7. Row Level Security sin políticas: el backend se conecta como dueño de las tablas y no se ve
+--    afectado; la API REST de Supabase (roles anon y authenticated) no puede leerlas ni escribirlas
+ALTER TABLE brands ENABLE ROW LEVEL SECURITY;
+ALTER TABLE scrape_targets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE scraped_offers ENABLE ROW LEVEL SECURITY;
+
 COMMIT;
