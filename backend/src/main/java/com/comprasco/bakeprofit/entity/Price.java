@@ -9,6 +9,7 @@ import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -21,7 +22,8 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 
-@Table(name = "prices")
+@Table(name = "prices",
+    indexes = @Index(name = "idx_prices_product_store", columnList = "product_id, store_id"))
 public class Price {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
