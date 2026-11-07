@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.comprasco.bakeprofit.dto.AuthResponse;
+import com.comprasco.bakeprofit.dto.GoogleLoginRequest;
 import com.comprasco.bakeprofit.dto.LoginRequest;
 import com.comprasco.bakeprofit.dto.RegisterRequest;
 import com.comprasco.bakeprofit.entity.User;
@@ -53,6 +54,12 @@ public class AuthController {
                 user.getName(),
                 user.getEmail(),
                 user.getRole());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
+        AuthResponse response = userService.googleLogin(request);
         return ResponseEntity.ok(response);
     }
 }

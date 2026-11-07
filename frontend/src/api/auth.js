@@ -1,18 +1,10 @@
 /*
- * auth.js (capa api)
- *
+
  * Este archivo SOLO se encarga de hablar con el backend.
  * No toca el DOM, no muestra ni oculta nada en pantalla.
  * Esa responsabilidad vive en js/ui/login.js y js/ui/registro.js.
  *
- * Conceptos usados:
- * - fetch(): funcion nativa del navegador para hacer peticiones HTTP.
- * - async/await: forma de escribir codigo asincrono que se lee como
- *   si fuera secuencial, en vez de usar .then() encadenados.
- * - JSON.stringify: convierte el objeto JS a texto JSON antes de
- *   enviarlo en el body de la peticion.
  */
-
 
 /**
  * Envia las credenciales de login al backend.
@@ -61,3 +53,32 @@ export async function register(userData) {
 
     return data;
 }
+
+/**
+ * Envía el ID token de Google al backend para iniciar sesión o registrarse.
+ * @param {string} credential - El ID token JWT devuelto por Google.
+ * @returns {Promise<object>} Datos del usuario autenticado y el JWT de la app.
+ */
+
+export async function googleLogin(credential) {
+    let response;
+    try {
+        response = await fetch(`${API_BASE}/google`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ credential }),
+        });
+    } catch {
+        throw new Error("No se pudo conectar con el servidor. Intenta de nuevo en unos minutos.");
+    }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "No se pudo iniciar sesión con Google");
+    }
+
+    return data;
+}
+
+

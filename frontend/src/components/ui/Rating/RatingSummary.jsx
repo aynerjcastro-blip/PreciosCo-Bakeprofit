@@ -1,5 +1,5 @@
 import StarRating from './StarRating';
-import { formatScore } from '../utils/format-helper';
+import { formatScore } from '../../../utils/format-helper';
 import styles from './RatingSummary.module.css';
 
 /**

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import RatingSummary from './RatingSummary';
-import { getSummary } from '../api/reviews';
+import RatingSummary from '@/components/ui/Rating/RatingSummary';
+import { getSummary } from '@/api/reviews';
 
 /**
  * Promedio general del producto (todas las tiendas), bajo el título del comparador.

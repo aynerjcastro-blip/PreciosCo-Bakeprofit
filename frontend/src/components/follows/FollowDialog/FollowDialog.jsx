@@ -1,9 +1,9 @@
 import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
-import Dialog from './Dialog';
-import { createFollow, updateFollow, deleteFollow } from '../api/follows';
-import formStyles from './ReviewForm.module.css';
-import styles from './FollowDialog.module.css';
+import Dialog from '@/components/ui/Dialog/Dialog';
+import { createFollow, updateFollow, deleteFollow } from "@/api/follows";
+import formStyles from '@/components/reviews/Dialogs/ReviewForm.module.css';
+import styles from '@/components/follows/FollowDialog/FollowDialog.module.css';
 
 /**
  * Diálogo para seguir un producto o ajustar su seguimiento.

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getNotifications, markNotificationRead } from '../api/notifications';
-import { formatDateTime } from '../utils/format-helper';
-import { formatPrice } from '../utils/follow-helper';
-import styles from './NotificationBell.module.css';
+import { getNotifications, markNotificationRead } from '@/api/notifications';
+import { formatDateTime } from '@/utils/format-helper';
+import { formatPrice } from '@/utils/follow-helper';
+import styles from '@/components/follows/NotificationBell/NotificationBell.module.css';
 
 // Cada cuánto se consulta el contador de no leídos con la página abierta
 const POLL_INTERVAL_MS = 60_000;
@@ -69,7 +69,7 @@ export default function NotificationBell() {
 
     // Carga inicial y consulta periódica
     useEffect(() => {
-        refresh();
+        const initialLoad = setTimeout(() => refresh(), 0);
 
         const timer = setInterval(() => {
             if (!document.hidden) refresh();
@@ -80,6 +80,7 @@ export default function NotificationBell() {
         document.addEventListener('visibilitychange', onVisible);
 
         return () => {
+            clearTimeout(initialLoad);
             clearInterval(timer);
             document.removeEventListener('visibilitychange', onVisible);
         };

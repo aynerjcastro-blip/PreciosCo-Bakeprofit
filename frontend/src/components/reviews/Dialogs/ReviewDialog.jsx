@@ -1,9 +1,9 @@
 import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
-import Dialog from './Dialog';
-import StarRating from './StarRating';
-import { createReview, updateReview } from '../api/reviews';
-import { formatDateTime } from '../utils/format-helper';
+import Dialog from '../../ui/Dialog/Dialog';
+import StarRating from '../../StarRating';
+import { createReview, updateReview } from '../../../api/reviews';
+import { formatDateTime } from '../../../utils/format-helper';
 import styles from './ReviewForm.module.css';
 
 const MIN_LENGTH = 10;

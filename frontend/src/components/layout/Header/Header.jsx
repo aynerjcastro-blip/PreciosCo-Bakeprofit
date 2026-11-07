@@ -1,5 +1,4 @@
 /**
- * @file Header.jsx
  * @description Componente principal de navegación superior para PreciosCo. 
  * Gestiona el menú responsivo, la barra de búsqueda global, la alternancia de tema 
  * y el menú de estado/perfil del usuario autenticado.
@@ -7,9 +6,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { toggleTheme } from '../utils/theme';
-import { useAuth } from '../context/useAuth';
-import NotificationBell from './NotificationBell';
+import { toggleTheme } from '../../../utils/theme';
+import { useAuth } from '../../../context/useAuth';
+import NotificationBell from "@/components/follows/NotificationBell/NotificationBell";
 
 // Importación del módulo de CSS para garantizar el encapsulamiento de estilos
 import styles from './Header.module.css';
@@ -39,7 +38,7 @@ export default function Header() {
 
     // Condición de renderizado: oculta el buscador del header en las vistas '/' y '/buscar'
     // para evitar redundancia visual con los buscadores principales de esas páginas.
-    const showSearch = location.pathname !== '/' && location.pathname !== '/buscar';
+    const showSearch = location.pathname !== '/' && location.pathname !== '/buscar' && location.pathname !== '/login' && location.pathname !== '/register';
 
     // Derivación segura de datos del usuario para la interfaz
     const firstName = user?.name?.split(' ')[0];
