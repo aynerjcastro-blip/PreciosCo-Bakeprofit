@@ -20,6 +20,9 @@
 
 	<properties>
 		<java.version>25</java.version>
+		<!-- Las pruebas con @Tag("integration") necesitan PostgreSQL real y no corren con
+		     "mvn test". Para correrlas: mvn test -Dgroups=integration -Dsurefire.excludedGroups= -->
+		<surefire.excludedGroups>integration</surefire.excludedGroups>
 	</properties>
 
 	<dependencies>
@@ -237,6 +240,15 @@
 						</configuration>
 					</execution>
 				</executions>
+			</plugin>
+			<!-- Excluye las pruebas de integración salvo que se vacíe la propiedad
+			     surefire.excludedGroups desde la línea de comandos -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<excludedGroups>${surefire.excludedGroups}</excludedGroups>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

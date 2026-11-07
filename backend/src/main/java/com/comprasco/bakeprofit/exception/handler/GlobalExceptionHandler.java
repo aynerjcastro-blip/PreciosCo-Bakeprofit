@@ -22,6 +22,8 @@ import com.comprasco.bakeprofit.exception.FollowAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.FollowNotAllowedException;
 import com.comprasco.bakeprofit.exception.FollowNotFoundException;
 import com.comprasco.bakeprofit.exception.NotificationNotFoundException;
+import com.comprasco.bakeprofit.exception.InvalidProductIdentityException;
+import com.comprasco.bakeprofit.exception.ProductAlreadyExistsException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -89,6 +91,30 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(InvalidCategoryHierarchyException.class)
         public ResponseEntity<ErrorResponse> handleInvalidCategoryHierarchy(
                         InvalidCategoryHierarchyException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_REQUEST.value())
+                                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        /**
+         * Maneja datos de identidad de producto incoherentes entre si: contenido
+         * neto sin unidad base (o al reves) o referencia del fabricante sin marca.
+         *
+         * @param ex      excepcion de identidad de producto invalida
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 400 Bad Request
+         */
+        @ExceptionHandler(InvalidProductIdentityException.class)
+        public ResponseEntity<ErrorResponse> handleInvalidProductIdentity(
+                        InvalidProductIdentityException ex,
                         HttpServletRequest request) {
 
                 ErrorResponse error = ErrorResponse.builder()
@@ -237,6 +263,30 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(StoreAlreadyExistsException.class)
         public ResponseEntity<ErrorResponse> handleStoreAlreadyExists(
                         StoreAlreadyExistsException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.CONFLICT.value())
+                                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+        }
+
+        /**
+         * Maneja el intento de registrar un producto repetido: mismo EAN o misma
+         * marca y referencia del fabricante.
+         *
+         * @param ex      excepcion de producto duplicado
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 409 Conflict
+         */
+        @ExceptionHandler(ProductAlreadyExistsException.class)
+        public ResponseEntity<ErrorResponse> handleProductAlreadyExists(
+                        ProductAlreadyExistsException ex,
                         HttpServletRequest request) {
 
                 ErrorResponse error = ErrorResponse.builder()

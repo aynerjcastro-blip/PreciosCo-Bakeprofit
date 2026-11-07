@@ -77,33 +77,35 @@ public class ProductController {
 
     @Operation(summary = "Registrar productos", description = "Registra el nuevo producto en la base de datos")
     @ApiResponse(responseCode = "201", description = "Producto registrado")
-    @ApiResponse(responseCode = "400", description = "Validación fallida")
+    @ApiResponse(responseCode = "400", description = "Validación fallida; EAN inválido, de relleno, de uso interno de una tienda o de peso variable; o identidad incoherente (contenido sin unidad, referencia sin marca)")
     @ApiResponse(responseCode = "404", description = "CategoryId no existe")
-    @ApiResponse(responseCode = "409", description = "Categoría inactiva")
+    @ApiResponse(responseCode = "409", description = "Categoría inactiva, o EAN o marca + referencia ya registrados")
     @PostMapping
     public ResponseEntity<ProductResponse> create (
-                @Parameter(description = "Record con toda la información del producto(nombre, unidades, id de su categoria)")
+                @Parameter(description = "Record con toda la información del producto (nombre, unidades, id de su categoría e identidad opcional)")
                 @Valid @RequestBody ProductRequest request) {
-        ProductResponse response = productService.create(request.name(), request.unit(), request.idCategory());
+        ProductResponse response = productService.create(request);
         return ResponseEntity
                 .created(URI.create("/api/products/" + response.id()))
                 .body(response);
     }
 
 
-    @Operation(summary = "Actualizar producto", description = "Modifica la información del producto indicado")
+    @Operation(summary = "Actualizar producto", description = "Modifica la información del producto indicado. "
+            + "Si la petición no trae ningún campo de identidad (brandName, ean, netContent, unitBase, manufacturerRef), "
+            + "se conserva la identidad existente. Si trae alguno, se reemplaza toda la identidad: "
+            + "los campos de identidad omitidos quedan vacíos.")
     @ApiResponse(responseCode = "200", description = "Producto modificado")
-    @ApiResponse(responseCode = "400", description = "Validación fallida")
+    @ApiResponse(responseCode = "400", description = "Validación fallida; EAN inválido, de relleno, de uso interno de una tienda o de peso variable; o identidad incoherente (contenido sin unidad, referencia sin marca)")
     @ApiResponse(responseCode = "404", description = "Id o categoryId no existe")
-    @ApiResponse(responseCode = "409", description = "Categoría inactiva")
+    @ApiResponse(responseCode = "409", description = "Categoría inactiva, o EAN o marca + referencia ya registrados")
     @PutMapping("/{id}")
     public ResponseEntity<ProductResponse> update (
                 @Parameter(description = "Id del producto que se va a actualizar")
                 @PathVariable Long id, 
-                @Parameter(description = "Record con los nuevos datos del producto(nombre, unidades, id de su categoria)")                                   
+                @Parameter(description = "Record con los nuevos datos del producto. Sin campos de identidad conserva la existente; con alguno, la reemplaza toda")
                 @Valid @RequestBody ProductRequest request) {
-        return ResponseEntity.ok(productService.update(id, request.name(), 
-                                                request.unit(), request.idCategory()));
+        return ResponseEntity.ok(productService.update(id, request));
     }
 
 
