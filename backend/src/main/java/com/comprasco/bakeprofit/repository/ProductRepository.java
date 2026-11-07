@@ -1,5 +1,6 @@
 package com.comprasco.bakeprofit.repository;
 
+import com.comprasco.bakeprofit.entity.Brand;
 import com.comprasco.bakeprofit.entity.Product;
 import com.comprasco.bakeprofit.entity.Category;
 
@@ -9,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
@@ -21,6 +23,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByActiveTrue ();
 
     List<Product> findByActiveFalse ();
+
+    Optional<Product> findByEan(String ean);
+
+    // Comparan contra la columna generada: el valor se normaliza en Java con ManufacturerReference
+    boolean existsByBrandAndManufacturerRefNorm(Brand brand, String manufacturerRefNorm);
+
+    boolean existsByBrandAndManufacturerRefNormAndIdNot(Brand brand, String manufacturerRefNorm, Long id);
 
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Product p SET p.active = :active WHERE p.category.id = :categoryId")

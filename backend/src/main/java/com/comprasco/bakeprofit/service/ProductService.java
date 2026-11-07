@@ -1,31 +1,78 @@
 package com.comprasco.bakeprofit.service;
 
+import com.comprasco.bakeprofit.entity.Brand;
 import com.comprasco.bakeprofit.entity.Product;
 import com.comprasco.bakeprofit.repository.ProductRepository;
+import com.comprasco.bakeprofit.util.Gtin;
+import com.comprasco.bakeprofit.util.GtinVerdict;
+import com.comprasco.bakeprofit.util.ManufacturerReference;
 import com.comprasco.bakeprofit.entity.Category;
+import com.comprasco.bakeprofit.dto.ProductRequest;
 import com.comprasco.bakeprofit.dto.ProductResponse;
 import com.comprasco.bakeprofit.exception.ProductNotFoundException;
 import com.comprasco.bakeprofit.exception.InvalidCategoryHierarchyException;
+import com.comprasco.bakeprofit.exception.InvalidProductIdentityException;
 import com.comprasco.bakeprofit.exception.InactiveParentException;
+import com.comprasco.bakeprofit.exception.ProductAlreadyExistsException;
 
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.SQLException;
 import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @Transactional(readOnly = true)
 public class ProductService {
+
+    private static final String CONTENT_PAIR_MESSAGE =
+            "El contenido neto y la unidad base van juntos: envía los dos o ninguno.";
+    private static final String REFERENCE_WITHOUT_BRAND_MESSAGE =
+            "La referencia del fabricante exige una marca.";
+    private static final String INVALID_GTIN_MESSAGE =
+            "El código %s no es un EAN válido: revisa el dígito verificador";
+    private static final String PLACEHOLDER_GTIN_MESSAGE =
+            "El código %s es un valor de relleno y no corresponde a un producto real";
+    private static final String STORE_INTERNAL_GTIN_MESSAGE =
+            "El código %s es de uso interno de una tienda y no identifica el producto entre tiendas";
+    private static final String VARIABLE_MEASURE_GTIN_MESSAGE =
+            "El código %s corresponde a un producto de peso variable y su precio no es comparable entre tiendas";
+    private static final String EMPTY_REFERENCE_MESSAGE =
+            "La referencia del fabricante debe tener al menos una letra o un número.";
+    private static final String DUPLICATE_EAN_MESSAGE =
+            "Ya existe un producto con el EAN %s: '%s'.";
+    private static final String DUPLICATE_REFERENCE_MESSAGE =
+            "Ya existe un producto de la marca '%s' con la referencia '%s'.";
+    private static final String DUPLICATE_IDENTITY_MESSAGE =
+            "Ya existe un producto con el mismo EAN o con la misma marca y referencia del fabricante.";
+
+    // Restricciones de identidad del script: solo su violación es un producto repetido (409)
+    private static final String UQ_PRODUCTS_EAN = "uq_products_ean";
+    private static final String UQ_PRODUCTS_BRAND_REF = "uq_products_brand_ref";
+    private static final Set<String> IDENTITY_CONSTRAINTS = Set.of(UQ_PRODUCTS_EAN, UQ_PRODUCTS_BRAND_REF);
+    // Respaldo si Hibernate no extrae el nombre: SQLState unique_violation y nombre entre comillas
+    private static final String UNIQUE_VIOLATION_SQLSTATE = "23505";
+    private static final Pattern CONSTRAINT_IN_MESSAGE = Pattern.compile("constraint \"([^\"]+)\"");
+
     private final ProductRepository productRepository;
     private final CategoryService categoryService;
+    private final BrandService brandService;
 
     public ProductService (ProductRepository productRepository,
-                           CategoryService categoryService) {
+                           CategoryService categoryService,
+                           BrandService brandService) {
         this.productRepository = productRepository;
         this.categoryService = categoryService;
-    } 
+        this.brandService = brandService;
+    }
 
     public List<ProductResponse> findAll () {
         return productRepository.findAll().stream()
@@ -105,9 +152,14 @@ public class ProductService {
         return true;
     }
 
+    /**
+     * Registra un producto. Orden: categoría (404/400/409) -> identidad incoherente (400)
+     * -> EAN o marca + referencia repetidos (409). Todo se comprueba antes de tocar la
+     * entidad; el índice único de la BD es la segunda barrera.
+     */
     @Transactional
-    public ProductResponse create (String name, String unit, Long idCategory) {
-        Category category = categoryService.findById(idCategory);
+    public ProductResponse create (ProductRequest request) {
+        Category category = categoryService.findById(request.idCategory());
 
         if (category.getParent() == null) {
             throw new InvalidCategoryHierarchyException("Los productos no pueden pertencer a una categoría raíz");
@@ -115,22 +167,30 @@ public class ProductService {
 
         if (!Boolean.TRUE.equals(category.getActive())) {
             throw new InactiveParentException(
-                    "No se puede crear el producto '" + name +
+                    "No se puede crear el producto '" + request.name() +
                     "' porque la categoría '" + category.getName() + "' está inactiva.");
         }
 
-        Product product = new Product();
-        product.setName(name);
-        product.setUnit(unit);
-        product.setCategory(category);
+        ResolvedIdentity identity = prepareIdentity(request, null);
 
-        return ProductResponse.from(productRepository.save(product));
+        Product product = new Product();
+        product.setName(request.name());
+        product.setUnit(request.unit());
+        product.setCategory(category);
+        applyIdentity(product, request, identity);
+
+        return ProductResponse.from(saveUnique(product));
     }
 
+    /**
+     * Actualiza un producto. Si la petición no trae ningún campo de identidad, la
+     * identidad actual se conserva: así un cliente anterior a HT-09 no borra el EAN
+     * al editar el nombre. Si trae alguno, la identidad se reemplaza completa.
+     */
     @Transactional
-    public ProductResponse update (Long id, String name, String unit, Long idCategory) {
+    public ProductResponse update (Long id, ProductRequest request) {
         Product product = findById(id);
-        Category category = categoryService.findById(idCategory);
+        Category category = categoryService.findById(request.idCategory());
 
         if (category.getParent() == null) {
             throw new InvalidCategoryHierarchyException("Los productos no pueden pertencer a una categoría raíz");
@@ -141,12 +201,17 @@ public class ProductService {
                     "No se puede actualizar el producto '" + product.getName() +
                     "' porque la nueva categoría '" + category.getName() + "' está inactiva.");
         }
-        
-        product.setName(name);
-        product.setUnit(unit);
+
+        if (carriesIdentity(request)) {
+            ResolvedIdentity identity = prepareIdentity(request, id);
+            applyIdentity(product, request, identity);
+        }
+
+        product.setName(request.name());
+        product.setUnit(request.unit());
         product.setCategory(category);
 
-        return ProductResponse.from(productRepository.save(product));
+        return ProductResponse.from(saveUnique(product));
     }
 
     @Transactional
@@ -170,5 +235,141 @@ public class ProductService {
         product.setActive(false);
 
         productRepository.save(product);
+    }
+
+    /* IDENTIDAD (HT-09) */
+
+    /** Marca resuelta y EAN ya normalizado a GTIN-14, listos para asignar al producto. */
+    private record ResolvedIdentity (Brand brand, String gtin) {
+    }
+
+    // Valida y comprueba duplicados con los datos de la petición; productId es null al crear
+    private ResolvedIdentity prepareIdentity (ProductRequest request, Long productId) {
+        validateIdentity(request);
+        String gtin = Gtin.normalize(request.ean());
+        ensureUniqueEan(gtin, request.ean(), productId);
+        Brand brand = resolveBrand(request.brandName());
+        ensureUniqueReference(brand, request.manufacturerRef(), productId);
+        return new ResolvedIdentity(brand, gtin);
+    }
+
+    private void validateIdentity (ProductRequest request) {
+        if (request.ean() != null) {
+            rejectionMessage(Gtin.assess(request.ean())).ifPresent(message -> {
+                throw new InvalidProductIdentityException(message.formatted(request.ean()));
+            });
+        }
+        if ((request.netContent() == null) != (request.unitBase() == null)) {
+            throw new InvalidProductIdentityException(CONTENT_PAIR_MESSAGE);
+        }
+        if (request.manufacturerRef() == null) {
+            return;
+        }
+        if (request.brandName() == null) {
+            throw new InvalidProductIdentityException(REFERENCE_WITHOUT_BRAND_MESSAGE);
+        }
+        if (ManufacturerReference.normalize(request.manufacturerRef()).isEmpty()) {
+            throw new InvalidProductIdentityException(EMPTY_REFERENCE_MESSAGE);
+        }
+    }
+
+    // Switch de expresión sin default: un veredicto nuevo no compila hasta tener su mensaje
+    private static Optional<String> rejectionMessage (GtinVerdict verdict) {
+        return switch (verdict) {
+            case INVALID -> Optional.of(INVALID_GTIN_MESSAGE);
+            case PLACEHOLDER -> Optional.of(PLACEHOLDER_GTIN_MESSAGE);
+            case STORE_INTERNAL -> Optional.of(STORE_INTERNAL_GTIN_MESSAGE);
+            case VARIABLE_MEASURE -> Optional.of(VARIABLE_MEASURE_GTIN_MESSAGE);
+            case COMPARABLE -> Optional.empty();
+        };
+    }
+
+    // Busca por el GTIN-14 normalizado; el mensaje muestra el código tal como lo envió el cliente
+    private void ensureUniqueEan (String gtin, String requestedEan, Long productId) {
+        if (gtin == null) {
+            return;
+        }
+        productRepository.findByEan(gtin)
+                .filter(existing -> !existing.getId().equals(productId))
+                .ifPresent(existing -> {
+                    throw new ProductAlreadyExistsException(
+                            DUPLICATE_EAN_MESSAGE.formatted(requestedEan, existing.getName()));
+                });
+    }
+
+    private void ensureUniqueReference (Brand brand, String reference, Long productId) {
+        if (reference == null) {
+            return;
+        }
+        String normalizedReference = ManufacturerReference.normalize(reference);
+        boolean taken = productId == null
+                ? productRepository.existsByBrandAndManufacturerRefNorm(brand, normalizedReference)
+                : productRepository.existsByBrandAndManufacturerRefNormAndIdNot(brand, normalizedReference, productId);
+        if (taken) {
+            throw new ProductAlreadyExistsException(
+                    DUPLICATE_REFERENCE_MESSAGE.formatted(brand.getName(), reference));
+        }
+    }
+
+    private Brand resolveBrand (String brandName) {
+        return brandName == null ? null : brandService.resolveByName(brandName);
+    }
+
+    private static void applyIdentity (Product product, ProductRequest request, ResolvedIdentity identity) {
+        product.setBrand(identity.brand());
+        product.setEan(identity.gtin());
+        product.setNetContent(request.netContent());
+        product.setUnitBase(request.unitBase());
+        product.setManufacturerRef(request.manufacturerRef());
+    }
+
+    private static boolean carriesIdentity (ProductRequest request) {
+        return request.brandName() != null
+                || request.ean() != null
+                || request.netContent() != null
+                || request.unitBase() != null
+                || request.manufacturerRef() != null;
+    }
+
+    private Product saveUnique (Product product) {
+        try {
+            return productRepository.saveAndFlush(product);
+        } catch (DataIntegrityViolationException e) {
+            // Dos peticiones simultáneas pasaron la pre-comprobación: gana el índice único de la BD.
+            // Cualquier otra violación (un CHECK, una FK) es un error de programación y no se disfraza de 409
+            if (violatesIdentityConstraint(e)) {
+                throw new ProductAlreadyExistsException(DUPLICATE_IDENTITY_MESSAGE);
+            }
+            throw e;
+        }
+    }
+
+    private static boolean violatesIdentityConstraint (DataIntegrityViolationException exception) {
+        return violatedConstraintName(exception)
+                .map(IDENTITY_CONSTRAINTS::contains)
+                .orElse(false);
+    }
+
+    // Primero el nombre que extrae Hibernate; si no lo trae, el mensaje de PostgreSQL de una violación única
+    private static Optional<String> violatedConstraintName (DataIntegrityViolationException exception) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ConstraintViolationException hibernateViolation
+                    && hibernateViolation.getConstraintName() != null) {
+                return Optional.of(hibernateViolation.getConstraintName());
+            }
+            if (cause instanceof SQLException sqlException
+                    && UNIQUE_VIOLATION_SQLSTATE.equals(sqlException.getSQLState())) {
+                return constraintNamedIn(sqlException.getMessage());
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<String> constraintNamedIn (String message) {
+        if (message == null) {
+            return Optional.empty();
+        }
+        Matcher matcher = CONSTRAINT_IN_MESSAGE.matcher(message);
+        return matcher.find() ? Optional.of(matcher.group(1)) : Optional.empty();
     }
 }
