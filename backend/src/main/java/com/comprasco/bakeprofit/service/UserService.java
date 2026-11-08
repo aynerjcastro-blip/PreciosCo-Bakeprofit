@@ -237,7 +237,9 @@ public class UserService {
 
         // 3. Enviamos el correo (Reemplaza esto con tu método real de SCRUM-138)
         String resetUrl = "http://localhost:5173/reset-password?token=" + resetToken.getToken();
-         emailService.sendEmail(user.getEmail(), "Recuperar contraseña", "Tu enlace: " + resetUrl);
+        System.out.println("TOKEN GENERADO: "+resetToken.getToken());
+        emailService.sendEmail(user.getEmail(), "Recuperar contraseña", "Tu enlace: " + resetUrl);
+        
     }
 
     /**
