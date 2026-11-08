@@ -2,20 +2,25 @@ package com.comprasco.bakeprofit.service;
 
 import com.comprasco.bakeprofit.config.JwtSecurity;
 import com.comprasco.bakeprofit.dto.AuthResponse;
+import com.comprasco.bakeprofit.dto.ForgotPasswordRequest;
 import com.comprasco.bakeprofit.dto.GoogleLoginRequest;
 import com.comprasco.bakeprofit.dto.LoginRequest;
+import com.comprasco.bakeprofit.dto.PasswordResetToken;
 import com.comprasco.bakeprofit.dto.RegisterRequest;
+import com.comprasco.bakeprofit.dto.ResetPasswordRequest;
 import com.comprasco.bakeprofit.entity.Role;
 import com.comprasco.bakeprofit.entity.User;
 import com.comprasco.bakeprofit.exception.EmailAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.InactiveUserException;
 import com.comprasco.bakeprofit.exception.InvalidCredentialsException;
 import com.comprasco.bakeprofit.exception.UserNotFoundException;
-import com.comprasco.bakeprofit.repository.UserRepository;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.comprasco.bakeprofit.repository.PasswordResetTokenRepository;
+import com.comprasco.bakeprofit.repository.UserRepository;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,9 +28,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * Servicio encargado de la gestion de usuarios, registro y autenticacion.
  */
@@ -36,15 +43,19 @@ public class UserService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtSecurity jwtSecurity;
-private static final Logger log = LoggerFactory.getLogger(UserService.class);
+    private final PasswordResetTokenRepository tokenRepository;
+    private final EmailService emailService;
+
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
     @Value("${google.client-id}")
     private String googleClientId;
 
-    public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, JwtSecurity jwtSecurity) {
+    public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, JwtSecurity jwtSecurity, PasswordResetTokenRepository tokenRepository, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtSecurity = jwtSecurity;
-
+        this.tokenRepository = tokenRepository;
+        this.emailService = emailService;
     }
 
     /* CONSULTAS */
@@ -201,5 +212,55 @@ private static final Logger log = LoggerFactory.getLogger(UserService.class);
         String token = jwtSecurity.generateToken(user.getEmail(), user.getRole().name());
 
         return new AuthResponse(token, user.getName(), user.getEmail(), user.getRole());
+    }
+
+    /**
+     * Solicita el restablecimiento de contraseña.
+     */
+    @Transactional
+    public void requestPasswordReset(ForgotPasswordRequest request) {
+        Optional<User> userOpt = userRepository.findByEmail(request.email());
+
+        // Si el usuario no existe, salimos silenciosamente sin lanzar error.
+        if (userOpt.isEmpty()) {
+            return;
+        }
+
+        User user = userOpt.get();
+
+        // 1. Limpiamos tokens anteriores para evitar acumulación en BD
+        tokenRepository.deleteByUserId(user.getId());
+
+        // 2. Generamos y guardamos el nuevo token
+        PasswordResetToken resetToken = new PasswordResetToken(user);
+        tokenRepository.save(resetToken);
+
+        // 3. Enviamos el correo (Reemplaza esto con tu método real de SCRUM-138)
+        String resetUrl = "http://localhost:5173/reset-password?token=" + resetToken.getToken();
+        System.out.println("TOKEN GENERADO: "+resetToken.getToken());
+        emailService.sendEmail(user.getEmail(), "Recuperar contraseña", "Tu enlace: " + resetUrl);
+        
+    }
+
+    /**
+     * Valida el token y cambia la contraseña.
+     */
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        PasswordResetToken resetToken = tokenRepository.findByToken(request.token())
+                .orElseThrow(() -> new IllegalArgumentException("Enlace inválido o ya utilizado."));
+
+        if (resetToken.isExpired()) {
+            tokenRepository.delete(resetToken); // Limpieza proactiva
+            throw new IllegalArgumentException("El enlace ha expirado a los 30 minutos. Solicita uno nuevo.");
+        }
+
+        // Actualizamos la contraseña cifrada
+        User user = resetToken.getUser();
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+
+        // Eliminamos el token para que no se pueda volver a usar
+        tokenRepository.delete(resetToken);
     }
 }
