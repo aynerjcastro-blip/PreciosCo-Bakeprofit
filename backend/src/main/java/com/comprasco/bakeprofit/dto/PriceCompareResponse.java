@@ -11,5 +11,7 @@ public record PriceCompareResponse(
     String source,
     LocalDateTime registrationDate,
     String productUrl,
-    String imageUrl
+    String imageUrl,
+    // Última vez que el scraper vio este mismo precio; registrationDate es cuándo empezó
+    LocalDateTime lastSeenAt
 ) {}
