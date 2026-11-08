@@ -1,38 +1,32 @@
 package com.comprasco.bakeprofit.dto;
 
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
-public class PriceDropAlertDto {
+/**
+ * Objeto de transferencia de datos (DTO) inmutable que representa 
+ * la estructura de la alerta cuando se detecta una caída de precio en un producto.
+ * Utiliza validaciones de Jakarta para asegurar la integridad de los datos en entornos empresariales.
+ */
+public record PriceDropAlertDto(
 
-    private Long productId;
-    private String productName;
-    private Double previousPrice;
-    private Double currentPrice;
-    private LocalDateTime detectedAt;
+        @NotNull(message = "El ID del producto es obligatorio")
+        Long productId,
 
-    public PriceDropAlertDto() {}
+        @NotBlank(message = "El nombre del producto es obligatorio")
+        String productName,
 
-    public PriceDropAlertDto(Long productId, String productName, Double previousPrice, Double currentPrice, LocalDateTime detectedAt) {
-        this.productId = productId;
-        this.productName = productName;
-        this.previousPrice = previousPrice;
-        this.currentPrice = currentPrice;
-        this.detectedAt = detectedAt;
-    }
+        @NotNull(message = "El precio anterior es obligatorio")
+        @DecimalMin(value = "0.0", inclusive = false, message = "El precio anterior debe ser mayor que cero")
+        Double previousPrice,
 
-    // Getters and Setters
-    public Long getProductId() { return productId; }
-    public void setProductId(Long productId) { this.productId = productId; }
+        @NotNull(message = "El precio actual es obligatorio")
+        @DecimalMin(value = "0.0", inclusive = false, message = "El precio actual debe ser mayor que cero")
+        Double currentPrice,
 
-    public String getProductName() { return productName; }
-    public void setProductName(String productName) { this.productName = productName; }
-
-    public Double getPreviousPrice() { return previousPrice; }
-    public void setPreviousPrice(Double previousPrice) { this.previousPrice = previousPrice; }
-
-    public Double getCurrentPrice() { return currentPrice; }
-    public void setCurrentPrice(Double currentPrice) { this.currentPrice = currentPrice; }
-
-    public LocalDateTime getDetectedAt() { return detectedAt; }
-    public void setDetectedAt(LocalDateTime detectedAt) { this.detectedAt = detectedAt; }
+        @NotNull(message = "La fecha de detección es obligatoria")
+        LocalDateTime detectedAt
+) {
 }
