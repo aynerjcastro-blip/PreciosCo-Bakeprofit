@@ -22,6 +22,7 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,7 +51,8 @@ public class UserService {
     @Value("${google.client-id}")
     private String googleClientId;
 
-    public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, JwtSecurity jwtSecurity, PasswordResetTokenRepository tokenRepository, EmailService emailService) {
+    public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, JwtSecurity jwtSecurity,
+            PasswordResetTokenRepository tokenRepository, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtSecurity = jwtSecurity;
@@ -237,9 +239,14 @@ public class UserService {
 
         // 3. Enviamos el correo (Reemplaza esto con tu método real de SCRUM-138)
         String resetUrl = "http://localhost:5173/reset-password?token=" + resetToken.getToken();
-        System.out.println("TOKEN GENERADO: "+resetToken.getToken());
-        emailService.sendEmail(user.getEmail(), "Recuperar contraseña", "Tu enlace: " + resetUrl);
-        
+
+        try {
+            emailService.sendEmail(user.getEmail(), "Recuperar contraseña", "Tu enlace: " + resetUrl);
+        } catch (MailException e) {
+            // Responder igual exista o no el correo; el fallo queda solo en el log
+            log.error("No se pudo enviar el correo de recuperación", e);
+        }
+
     }
 
     /**
