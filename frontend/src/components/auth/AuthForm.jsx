@@ -125,7 +125,7 @@ export default function AuthForm({ isLogin }) {
                         </button>
                     </div>
                     {isLogin ? (
-                        <div className={styles['auth-form__forgot']}><Link to="/recuperar">¿Olvidaste tu contrasena?</Link></div>
+                        <div className={styles['auth-form__forgot']}><Link to="/forgot-password">¿Olvidaste tu contrasena?</Link></div>
                     ) : (
                         <span className={styles['auth-form__hint']}>Minimo 8 caracteres</span>
                     )}

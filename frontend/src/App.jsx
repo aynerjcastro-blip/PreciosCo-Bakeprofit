@@ -6,6 +6,8 @@ import Search from './pages/Search';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import Followed from './pages/Followed';
 import AuthPage from './pages/AuthPage';
+import ForgotPassword from '@/components/password/ForgotPassword';
+import ResetPassword from '@/components/password/ResetPassword';
 
 export default function App() {
   return (
@@ -19,13 +21,15 @@ export default function App() {
           <Route path="buscar" element={<Search />} />
           <Route path="/login" element={<AuthPage type="login" />} />
           <Route path="/register" element={<AuthPage type="register" />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Rutas Protegidas (Requieren Login) */}
           <Route element={<ProtectedRoute />}>
             <Route
               path="seguidos"
               element={<Followed />}
-              
+
             />
           </Route>
         </Route>
