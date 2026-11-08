@@ -7,6 +7,8 @@ import org.hibernate.annotations.Generated;
 import org.hibernate.generator.EventType;
 
 import com.comprasco.bakeprofit.util.Gtin;
+import com.comprasco.bakeprofit.util.NetContentLabel;
+import com.comprasco.bakeprofit.util.TextLimits;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -43,6 +45,8 @@ import lombok.Setter;
     indexes = @Index(name = "idx_products_category", columnList = "category_id"))
 public class Product {
 
+    /** Longitud de {@code products.name} (VARCHAR(255)). */
+    public static final int NAME_MAX_LENGTH = 255;
     public static final int MANUFACTURER_REF_MAX_LENGTH = 60;
     public static final int NET_CONTENT_INTEGER_DIGITS = 8;
     public static final int NET_CONTENT_FRACTION_DIGITS = 2;
@@ -51,7 +55,7 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = NAME_MAX_LENGTH)
     private String name;
 
     @Column
@@ -95,6 +99,31 @@ public class Product {
             columnDefinition = "VARCHAR(60) GENERATED ALWAYS AS "
                     + "(upper(regexp_replace(manufacturer_ref, '[^A-Za-z0-9]', '', 'g'))) STORED")
     private String manufacturerRefNorm;
+
+    /**
+     * Producto identificado por EAN, como lo crea el procesador de staging. El campo
+     * de texto {@code unit} se deriva del contenido para que no se contradigan, y el
+     * nombre que trae la tienda se recorta a la columna.
+     */
+    public static Product withIdentity(String name, Category category, Brand brand,
+                                       String gtin, BigDecimal netContent, UnitBase unitBase) {
+        Product product = new Product();
+        product.name = TextLimits.truncate(name, NAME_MAX_LENGTH);
+        product.category = category;
+        product.brand = brand;
+        product.ean = gtin;
+        product.netContent = netContent;
+        product.unitBase = unitBase;
+        product.unit = NetContentLabel.format(netContent, unitBase);
+        return product;
+    }
+
+    /** Mismo contenido neto (como número, 1000 = 1000.00) y misma unidad base. */
+    public boolean hasSize(BigDecimal content, UnitBase unit) {
+        return netContent != null
+                && unitBase == unit
+                && netContent.compareTo(content) == 0;
+    }
 
     public boolean hasManufacturerReference() {
         return manufacturerRef != null;
