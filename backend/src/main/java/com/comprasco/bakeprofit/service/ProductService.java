@@ -4,7 +4,6 @@ import com.comprasco.bakeprofit.entity.Brand;
 import com.comprasco.bakeprofit.entity.Product;
 import com.comprasco.bakeprofit.repository.ProductRepository;
 import com.comprasco.bakeprofit.util.Gtin;
-import com.comprasco.bakeprofit.util.GtinVerdict;
 import com.comprasco.bakeprofit.util.ManufacturerReference;
 import com.comprasco.bakeprofit.entity.Category;
 import com.comprasco.bakeprofit.dto.ProductRequest;
@@ -37,14 +36,6 @@ public class ProductService {
             "El contenido neto y la unidad base van juntos: envía los dos o ninguno.";
     private static final String REFERENCE_WITHOUT_BRAND_MESSAGE =
             "La referencia del fabricante exige una marca.";
-    private static final String INVALID_GTIN_MESSAGE =
-            "El código %s no es un EAN válido: revisa el dígito verificador";
-    private static final String PLACEHOLDER_GTIN_MESSAGE =
-            "El código %s es un valor de relleno y no corresponde a un producto real";
-    private static final String STORE_INTERNAL_GTIN_MESSAGE =
-            "El código %s es de uso interno de una tienda y no identifica el producto entre tiendas";
-    private static final String VARIABLE_MEASURE_GTIN_MESSAGE =
-            "El código %s corresponde a un producto de peso variable y su precio no es comparable entre tiendas";
     private static final String EMPTY_REFERENCE_MESSAGE =
             "La referencia del fabricante debe tener al menos una letra o un número.";
     private static final String DUPLICATE_EAN_MESSAGE =
@@ -255,8 +246,8 @@ public class ProductService {
 
     private void validateIdentity (ProductRequest request) {
         if (request.ean() != null) {
-            rejectionMessage(Gtin.assess(request.ean())).ifPresent(message -> {
-                throw new InvalidProductIdentityException(message.formatted(request.ean()));
+            Gtin.assess(request.ean()).rejectionMessage(request.ean()).ifPresent(message -> {
+                throw new InvalidProductIdentityException(message);
             });
         }
         if ((request.netContent() == null) != (request.unitBase() == null)) {
@@ -271,17 +262,6 @@ public class ProductService {
         if (ManufacturerReference.normalize(request.manufacturerRef()).isEmpty()) {
             throw new InvalidProductIdentityException(EMPTY_REFERENCE_MESSAGE);
         }
-    }
-
-    // Switch de expresión sin default: un veredicto nuevo no compila hasta tener su mensaje
-    private static Optional<String> rejectionMessage (GtinVerdict verdict) {
-        return switch (verdict) {
-            case INVALID -> Optional.of(INVALID_GTIN_MESSAGE);
-            case PLACEHOLDER -> Optional.of(PLACEHOLDER_GTIN_MESSAGE);
-            case STORE_INTERNAL -> Optional.of(STORE_INTERNAL_GTIN_MESSAGE);
-            case VARIABLE_MEASURE -> Optional.of(VARIABLE_MEASURE_GTIN_MESSAGE);
-            case COMPARABLE -> Optional.empty();
-        };
     }
 
     // Busca por el GTIN-14 normalizado; el mensaje muestra el código tal como lo envió el cliente
