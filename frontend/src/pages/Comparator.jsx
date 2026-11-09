@@ -50,8 +50,9 @@ function PriceCard({ item, isBest, productId, onShowReviews, onReviewsChanged })
                 <p className={styles['price-card__value']}>
                     ${Number(item.value).toLocaleString('es-CO')}
                 </p>
+                {/* RF10, DP-32: la última vez que la tienda confirmó este precio, no cuándo empezó */}
                 <p className={styles['price-card__date']}>
-                    Actualizado: {new Date(item.registrationDate).toLocaleDateString('es-CO')}
+                    Confirmado el {new Date(item.lastSeenAt).toLocaleDateString('es-CO')}
                 </p>
                 <StoreReviewBar
                     productId={productId}
