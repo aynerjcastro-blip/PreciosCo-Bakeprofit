@@ -154,12 +154,6 @@ a.price-card__link:focus-visible {
     outline: none;
 }
 
-.price-card__link--disabled {
-    background: var(--border-color);
-    color: var(--text-muted);
-    cursor: not-allowed;
-}
-
 /* ============================================================
    RESPONSIVE
    ============================================================ */

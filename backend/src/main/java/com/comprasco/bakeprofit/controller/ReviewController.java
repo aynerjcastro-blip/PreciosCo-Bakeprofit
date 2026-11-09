@@ -79,6 +79,7 @@ public class ReviewController {
     @ApiResponse(responseCode = "401", description = "Sin sesión")
     @ApiResponse(responseCode = "403", description = "No eres el autor")
     @ApiResponse(responseCode = "404", description = "La opinión no existe")
+    @ApiResponse(responseCode = "409", description = "Un moderador ocultó el comentario: no se puede eliminar")
     @DeleteMapping("/{id}/comment")
     public ResponseEntity<Void> deleteComment(@CurrentUser User user, @PathVariable Long id) {
         reviewService.deleteComment(user, id);
