@@ -5,8 +5,7 @@ import ProductRating from '@/components/reviews/ProductRating';
 import ReviewsSection from '@/components/reviews/ReviewsSection/ReviewsSection';
 import StoreReviewBar from '@/components/reviews/StoreReviewBar/StoreReviewBar';
 import FollowButton from '@/components/follows/FollowButton/FollowButton';
-
-const API_BASE = 'http://localhost:8080';
+import { compareByProduct } from '@/api/prices';
 
 // Icono de enlace (cadena)
 function LinkIcon() {
@@ -106,9 +105,7 @@ export default function Comparator() {
 
         const fetchPrices = async () => {
             try {
-                const res = await fetch(`${API_BASE}/api/prices/compare?productId=${productId}`);
-                if (!res.ok) throw new Error('Error al consultar precios');
-                const data = await res.json();
+                const data = await compareByProduct(productId);
                 if (data.length === 0) { setStatus('empty'); return; }
                 setProductName(data[0].productName);
                 setPrices(data);
@@ -136,7 +133,6 @@ export default function Comparator() {
 
             <div className={styles.comparador__header}>
                 <h1 className={styles.comparador__title}>{productName}</h1>
-                {status === 'success' && <ProductRating productId={productId} refreshKey={reviewsVersion} />}
                 {status === 'success' && <ProductRating productId={productId} refreshKey={reviewsVersion} />}
                 {status === 'success' && <FollowButton productId={productId} productName={productName} />}
                 <p className={styles.comparador__subtitle}>
