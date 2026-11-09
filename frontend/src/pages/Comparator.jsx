@@ -18,7 +18,7 @@ function LinkIcon() {
     );
 }
 
-// Tarjeta de precio: imagen | datos | botón de enlace
+// Tarjeta de precio: imagen | datos | botón de enlace (solo si hay página)
 function PriceCard({ item, isBest, productId, onShowReviews, onReviewsChanged }) {    // Si la imagen no carga (o no existe) se muestra el espacio con un marcador
     const [imageFailed, setImageFailed] = useState(false);
     const showImage = item.imageUrl && !imageFailed;
@@ -63,7 +63,8 @@ function PriceCard({ item, isBest, productId, onShowReviews, onReviewsChanged })
                 />
             </div>
 
-            {item.productUrl ? (
+            {/* RF57: un precio sin página registrada se muestra sin enlace (ni un ícono deshabilitado) */}
+            {item.productUrl && (
                 <a
                     className={styles['price-card__link']}
                     href={item.productUrl}
@@ -74,14 +75,6 @@ function PriceCard({ item, isBest, productId, onShowReviews, onReviewsChanged })
                 >
                     <LinkIcon />
                 </a>
-            ) : (
-                <span
-                    className={`${styles['price-card__link']} ${styles['price-card__link--disabled']}`}
-                    title="Enlace no disponible"
-                    aria-hidden="true"
-                >
-                    <LinkIcon />
-                </span>
             )}
         </div>
     );
