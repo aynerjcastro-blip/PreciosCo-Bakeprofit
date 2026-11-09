@@ -31,7 +31,8 @@ public class PriceService {
                         p.getSource(),
                         p.getRegistrationDate(),
                         p.getProductUrl(),
-                        p.getImageUrl()
+                        p.getImageUrl(),
+                        p.getLastSeenAt()
                 ))
                 .toList();
     }

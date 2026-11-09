@@ -1,15 +1,16 @@
 package com.comprasco.bakeprofit.repository;
-import com.comprasco.bakeprofit.entity.Price;
+
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
-
+import com.comprasco.bakeprofit.entity.Price;
 
 public interface PriceRepository extends JpaRepository<Price, Long> {
 
-    
     @Query("""
         SELECT p FROM Price p
         WHERE p.product.id = :productId
@@ -23,7 +24,6 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
     """)
     List<Price> findRecentPricesByProduct(@Param("productId") Long productId);
 
-   
     @Query("""
         SELECT MIN(p.value) FROM Price p
         WHERE p.product.id = :productId
@@ -38,8 +38,11 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
 
     boolean existsByProductIdAndStoreId(Long productId, Long storeId);
 
-        /** Los dos precios más recientes de un producto en una tienda (el último y el anterior). */
+    /** Los dos precios más recientes de un producto en una tienda (el último y el anterior). */
     List<Price> findTop2ByProductIdAndStoreIdOrderByRegistrationDateDescIdDesc(Long productId, Long storeId);
+
+    /** El periodo de precio más reciente del producto en la tienda. */
+    Optional<Price> findFirstByProductIdAndStoreIdOrderByRegistrationDateDescIdDesc(Long productId, Long storeId);
 
     /** Tiendas que tienen al menos un precio del producto. */
     @Query("SELECT DISTINCT p.store.id FROM Price p WHERE p.product.id = :productId")
