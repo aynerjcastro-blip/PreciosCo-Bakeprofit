@@ -134,10 +134,18 @@ public class ReviewService {
         return toResponse(rating, comment);
     }
 
-    /** Elimina el comentario (borrado lógico) en cualquier momento. La calificación se conserva. Repetirlo no hace nada. */
+    /**
+     * Elimina el comentario (borrado lógico) en cualquier momento. La calificación se conserva. Repetirlo no hace nada.
+     * Orden: opinión inexistente (404) -> no es el autor (403) -> comentario OCULTO por moderación (409).
+     * Un comentario OCULTO no lo puede eliminar su autor (DECISIONS.md): responder 204 le haría creer que lo borró.
+     */
     @Transactional
     public void deleteComment(User user, Long reviewId) {
-        commentOf(findOwnedRating(user, reviewId)).delete();
+        Comment comment = commentOf(findOwnedRating(user, reviewId));
+        if (comment.getStatus() == CommentStatus.OCULTO) {
+            throw new ReviewNotAllowedException("No se puede eliminar: un moderador ocultó este comentario.");
+        }
+        comment.delete();
     }
 
     /**
