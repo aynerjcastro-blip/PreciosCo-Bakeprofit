@@ -11,9 +11,14 @@ import com.comprasco.bakeprofit.entity.Price;
 
 public interface PriceRepository extends JpaRepository<Price, Long> {
 
+    /**
+     * Precio vigente del producto en cada tienda activa, de menor a mayor (comparador, RF07).
+     * Una tienda inactiva no se compara: el visitante no la ve en la búsqueda ni en el selector.
+     */
     @Query("""
         SELECT p FROM Price p
         WHERE p.product.id = :productId
+        AND p.store.active = true
         AND p.registrationDate = (
             SELECT MAX(p2.registrationDate)
             FROM Price p2
@@ -24,9 +29,11 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
     """)
     List<Price> findRecentPricesByProduct(@Param("productId") Long productId);
 
+    /** El precio más bajo entre las tiendas activas: el primero del comparador (Seguidos, RF27). */
     @Query("""
         SELECT MIN(p.value) FROM Price p
         WHERE p.product.id = :productId
+        AND p.store.active = true
         AND p.registrationDate = (
             SELECT MAX(p2.registrationDate)
             FROM Price p2

@@ -3,11 +3,13 @@ package com.comprasco.bakeprofit.service;
 import com.comprasco.bakeprofit.entity.Brand;
 import com.comprasco.bakeprofit.entity.Product;
 import com.comprasco.bakeprofit.repository.ProductRepository;
+import com.comprasco.bakeprofit.repository.ProductSpecifications;
 import com.comprasco.bakeprofit.util.Gtin;
 import com.comprasco.bakeprofit.util.ManufacturerReference;
 import com.comprasco.bakeprofit.entity.Category;
 import com.comprasco.bakeprofit.dto.ProductRequest;
 import com.comprasco.bakeprofit.dto.ProductResponse;
+import com.comprasco.bakeprofit.dto.ProductSearchCriteria;
 import com.comprasco.bakeprofit.exception.ProductNotFoundException;
 import com.comprasco.bakeprofit.exception.InvalidCategoryHierarchyException;
 import com.comprasco.bakeprofit.exception.InvalidProductIdentityException;
@@ -16,13 +18,15 @@ import com.comprasco.bakeprofit.exception.ProductAlreadyExistsException;
 
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PagedModel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.SQLException;
-import java.text.Normalizer;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -53,16 +57,23 @@ public class ProductService {
     private static final String UNIQUE_VIOLATION_SQLSTATE = "23505";
     private static final Pattern CONSTRAINT_IN_MESSAGE = Pattern.compile("constraint \"([^\"]+)\"");
 
+    /** Tamaño máximo de una página de la búsqueda (el mismo límite que las opiniones). */
+    public static final int MAX_PAGE_SIZE = 50;
+    private static final Sort SEARCH_ORDER = Sort.by(Sort.Order.asc("name"), Sort.Order.asc("id"));
+
     private final ProductRepository productRepository;
     private final CategoryService categoryService;
     private final BrandService brandService;
+    private final StoreService storeService;
 
     public ProductService (ProductRepository productRepository,
                            CategoryService categoryService,
-                           BrandService brandService) {
+                           BrandService brandService,
+                           StoreService storeService) {
         this.productRepository = productRepository;
         this.categoryService = categoryService;
         this.brandService = brandService;
+        this.storeService = storeService;
     }
 
     public List<ProductResponse> findAll () {
@@ -93,54 +104,30 @@ public class ProductService {
     }
 
     /**
-     * Busca productos activos por nombre y/o categoría.
+     * Busca productos activos con los filtros de HU-06a (nombre y categoría) y HU-06b
+     * (tiendas y rango del precio vigente). Todos se resuelven en SQL, así que cada página
+     * está completa y el total es exacto.
      *
-     * El nombre se normaliza antes de comparar (sin tildes, sin mayúsculas y
-     * sin espacios repetidos) y se separa en palabras: el producto coincide si
-     * contiene TODAS las palabras, en cualquier orden. Así "ARROZ", "arróz" o
-     * "  leche   entera " encuentran los productos esperados.
+     * <p>
+     * Orden: categoría inexistente (404) -> tienda inexistente o inactiva (404) -> consulta.
+     * El rango ya llega validado en los filtros (400). El cliente no elige el orden: por
+     * nombre y, si empatan, por id, para que las páginas no repitan ni salten productos.
+     * </p>
      */
-    public List<ProductResponse> search (String name, Long idCategory) {
-        List<Product> candidates;
-        if (idCategory != null) {
-            Category category = categoryService.findById(idCategory);
-            candidates = productRepository.findByCategoryAndActiveTrue(category);
-        } else {
-            candidates = productRepository.findByActiveTrue();
+    public PagedModel<ProductResponse> search (ProductSearchCriteria criteria, int page, int size) {
+        if (criteria.categoryId() != null) {
+            categoryService.findById(criteria.categoryId());
         }
+        storeService.requireActive(criteria.storeIds());
 
-        String normalizedName = normalize(name);
-        if (!normalizedName.isEmpty()) {
-            String[] tokens = normalizedName.split(" ");
-            candidates = candidates.stream()
-                    .filter(p -> containsAllTokens(normalize(p.getName()), tokens))
-                    .toList();
-        }
+        Pageable pageable = PageRequest.of(
+                Math.max(page, 0),
+                Math.min(Math.max(size, 1), MAX_PAGE_SIZE),
+                SEARCH_ORDER);
 
-        return candidates.stream()
-                .map(ProductResponse::from)
-                .toList();
-    }
-
-    /** Quita tildes/diacríticos, pasa a minúsculas y colapsa espacios. */
-    static String normalize (String text) {
-        if (text == null) {
-            return "";
-        }
-        return Normalizer.normalize(text, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "")
-                .toLowerCase(Locale.ROOT)
-                .trim()
-                .replaceAll("\\s+", " ");
-    }
-
-    private static boolean containsAllTokens (String normalizedProductName, String[] tokens) {
-        for (String token : tokens) {
-            if (!normalizedProductName.contains(token)) {
-                return false;
-            }
-        }
-        return true;
+        return new PagedModel<>(productRepository
+                .findAll(ProductSpecifications.matching(criteria), pageable)
+                .map(ProductResponse::from));
     }
 
     /**
