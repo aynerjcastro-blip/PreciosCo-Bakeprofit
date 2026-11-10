@@ -5,6 +5,7 @@ import com.comprasco.bakeprofit.dto.CategoryResponse;
 import com.comprasco.bakeprofit.service.CategoryService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 
@@ -77,6 +78,7 @@ public class CategoryController {
     @ApiResponse(responseCode = "404", description = "ParentId no existe")
     @ApiResponse(responseCode = "409", description = "Ya existe una categoría con ese nombre o la categoría raíz indicada no está activa")
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CategoryResponse> create(
                 @Parameter(description = "Record con el nombre de la categoría, y id de categoría padre(cuando no es raíz)")
                 @Valid @RequestBody CategoryRequest request) {
@@ -97,6 +99,7 @@ public class CategoryController {
     @ApiResponse(responseCode = "404", description = "Id o parentId no existe")
     @ApiResponse(responseCode = "409", description = "La nueva categoría raíz no está activa")
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CategoryResponse> update(
                 @Parameter(description = "Id de la categoría a actualizar")
                 @PathVariable Long id,
@@ -114,6 +117,7 @@ public class CategoryController {
     @ApiResponse(responseCode = "204", description = "Categoría desactivada")
     @ApiResponse(responseCode = "404", description = "Id no existe")
     @PatchMapping("/{id}/deactivate")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deactivate(
                 @Parameter(description = "Id de la categoría")
                 @PathVariable Long id) {
@@ -131,6 +135,7 @@ public class CategoryController {
     @ApiResponse(responseCode = "404", description = "Id no existe")
     @ApiResponse(responseCode = "409", description = "La categoría raíz no está activa")
     @PatchMapping("/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> activate(
                 @Parameter(description = "Id de la categoría")
                 @PathVariable Long id) {
