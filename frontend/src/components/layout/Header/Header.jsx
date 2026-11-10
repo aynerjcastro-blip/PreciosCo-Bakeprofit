@@ -184,6 +184,12 @@ export default function Header() {
                                             </div>
                                         </div>
 
+                                        {/* NUEVO: Enlace a Mi Perfil */}
+                                        <div className={styles['user-menu__divider']}></div>
+                                        <Link to="/perfil" className={styles['user-menu__item']} role="menuitem" onClick={closeMenus}>
+                                            Mi Perfil
+                                        </Link>
+
                                         {canFollow && (
                                             <>
                                                 <div className={styles['user-menu__divider']}></div>

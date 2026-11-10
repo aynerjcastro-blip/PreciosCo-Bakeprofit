@@ -9,6 +9,7 @@ import com.comprasco.bakeprofit.dto.PasswordResetToken;
 import com.comprasco.bakeprofit.dto.ProfileResponse;
 import com.comprasco.bakeprofit.dto.RegisterRequest;
 import com.comprasco.bakeprofit.dto.ResetPasswordRequest;
+import com.comprasco.bakeprofit.dto.UpdateDisplayNameRequest;
 import com.comprasco.bakeprofit.dto.UpdateProfileRequest;
 import com.comprasco.bakeprofit.entity.AuthProvider;
 import com.comprasco.bakeprofit.entity.Role;
@@ -275,46 +276,65 @@ public class UserService {
         tokenRepository.delete(resetToken);
     }
 
-
     public ProfileResponse getProfile(Long userId) {
-    User user = findById(userId);
-    return new ProfileResponse(user.getName(), user.getEmail(), user.getRole(),
-            user.getAuthProvider() == AuthProvider.LOCAL);
-}
-
-@Transactional
-public AuthResponse updateProfile(Long userId, UpdateProfileRequest request) {
-    // El usuario del SecurityContext llega desconectado de la sesión; se recarga para poder modificarlo
-    User user = findById(userId);
-
-    String newName = request.name().trim();
-    String newEmail = request.email().trim();
-    boolean emailChanged = !newEmail.equals(user.getEmail());
-
-    if (emailChanged) {
-        // Google identifica la cuenta por correo; cambiarlo rompería su inicio de sesión (DP-23)
-        if (user.getAuthProvider() == AuthProvider.GOOGLE) {
-            throw new ForbiddenActionException(
-                    "Las cuentas creadas con Google no pueden cambiar su correo desde el perfil.");
-        }
-
-        boolean takenByAnother = userRepository.findByEmail(newEmail)
-                .filter(other -> !other.getId().equals(user.getId()))
-                .isPresent();
-        if (takenByAnother) {
-            throw new EmailAlreadyExistsException(newEmail);
-        }
+        User user = findById(userId);
+        return new ProfileResponse(user.getName(), user.getEmail(), user.getRole(),
+                user.getAuthProvider() == AuthProvider.LOCAL);
     }
 
-    user.setName(newName);
-    user.setEmail(newEmail);
+    @Transactional
+    public AuthResponse updateProfile(Long userId, UpdateProfileRequest request) {
+        // El usuario del SecurityContext llega desconectado de la sesión; se recarga
+        // para poder modificarlo
+        User user = findById(userId);
 
-    // El JWT guarda el correo como subject: solo si cambió hace falta uno nuevo.
-    // Emitirlo siempre alargaría la sesión 24 h cada vez que alguien edita su nombre.
-    String token = emailChanged
-            ? jwtSecurity.generateToken(user.getEmail(), user.getRole().name())
-            : null;
+        String newName = request.name().trim();
+        String newEmail = request.email().trim();
+        boolean emailChanged = !newEmail.equals(user.getEmail());
 
-    return new AuthResponse(token, user.getName(), user.getEmail(), user.getRole());
-}
+        if (emailChanged) {
+            // Google identifica la cuenta por correo; cambiarlo rompería su inicio de
+            // sesión (DP-23)
+            if (user.getAuthProvider() == AuthProvider.GOOGLE) {
+                throw new ForbiddenActionException(
+                        "Las cuentas creadas con Google no pueden cambiar su correo desde el perfil.");
+            }
+
+            boolean takenByAnother = userRepository.findByEmail(newEmail)
+                    .filter(other -> !other.getId().equals(user.getId()))
+                    .isPresent();
+            if (takenByAnother) {
+                throw new EmailAlreadyExistsException(newEmail);
+            }
+        }
+
+        user.setName(newName);
+        user.setEmail(newEmail);
+
+        // El JWT guarda el correo como subject: solo si cambió hace falta uno nuevo.
+        // Emitirlo siempre alargaría la sesión 24 h cada vez que alguien edita su
+        // nombre.
+        String token = emailChanged
+                ? jwtSecurity.generateToken(user.getEmail(), user.getRole().name())
+                : null;
+
+        return new AuthResponse(token, user.getName(), user.getEmail(), user.getRole());
+    }
+
+    /**
+     * Cambia el nombre a mostrar de un usuario y devuelve su perfil actualizado.
+     *
+     * @param userId  id del usuario autenticado
+     * @param request datos validados con el nuevo nombre
+     * @return el perfil con el nombre ya actualizado
+     * @throws RuntimeException si no existe un usuario con ese id
+     */
+    @Transactional
+    public ProfileResponse updateDisplayName(Long userId, UpdateDisplayNameRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        user.setName(request.name());
+        userRepository.save(user);
+        return getProfile(userId);
+    }
 }

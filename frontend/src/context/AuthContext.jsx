@@ -1,20 +1,31 @@
-import { useState } from 'react';
+import { createContext, useState } from 'react';
 import {
     getStoredUser,
     getToken,
     saveAuthData,
-    clearAuthData
+    clearAuthData,
+    updateStoredUser 
 } from '../utils/auth-helper';
-import { AuthContext } from './authContextValue';
 
+//Se crea el contexto aquí mismo (elimina la importación de authContextValue.js)
+// eslint-disable-next-line react-refresh/only-export-components
+export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-    // Inicialización síncrona
     const [user, setUser] = useState(() => {
         const storedUser = getStoredUser();
         const token = getToken();
         return (storedUser && token) ? storedUser : null;
     });
+
+
+    const updateUserData = (newData) => {
+        setUser((prevUser) => {
+            const updatedUser = { ...prevUser, ...newData };
+            updateStoredUser(updatedUser); 
+            return updatedUser;
+        });
+    };
 
     const [loading] = useState(false);
 
@@ -36,7 +47,8 @@ export function AuthProvider({ children }) {
     const isAuthenticated = Boolean(user && getToken());
 
     return (
-        <AuthContext.Provider value={{ user, isAuthenticated, loading, login, logout }}>
+        //  Se agrega updateUserData al value para que otros componentes puedan usarla
+        <AuthContext.Provider value={{ user, isAuthenticated, loading, login, logout, updateUserData }}>
             {children}
         </AuthContext.Provider>
     );
