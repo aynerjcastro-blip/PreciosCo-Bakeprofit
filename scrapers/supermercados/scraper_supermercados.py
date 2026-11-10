@@ -204,9 +204,18 @@ def oferta_del_producto(p):
     return item, seller.get("commertialOffer") or {}
 
 
+def _stock(oferta):
+    """La API pública de VTEX expone el stock como AvailableQuantity; se acepta Stock si existe."""
+    for campo in ("Stock", "AvailableQuantity"):
+        v = oferta.get(campo)
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            return v
+    return None
+
+
 def esta_disponible(oferta):
-    stock = oferta.get("Stock")
-    return oferta.get("IsAvailable") is True and isinstance(stock, (int, float)) and stock > 0
+    stock = _stock(oferta)
+    return oferta.get("IsAvailable") is True and stock is not None and stock > 0
 
 
 def _dinero(v):
@@ -333,6 +342,13 @@ def procesar_target(conn, session, target):
         if fila[9] is None:
             r.sin_tamano += 1
         filas.append(fila)
+
+    if productos and r.no_disponibles == len(productos):
+        _, o = oferta_del_producto(productos[0])
+        log.warning("[%s][%s] todos no disponibles; ejemplo de commertialOffer: IsAvailable=%r Stock=%r "
+                    "AvailableQuantity=%r Price=%r (campos: %s)", r.tienda, r.termino,
+                    o.get("IsAvailable"), o.get("Stock"), o.get("AvailableQuantity"), o.get("Price"),
+                    ", ".join(sorted(o.keys()))[:300])
 
     if filas:
         try:
