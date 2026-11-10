@@ -8,6 +8,7 @@ import com.comprasco.bakeprofit.dto.LoginRequest;
 import com.comprasco.bakeprofit.dto.PasswordResetToken;
 import com.comprasco.bakeprofit.dto.RegisterRequest;
 import com.comprasco.bakeprofit.dto.ResetPasswordRequest;
+import com.comprasco.bakeprofit.entity.AuthProvider;
 import com.comprasco.bakeprofit.entity.Role;
 import com.comprasco.bakeprofit.entity.User;
 import com.comprasco.bakeprofit.exception.EmailAlreadyExistsException;
@@ -204,6 +205,7 @@ public class UserService {
             newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
             newUser.setRole(Role.USER);
             newUser.setActive(true);
+            newUser.setAuthProvider(AuthProvider.GOOGLE);
             return userRepository.save(newUser);
         });
 

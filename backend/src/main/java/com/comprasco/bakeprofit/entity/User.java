@@ -41,11 +41,12 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    /*
-     * TODO:Podria cambiar lo de manejar un Enum para los roles.
-     */
-
+    
     @Column(nullable = false)
     private LocalDateTime registrationDate = LocalDateTime.now();
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", nullable = false)
+    private AuthProvider authProvider = AuthProvider.LOCAL;
 
 }
