@@ -26,6 +26,8 @@ import com.comprasco.bakeprofit.exception.InvalidProductIdentityException;
 import com.comprasco.bakeprofit.exception.InvalidSearchFilterException;
 import com.comprasco.bakeprofit.exception.ProductAlreadyExistsException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -35,6 +37,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -496,5 +500,22 @@ public class GlobalExceptionHandler {
                                 .build();
 
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        }
+
+        /**
+         * Intercepta la denegación de acceso producida por @PreAuthorize de Spring
+         * Security.
+         * Retorna HTTP 403 Forbidden en lugar de permitir que se transforme en un error
+         * 500.
+         */
+        @ExceptionHandler({ AccessDeniedException.class, AuthorizationDeniedException.class })
+        public ResponseEntity<Map<String, Object>> handleAccessDeniedException(Exception ex) {
+                Map<String, Object> body = new HashMap<>();
+                body.put("timestamp", LocalDateTime.now());
+                body.put("status", HttpStatus.FORBIDDEN.value());
+                body.put("error", "Forbidden");
+                body.put("message", "Acceso denegado: Se requieren permisos de administrador.");
+
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
         }
 }
