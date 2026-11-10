@@ -6,10 +6,14 @@ on:
   #   - cron: "0 10 * * *"
   workflow_dispatch: {}   # permite lanzarlo manualmente desde la pestaña Actions
 
+concurrency:
+  group: scraper-supermercados   # evita dos corridas a la vez (duplicarían filas en scraped_offers)
+  cancel-in-progress: false
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 20   # sin navegador es mucho más rápido; 12 targets ≈ 1 minuto
 
     steps:
       - name: Clonar repositorio
@@ -19,9 +23,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Instalar Chrome
-        uses: browser-actions/setup-chrome@v1
+          cache: pip
+          cache-dependency-path: scrapers/supermercados/requirements.txt
 
       - name: Instalar dependencias
         working-directory: scrapers/supermercados
@@ -35,6 +38,5 @@ jobs:
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          HEADLESS: "true"
-        run: python scraper_supermercados.py
-
+          DB_SSLMODE: require
+        run: python scraper_vtex.py
