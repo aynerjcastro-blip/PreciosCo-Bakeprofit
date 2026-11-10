@@ -47,6 +47,201 @@ Registro de decisiones de equipo: desviaciones deliberadas del MVP y acuerdos to
 - **Despliegue y rendimiento**: el despliegue se aplaza (el docente no lo exige por ahora). El rendimiento queda como tareas extra; la prueba de carga nunca se corre contra la base compartida de Supabase.
 - **Patrón de diseño del scraper**: Strategy, del catálogo GoF.
 
+## Fase 3 — Selección de tiendas de droguería y cuidado facial (SCRUM-168, 10-nov-2026)
+
+Evidencia: dos ejecuciones de `verificar_tiendas.py` (robots.txt, API de catálogo, términos), lectura completa de los términos de las
+tiendas que los publican y revisión de las páginas públicas. Lo marcado **PENDIENTE** no se pudo comprobar y no se da por
+verificado. Este análisis no es asesoría legal.
+
+### Plataformas y tipo de tienda
+
+- **VTEX**: Drogas La Rebaja, Farmanorte, Cutis. **Shopify**: Ánimus Lab, Botanikalia. **Aplicación propia** (Angular): Farmatodo
+  y Cruz Verde. Droguería La Economía: sin determinar.
+- **Mixtas** (venden de más de un dominio): Farmatodo, Cruz Verde, Farmanorte (droguería y dermocosméticos), Drogas La Rebaja
+  (droguería y sección "Piel Radiante") y Cutis (cuidado facial y medicamentos). **Especializadas**: Ánimus Lab y Botanikalia
+  (marcas propias de cuidado facial).
+
+### Resultado por tienda
+
+**Drogas La Rebaja** (droguería · riesgo bajo-medio)
+- Plataforma: **VTEX** (la API responde).
+- robots.txt: API de catálogo **permitida**; prohíbe `/busca/*`, cuenta y pago.
+- EAN: **sí**.
+- Datos útiles: `Producto OTC` (SI/NO), `Presentacionunidadmedida` ("BLISTER X 10"), `Principio activo`, `Kit`; marca.
+
+**Farmatodo - Droguería** (droguería · riesgo medio)
+- Plataforma: aplicación propia (Angular).
+- robots.txt: páginas `/producto/…` y sitemaps **permitidos**; prohíbe `/buscar*`, `/busqueda*`, cuenta y pago; bloquea por nombre a "Scrapy 2.7.1/2.8.0".
+- EAN: **no** (el `gtin` del JSON-LD es el id interno de la URL).
+- Datos útiles: JSON-LD con nombre, marca y precio.
+
+**Farmanorte** (droguería · riesgo medio)
+- Plataforma: **VTEX**.
+- robots.txt: **API (`/api/`) y búsquedas `map=ft` PROHIBIDAS**; permitidos páginas de producto `/…/p` y sitemap.
+- EAN: **no** (vacío; marca "Generica").
+- Datos útiles: presentación en el nombre ("* 10 TAB") y `Cantidad de unidades`.
+
+**Cruz Verde** (droguería · riesgo **alto**, ver términos)
+- Plataforma: aplicación de una sola página (Angular).
+- robots.txt: prohíbe `/search`, bolsa, cuenta y pago; productos y sitemap permitidos.
+- EAN: PENDIENTE.
+- Datos útiles: el HTML llega vacío sin JavaScript; los datos vienen de una API interna sin documentar.
+
+**Droguería La Economía (Eticos SAS)** (droguería · riesgo **alto**)
+- Plataforma: sin determinar (el sitemap vive en `/sitemaps/la_economia/`).
+- robots.txt: páginas de producto `/p/…` y sitemap **permitidos**; prohíbe `/search`, cuenta, checkout y pasos del pedido; **`Crawl-delay: 3600`** para todos los agentes (Googlebot tiene acceso libre).
+- EAN: PENDIENTE.
+- Datos útiles: nombre con presentación y precio en la página de producto.
+- Riesgo: una petición por hora hace inviable un ciclo diario (ver hallazgo 13).
+
+**Cutis** (cuidado facial · riesgo bajo)
+- Plataforma: **VTEX**.
+- robots.txt: API **permitida**; prohíbe `/busca/*`, `/img/*`, cuenta y pago.
+- EAN: **sí**.
+- Datos útiles: `Tipo de presentación` ("30 ML"), marca, categoría `/Rostro/`.
+
+**Farmatodo - Cuidado facial** (cuidado facial · riesgo medio)
+- Igual que Farmatodo - Droguería en plataforma, robots.txt y datos útiles.
+- EAN: **no**.
+
+**Ánimus Lab** (cuidado facial, marca propia · riesgo medio)
+- Plataforma: **Shopify**.
+- robots.txt: `/products.json` y `/collections/all` permitidos.
+- EAN: **no** (`/products.json` no expone código de barras).
+- Datos útiles: 44 productos (10 kits); SKU en 43; marca consistente; `compare_at_price` (precio de lista) en 57 variantes; **27 variantes agotadas**.
+
+**Botanikalia** (cuidado facial, marca propia · riesgo medio)
+- Plataforma: **Shopify**.
+- robots.txt: `/products.json` y `/collections/all` permitidos.
+- EAN: **no**.
+- Datos útiles: 40 productos (10 kits); **sin SKU**; marca escrita de dos formas; todo disponible; sin precios de lista.
+
+### Hallazgos que cambian el diseño
+
+1. **El EAN solo está en La Rebaja y Cutis.** ADR-01 (emparejar por EAN) no alcanza a Farmanorte, Farmatodo, Ánimus Lab ni
+   Botanikalia. Hace falta emparejar por marca normalizada + nombre o principio activo + contenido neto (ADR-03), o la vista de
+   equivalentes de ADR-04. En droguería, los productos genéricos del catálogo ya se definen sin marca ("Acetaminofén 500 mg").
+2. **Los kits de La Rebaja comparten el EAN de la unidad con otro precio**: el blíster x10 cuesta $2.600 y el kit de caja x100
+   ($18.820) trae el mismo EAN. Hay que excluir los listados con `Kit = Refkit`.
+3. **Filtro de venta libre**: La Rebaja marca cada producto con `Producto OTC` (SI/NO) y el alcance excluye fórmula médica; se
+   usa ese campo. En las demás tiendas el filtro es la lista de productos de `scrape_targets`.
+4. **El precio depende de la ciudad o del canal.** La Rebaja lista `Ciudades Exentas` (códigos de municipio; parecen ser exentas de
+   IVA); La Economía declara que sus precios difieren de los de las tiendas físicas y varían según la ciudad de entrega; Cruz Verde
+   declara que los precios del sitio pueden diferir de los de sus puntos de venta; Farmatodo y Farmanorte piden elegir ciudad.
+   La API sin región devuelve un precio por defecto de origen desconocido; verificarlo contra la web con ubicación en Valledupar
+   antes de confiar en él. Cruz Verde sí cubre Valledupar en su venta en línea y en el retiro en droguería.
+5. **Disponibilidad**: Cruz Verde marca "PRODUCTO SIN STOCK ONLINE" y su disponibilidad varía por localidad; en Ánimus Lab hay
+   variantes con `available = false`. Un producto sin stock no se registra como precio vigente.
+6. **Descargo de precios**: Cruz Verde declara que no responde por los precios que se muestren en otros sitios o buscadores;
+   La Rebaja y La Economía se reservan cambiarlos en cualquier momento. El comparador debe mostrar la fecha de captura del precio
+   (`prices.registration_date`) y el enlace a la tienda (`prices.product_url`), sin presentarlos como precio garantizado.
+7. **Farmanorte**: su robots.txt prohíbe la API. Respetarlo implica usar solo sitemap y HTML, y aun así no trae EAN ni marca real:
+   aporta poco. Tampoco sirve para cuidado facial en la API consultada (0 resultados de niacinamida y retinol). Decisión del equipo:
+   segunda ola solo por HTML, o excluirla.
+8. **Farmatodo**: no usar las APIs ni las claves que aparecen en el código de la página (Algolia, `api-transactional`): no están
+   documentadas para terceros. La ruta limpia es `sitemap-products.xml` + página de producto (JSON-LD), con ritmo bajo. Que bloquee
+   a Scrapy por nombre indica que vigilan a los scrapers; el UA del proyecto no está bloqueado y debe identificarse.
+9. **Cruz Verde**: los datos no están en el HTML, así que habría que usar la API interna que consulta la página. Sus términos
+   prohíben la ingeniería inversa de cualquier parte del sitio y la reproducción total o parcial del sitio sin permiso escrito (ver
+   términos). Se descarta como fuente a menos que haya autorización escrita.
+10. **Shopify**: se usa `price` (lo que paga el comprador), no `compare_at_price`, y se descartan las variantes agotadas. Botanikalia
+    escribe su marca de dos formas ("botanikaliacol" en 39 productos y "Botanikalia" en 1): normalizarla antes de `BrandService`, o
+    se crearían dos marcas. Los kits, rutinas y calendarios (10 en cada tienda) se excluyen. El `agents.md` de las tiendas Shopify
+    pide a los clientes automatizados identificarse (Web Bot Auth en peticiones servidor a servidor) y respetar `429` y
+    `Retry-After`; `/products.json` no se menciona y robots.txt lo permite.
+11. **El contenido neto (ADR-03) casi no viene estructurado en Shopify**: en Ánimus Lab solo 32 de 101 variantes traen ml o g en su
+    título y ningún título de producto lo trae; mirando también la descripción, solo 14 de 34 productos sueltos (muchos son
+    maquillaje). En Botanikalia, 3 de 30. Sin contenido neto no se puede calcular el precio por ml de forma automática.
+12. **Buscar un activo en el texto sobrecuenta.** En Ánimus Lab, 27 de 44 productos mencionan "niacinamida" en el título o la
+    descripción, pero solo 12 de los que no son kits la nombran con un porcentaje, y están en sérums, contornos de ojos, una crema
+    corporal y esencias, donde no es el activo principal. Ningún título de Ánimus Lab nombra el activo ("Suero AZ Hybrid Clear",
+    "Hydra Balance"). En Botanikalia hay exactamente un sérum de niacinamida en el título ("SERUM FACIAL NIACINAMIDA 10%",
+    $62.900) y uno de retinol ("SERUM FACIAL BIO RETINOL", $72.900). En Cutis, la búsqueda de texto completo por "niacinamida"
+    devuelve resultados útiles (Mela B3 de La Roche-Posay, Endocare Niacinal) mezclados con otros donde no es el activo principal
+    (un sérum capilar). Clasificar por activo exige curaduría, no solo buscar la palabra.
+
+13. **Crawl-delay**: solo Droguería La Economía lo declara (3600 s, una petición por hora para todos los agentes salvo
+    Googlebot). Es una directiva no estándar que Google ignora, pero los rastreadores respetuosos la acatan. Con los 20
+    productos del catálogo, un ciclo tardaría unas 20 horas (21 con el sitemap) y no admite crecer. Se descarta; si el equipo la
+    quiere, pedir autorización o una frecuencia mayor a `servicioalcliente@droguerialaeconomia.com`. El scraper debe leer
+    `Crawl-delay` de cada robots.txt y respetarlo por tienda.
+
+### Selección propuesta (a confirmar con el equipo)
+
+- **Droguería (RF52, EP-04, HU-28/HU-29)**. Primera ola: **Drogas La Rebaja** (API, EAN, filtro OTC) y **Farmatodo - Droguería**
+  (sitemap + HTML). Segunda ola: **Farmanorte** (solo HTML, sin EAN). **Cruz Verde**, solo con autorización escrita.
+  **Droguería La Economía**, descartada por su `Crawl-delay` de 3600 s (hallazgo 13).
+- **Cuidado facial (RF58, EP-05, HU-30/HU-31)**: **Cutis** (única con API y EAN), **Farmatodo - Cuidado facial**, **Ánimus Lab** (con
+  autorización) y **Botanikalia**. Cumple el mínimo de 2 tiendas con nombre, presentación, precio y URL.
+
+### Ajuste a ADR-02: Farmatodo como dos tiendas
+
+- **Decisión del equipo**: Farmatodo se registra como **"Farmatodo - Droguería"** y **"Farmatodo - Cuidado facial"**, en lugar de
+  una tabla intermedia tienda-dominio. ADR-02 había descartado duplicar tiendas mixtas porque parte el promedio de la tienda; se
+  acepta ese costo.
+- **Consecuencias**: (1) el promedio de calificaciones de Farmatodo queda partido; (2) los `scrape_targets` de las dos filas deben
+  ser disjuntos por categoría, o un mismo producto llegaría con dos precios de "Farmatodo"; (3) la regla vale solo para tiendas que
+  se scrapean en dos dominios (hoy, Farmatodo).
+
+### Comparación por ingrediente activo (propuesta; requiere decisión y nuevo ADR-04)
+
+- **Por qué la evidencia la favorece**: solo Cutis expone EAN en cuidado facial; Ánimus Lab y Botanikalia venden productos propios
+  que ninguna otra tienda seleccionada vende. Con ADR-01 sus productos quedarían con un solo precio.
+- **Idea del equipo**: comparar productos equivalentes de marcas distintas por ingrediente activo (niacinamida, retinol). Reabre la
+  decisión de que el comparador trabaja sobre un solo producto y no mezcla productos distintos.
+- **Opciones**: (A) solo el mismo producto (ADR-01). (B) vista complementaria "comparar equivalentes": categorías hoja por activo
+  bajo Cuidado facial (por ejemplo "Sérum de niacinamida"), con precio por unidad de contenido y la concentración visible.
+- **Lo que la evidencia obliga a ajustar en B**: (a) la lista de productos de cada categoría la define el equipo por curaduría
+  (unos 5 a 8 por tienda), no una búsqueda automática de la palabra (hallazgo 12); (b) el contenido neto de los productos de
+  Shopify se carga a mano para esa lista (hallazgo 11); (c) la concentración se registra por producto y se muestra, porque
+  niacinamida 2 % no equivale a 10 %; (d) si falta el contenido neto, se muestra el precio sin precio por ml.
+- **Recomendación**: B como complemento de A, empezando con una lista curada y corta.
+
+### Robots.txt y términos de uso
+
+- **robots.txt**: leído en los **8 sitios** (Farmatodo cuenta una vez aunque figure en dos filas; resumen en la tabla). El de Droguería La Economía se obtuvo copiándolo desde el
+  navegador porque el script falla con `CERTIFICATE_VERIFY_FAILED` incluso con `certifi` (suele indicar que el sitio no envía su
+  cadena de certificados completa). Para el User-Agent del proyecto permite las páginas de producto y el sitemap, prohíbe la
+  búsqueda, el checkout, la cuenta y los pasos del pedido, y exige `Crawl-delay: 3600`. No se desactiva la verificación SSL.
+- **Cruz Verde** (términos leídos completos, versión del 13-mar-2023): prohíbe "descifrar, descompilar, desensamblar, realizar
+  ingeniería inversa o intentar derivar el código fuente o ideas subyacentes o algoritmos de cualquier parte del sitio web, así como
+  modificar, traducir o crear trabajos derivados" y declara protegido todo el contenido del sitio, con la reproducción total o
+  parcial del sitio prohibida sin permiso previo, expreso y por escrito. Aclara que sus precios pueden diferir de los de las
+  droguerías y que no responde por precios publicados en otros sitios o buscadores. Pedir autorización por escrito (PQR en
+  `buzondigital.cruzverde.com.co`) antes de cualquier extracción.
+- **Farmatodo** (términos leídos completos): no mencionan el acceso automatizado a precios, pero prohíben la ingeniería inversa y
+  crear obras derivadas de cualquier parte del sitio, y declaran protegidos el texto y las imágenes. Guardar solo nombre,
+  presentación, precio y URL; mostrar las imágenes enlazadas, no copiadas.
+- **Ánimus Lab**: prohíbe reproducir, copiar, distribuir, transformar o explotar contenidos sin autorización expresa y se reserva
+  restringir, suspender o bloquear el acceso al sitio. Pedir autorización por escrito a `info@animuslb.com` antes de scrapear.
+- **Cutis**: sin cláusula sobre acceso automatizado ni copia (texto leído completo). Mantener un ritmo bajo (pausas de 1,5 s o más).
+- **Drogas La Rebaja (Copservir Ltda.)**: sin cláusula sobre acceso automatizado ni copia; se reserva el derecho de cambiar
+  precios en cualquier momento.
+- **Droguería La Economía (Eticos SAS)**: sin cláusula sobre acceso automatizado ni copia en los términos copiados del sitio;
+  declara que sus precios difieren de los de las tiendas físicas, varían según la ciudad, y que puede modificarlos en cualquier
+  momento.
+- **Farmanorte**: su página de "Términos y condiciones" solo reproduce la ley de protección de datos personales (Ley 1581); no
+  trae términos de uso del sitio. Sin cláusulas sobre acceso automatizado.
+- **Botanikalia**: la página de "Términos y condiciones" no muestra contenido (solo el formulario de devoluciones; puede ser un
+  fallo de su sitio). No hay términos legibles que revisar; se rige por su robots.txt y su `agents.md`. La ausencia de términos
+  no equivale a una autorización.
+- Este análisis no es asesoría legal.
+
+### Verificación de datos mínimos
+
+- Nombre, precio y URL: **visibles en las tiendas seleccionadas** (Cruz Verde y La Economía, solo en el navegador).
+- Presentación estructurada: La Rebaja (`Presentacionunidadmedida`), Cutis (`Tipo de presentación`), Farmanorte (nombre y
+  `Cantidad de unidades`). En Farmatodo, Ánimus Lab y Botanikalia hay que parsearla del nombre, la variante o la descripción, y
+  muchas veces no está (hallazgo 11).
+- Marca: La Rebaja, Cutis y Farmatodo la traen; Farmanorte solo "Generica"; en Shopify, `vendor` (consistente en Ánimus Lab; dos
+  escrituras en Botanikalia).
+
+### Pendientes antes de cerrar la tarjeta
+
+1. Autorización escrita de Ánimus Lab; decidir si se solicita también a Cruz Verde o se excluye.
+2. Cambiar el `UA` de `verificar_tiendas.py` por el User-Agent real del scraper, con contacto del proyecto.
+3. Decisión del equipo sobre Farmanorte (solo HTML o excluir) y sobre ADR-04.
+
 ## Búsqueda de productos (HU-06a, HU-06b)
 
 - **Todos los filtros en SQL (SCRUM-140)**: reemplaza la decisión anterior de filtrar el nombre en Java. Se filtraba en Java porque un `LIKE` simple no encontraba "café" al escribir "cafe". Con la búsqueda paginada eso ya no sirve: filtrar en Java después de paginar deja páginas cortas o vacías, y paginar en memoria carga todo el catálogo. La regla sin tildes ni mayúsculas se conserva con `lower(f_unaccent(...))` a los dos lados de la comparación (`scripts/2026-11-scrum140-busqueda-sin-tildes.sql`): primero se quitan las tildes y después se pasa a minúsculas, para no depender del `LC_CTYPE` de la base. Java solo parte el texto en palabras y escapa `%`, `_` y `\` (`SearchTerms`); cada palabra es un `LIKE` y deben estar todas, en cualquier orden. Así el criterio de HU-06a "el filtro combinado se aplica en una sola consulta" se cumple literalmente.
