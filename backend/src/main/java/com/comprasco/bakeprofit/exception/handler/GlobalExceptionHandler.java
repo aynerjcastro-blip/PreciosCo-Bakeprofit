@@ -23,6 +23,7 @@ import com.comprasco.bakeprofit.exception.FollowNotAllowedException;
 import com.comprasco.bakeprofit.exception.FollowNotFoundException;
 import com.comprasco.bakeprofit.exception.NotificationNotFoundException;
 import com.comprasco.bakeprofit.exception.InvalidProductIdentityException;
+import com.comprasco.bakeprofit.exception.InvalidSearchFilterException;
 import com.comprasco.bakeprofit.exception.ProductAlreadyExistsException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -385,6 +386,30 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(InvalidReviewRequestException.class)
         public ResponseEntity<ErrorResponse> handleInvalidReviewRequest(
                         InvalidReviewRequestException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_REQUEST.value())
+                                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        /**
+         * Maneja un filtro invalido de la busqueda de productos (HU-06b): precio
+         * negativo o minimo mayor que maximo.
+         *
+         * @param ex      excepcion de filtro de busqueda invalido
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 400 Bad Request
+         */
+        @ExceptionHandler(InvalidSearchFilterException.class)
+        public ResponseEntity<ErrorResponse> handleInvalidSearchFilter(
+                        InvalidSearchFilterException ex,
                         HttpServletRequest request) {
 
                 ErrorResponse error = ErrorResponse.builder()

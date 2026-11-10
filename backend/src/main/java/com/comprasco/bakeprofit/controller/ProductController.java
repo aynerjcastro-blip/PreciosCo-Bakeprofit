@@ -2,9 +2,11 @@ package com.comprasco.bakeprofit.controller;
 
 import com.comprasco.bakeprofit.dto.ProductResponse;
 import com.comprasco.bakeprofit.dto.ProductRequest;
+import com.comprasco.bakeprofit.dto.ProductSearchCriteria;
 import com.comprasco.bakeprofit.service.ProductService;
 
 import jakarta.validation.Valid;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.net.URI;
@@ -14,12 +16,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Tag(name = "Productos")
 @RestController
 @RequestMapping("api/products")
 public class ProductController {
+
+    private static final String DEFAULT_PAGE_SIZE = "20";
 
     private final ProductService productService;
 
@@ -62,16 +67,34 @@ public class ProductController {
     }
 
 
-    @Operation(summary = "Buscar productos con filtros", 
-            description = "Filtra productos activos por nombre y/o categoría. Ambos parámetros son opcionales.")
-    @ApiResponse(responseCode = "200", description = "Lista de productos que coinciden con el filtro")
+    @Operation(summary = "Buscar productos con filtros",
+            description = "Filtra productos activos por nombre, categoría, tiendas y rango del precio vigente. "
+                    + "Todos los parámetros son opcionales y se combinan (deben cumplirse todos). "
+                    + "El nombre no distingue tildes ni mayúsculas y coincide si contiene todas las palabras. "
+                    + "Sin tiendas, el rango se evalúa en todas las tiendas activas; con tiendas, solo en ellas. "
+                    + "Ordenado por nombre. Máximo " + ProductService.MAX_PAGE_SIZE + " por página.")
+    @ApiResponse(responseCode = "200", description = "Página de productos (en 'content'), también si no hay resultados")
+    @ApiResponse(responseCode = "400", description = "Precio negativo o no numérico, o mínimo mayor que máximo")
+    @ApiResponse(responseCode = "404", description = "Categoría inexistente, o tienda inexistente o inactiva")
     @GetMapping("/search")
-    public ResponseEntity<List<ProductResponse>> search(
-            @Parameter(description = "Texto parcial del nombre del producto") 
+    public ResponseEntity<PagedModel<ProductResponse>> search(
+            @Parameter(description = "Palabras del nombre del producto")
             @RequestParam(required = false) String name,
-            @Parameter(description = "ID de la categoría para filtrar") 
-            @RequestParam(required = false) Long idCategory) {
-        return ResponseEntity.ok(productService.search(name, idCategory));
+            @Parameter(description = "ID de la categoría para filtrar")
+            @RequestParam(required = false) Long idCategory,
+            @Parameter(description = "ID de una tienda; se repite para varias (storeId=1&storeId=3)")
+            @RequestParam(name = "storeId", required = false) List<Long> storeIds,
+            @Parameter(description = "Precio vigente mínimo, inclusivo")
+            @RequestParam(required = false) BigDecimal minPrice,
+            @Parameter(description = "Precio vigente máximo, inclusivo")
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @Parameter(description = "Página (desde 0)")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Tamaño de página (1 a " + ProductService.MAX_PAGE_SIZE + ")")
+            @RequestParam(defaultValue = DEFAULT_PAGE_SIZE) int size) {
+        ProductSearchCriteria criteria =
+                ProductSearchCriteria.of(name, idCategory, storeIds, minPrice, maxPrice);
+        return ResponseEntity.ok(productService.search(criteria, page, size));
     }
 
 
