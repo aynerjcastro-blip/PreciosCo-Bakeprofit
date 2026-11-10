@@ -6,11 +6,16 @@ import com.comprasco.bakeprofit.dto.ForgotPasswordRequest;
 import com.comprasco.bakeprofit.dto.GoogleLoginRequest;
 import com.comprasco.bakeprofit.dto.LoginRequest;
 import com.comprasco.bakeprofit.dto.PasswordResetToken;
+import com.comprasco.bakeprofit.dto.ProfileResponse;
 import com.comprasco.bakeprofit.dto.RegisterRequest;
 import com.comprasco.bakeprofit.dto.ResetPasswordRequest;
+import com.comprasco.bakeprofit.dto.UpdateDisplayNameRequest;
+import com.comprasco.bakeprofit.dto.UpdateProfileRequest;
+import com.comprasco.bakeprofit.entity.AuthProvider;
 import com.comprasco.bakeprofit.entity.Role;
 import com.comprasco.bakeprofit.entity.User;
 import com.comprasco.bakeprofit.exception.EmailAlreadyExistsException;
+import com.comprasco.bakeprofit.exception.ForbiddenActionException;
 import com.comprasco.bakeprofit.exception.InactiveUserException;
 import com.comprasco.bakeprofit.exception.InvalidCredentialsException;
 import com.comprasco.bakeprofit.exception.UserNotFoundException;
@@ -20,8 +25,8 @@ import com.comprasco.bakeprofit.repository.UserRepository;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
-
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,7 +55,8 @@ public class UserService {
     @Value("${google.client-id}")
     private String googleClientId;
 
-    public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, JwtSecurity jwtSecurity, PasswordResetTokenRepository tokenRepository, EmailService emailService) {
+    public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, JwtSecurity jwtSecurity,
+            PasswordResetTokenRepository tokenRepository, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtSecurity = jwtSecurity;
@@ -202,6 +208,7 @@ public class UserService {
             newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
             newUser.setRole(Role.USER);
             newUser.setActive(true);
+            newUser.setAuthProvider(AuthProvider.GOOGLE);
             return userRepository.save(newUser);
         });
 
@@ -237,9 +244,14 @@ public class UserService {
 
         // 3. Enviamos el correo (Reemplaza esto con tu método real de SCRUM-138)
         String resetUrl = "http://localhost:5173/reset-password?token=" + resetToken.getToken();
-        System.out.println("TOKEN GENERADO: "+resetToken.getToken());
-        emailService.sendEmail(user.getEmail(), "Recuperar contraseña", "Tu enlace: " + resetUrl);
-        
+
+        try {
+            emailService.sendEmail(user.getEmail(), "Recuperar contraseña", "Tu enlace: " + resetUrl);
+        } catch (MailException e) {
+            // Responder igual exista o no el correo; el fallo queda solo en el log
+            log.error("No se pudo enviar el correo de recuperación", e);
+        }
+
     }
 
     /**
@@ -262,5 +274,67 @@ public class UserService {
 
         // Eliminamos el token para que no se pueda volver a usar
         tokenRepository.delete(resetToken);
+    }
+
+    public ProfileResponse getProfile(Long userId) {
+        User user = findById(userId);
+        return new ProfileResponse(user.getName(), user.getEmail(), user.getRole(),
+                user.getAuthProvider() == AuthProvider.LOCAL);
+    }
+
+    @Transactional
+    public AuthResponse updateProfile(Long userId, UpdateProfileRequest request) {
+        // El usuario del SecurityContext llega desconectado de la sesión; se recarga
+        // para poder modificarlo
+        User user = findById(userId);
+
+        String newName = request.name().trim();
+        String newEmail = request.email().trim();
+        boolean emailChanged = !newEmail.equals(user.getEmail());
+
+        if (emailChanged) {
+            // Google identifica la cuenta por correo; cambiarlo rompería su inicio de
+            // sesión (DP-23)
+            if (user.getAuthProvider() == AuthProvider.GOOGLE) {
+                throw new ForbiddenActionException(
+                        "Las cuentas creadas con Google no pueden cambiar su correo desde el perfil.");
+            }
+
+            boolean takenByAnother = userRepository.findByEmail(newEmail)
+                    .filter(other -> !other.getId().equals(user.getId()))
+                    .isPresent();
+            if (takenByAnother) {
+                throw new EmailAlreadyExistsException(newEmail);
+            }
+        }
+
+        user.setName(newName);
+        user.setEmail(newEmail);
+
+        // El JWT guarda el correo como subject: solo si cambió hace falta uno nuevo.
+        // Emitirlo siempre alargaría la sesión 24 h cada vez que alguien edita su
+        // nombre.
+        String token = emailChanged
+                ? jwtSecurity.generateToken(user.getEmail(), user.getRole().name())
+                : null;
+
+        return new AuthResponse(token, user.getName(), user.getEmail(), user.getRole());
+    }
+
+    /**
+     * Cambia el nombre a mostrar de un usuario y devuelve su perfil actualizado.
+     *
+     * @param userId  id del usuario autenticado
+     * @param request datos validados con el nuevo nombre
+     * @return el perfil con el nombre ya actualizado
+     * @throws RuntimeException si no existe un usuario con ese id
+     */
+    @Transactional
+    public ProfileResponse updateDisplayName(Long userId, UpdateDisplayNameRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        user.setName(request.name());
+        userRepository.save(user);
+        return getProfile(userId);
     }
 }

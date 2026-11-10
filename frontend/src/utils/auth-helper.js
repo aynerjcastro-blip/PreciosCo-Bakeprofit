@@ -54,3 +54,14 @@ export const authHeader = () => {
     const token = getToken();
     return token ? { Authorization: 'Bearer ' + token } : {};
 };
+
+/**
+ * Actualiza los datos del usuario en el almacenamiento local (localStorage).
+ * Esto evita que los datos antiguos vuelvan a cargarse al recargar la página (F5).
+ * 
+ * @param {Object} updatedUser - El objeto del usuario con los datos actualizados.
+ */
+export const updateStoredUser = (updatedUser) => {
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+};
+
