@@ -39,4 +39,4 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_SSLMODE: require
-        run: python scraper_vtex.py
+        run: python scraper_supermercados.py
