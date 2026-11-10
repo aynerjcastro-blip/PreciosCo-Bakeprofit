@@ -1,0 +1,19 @@
+$kind: http-request
+name: GET Buscar - Rango de precio invertido
+description: "SCRUM-278 (HU-06b, regla 4). Precio mínimo mayor que el máximo. Esperado: 400 con el formato uniforme de errores (RNF08)."
+url: http://localhost:8080/api/products/search?minPrice=5000&maxPrice=1000
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code es 400", function () {
+          pm.response.to.have.status(400);
+      });
+      pm.test("El error tiene el formato uniforme y explica el rango", function () {
+          const body = pm.response.json();
+          pm.expect(body).to.include.keys("timestamp", "status", "error", "message", "path");
+          pm.expect(body.status).to.eql(400);
+          pm.expect(body.message).to.include("mínimo");
+      });
+    language: text/javascript
+order: 3001
