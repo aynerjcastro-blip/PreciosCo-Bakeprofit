@@ -6,12 +6,15 @@ import com.comprasco.bakeprofit.dto.ForgotPasswordRequest;
 import com.comprasco.bakeprofit.dto.GoogleLoginRequest;
 import com.comprasco.bakeprofit.dto.LoginRequest;
 import com.comprasco.bakeprofit.dto.PasswordResetToken;
+import com.comprasco.bakeprofit.dto.ProfileResponse;
 import com.comprasco.bakeprofit.dto.RegisterRequest;
 import com.comprasco.bakeprofit.dto.ResetPasswordRequest;
+import com.comprasco.bakeprofit.dto.UpdateProfileRequest;
 import com.comprasco.bakeprofit.entity.AuthProvider;
 import com.comprasco.bakeprofit.entity.Role;
 import com.comprasco.bakeprofit.entity.User;
 import com.comprasco.bakeprofit.exception.EmailAlreadyExistsException;
+import com.comprasco.bakeprofit.exception.ForbiddenActionException;
 import com.comprasco.bakeprofit.exception.InactiveUserException;
 import com.comprasco.bakeprofit.exception.InvalidCredentialsException;
 import com.comprasco.bakeprofit.exception.UserNotFoundException;
@@ -21,7 +24,6 @@ import com.comprasco.bakeprofit.repository.UserRepository;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -272,4 +274,47 @@ public class UserService {
         // Eliminamos el token para que no se pueda volver a usar
         tokenRepository.delete(resetToken);
     }
+
+
+    public ProfileResponse getProfile(Long userId) {
+    User user = findById(userId);
+    return new ProfileResponse(user.getName(), user.getEmail(), user.getRole(),
+            user.getAuthProvider() == AuthProvider.LOCAL);
+}
+
+@Transactional
+public AuthResponse updateProfile(Long userId, UpdateProfileRequest request) {
+    // El usuario del SecurityContext llega desconectado de la sesión; se recarga para poder modificarlo
+    User user = findById(userId);
+
+    String newName = request.name().trim();
+    String newEmail = request.email().trim();
+    boolean emailChanged = !newEmail.equals(user.getEmail());
+
+    if (emailChanged) {
+        // Google identifica la cuenta por correo; cambiarlo rompería su inicio de sesión (DP-23)
+        if (user.getAuthProvider() == AuthProvider.GOOGLE) {
+            throw new ForbiddenActionException(
+                    "Las cuentas creadas con Google no pueden cambiar su correo desde el perfil.");
+        }
+
+        boolean takenByAnother = userRepository.findByEmail(newEmail)
+                .filter(other -> !other.getId().equals(user.getId()))
+                .isPresent();
+        if (takenByAnother) {
+            throw new EmailAlreadyExistsException(newEmail);
+        }
+    }
+
+    user.setName(newName);
+    user.setEmail(newEmail);
+
+    // El JWT guarda el correo como subject: solo si cambió hace falta uno nuevo.
+    // Emitirlo siempre alargaría la sesión 24 h cada vez que alguien edita su nombre.
+    String token = emailChanged
+            ? jwtSecurity.generateToken(user.getEmail(), user.getRole().name())
+            : null;
+
+    return new AuthResponse(token, user.getName(), user.getEmail(), user.getRole());
+}
 }
