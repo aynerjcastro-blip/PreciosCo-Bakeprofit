@@ -120,6 +120,7 @@ _UNIDADES = {
     "ml": ("ML", 1), "cc": ("ML", 1), "mililitro": ("ML", 1), "mililitros": ("ML", 1),
     "un": ("UN", 1), "und": ("UN", 1), "unds": ("UN", 1), "unid": ("UN", 1),
     "unidad": ("UN", 1), "unidades": ("UN", 1), "uds": ("UN", 1),
+    "rollo": ("UN", 1), "rollos": ("UN", 1),      # papel higiénico, toallas de cocina
 }
 
 
