@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Dialog from '@/components/ui/Dialog/Dialog';
 import RatingSummary from '@/components/ui/Rating/RatingSummary';
-import ReviewDialog from '@/components/reviews/Dialogs/ReportDialog';
+import ReviewDialog from '@/components/reviews/Dialogs/ReviewDialog';
 import StarRating from '@/components/ui/Rating/StarRating';
 import { getSummary, getMyReview, deleteReviewComment } from '@/api/reviews';
 import { isLoggedIn, getUser } from '@/utils/auth-helper';

@@ -5,6 +5,7 @@ import com.comprasco.bakeprofit.dto.StoreResponse;
 import com.comprasco.bakeprofit.service.StoreService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 
@@ -77,6 +78,7 @@ public class StoreController {
     @ApiResponse(responseCode = "404", description = "CategoryId no existe")
     @ApiResponse(responseCode = "409", description = "Ya existe una tienda con ese nombre o la categoría está inactivada")
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<StoreResponse> create(
                 @Parameter(description = "Record con el nombre de la tienda e id de categoría")
                 @Valid @RequestBody StoreRequest request) {
@@ -93,6 +95,7 @@ public class StoreController {
     @ApiResponse(responseCode = "404", description = "Id o categoryId no existe")
     @ApiResponse(responseCode = "409", description = "Categoría inactiva")
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<StoreResponse> update(
                 @Parameter(description = "Id de la tienda a actualizar")
                 @PathVariable Long id,
@@ -106,6 +109,7 @@ public class StoreController {
     @ApiResponse(responseCode = "204", description = "Tienda desactivada")
     @ApiResponse(responseCode = "404", description = "Id no existe")
     @PatchMapping("/{id}/deactivate")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deactivate(
                 @Parameter(description = "Id de la tienda")
                 @PathVariable Long id) {
@@ -119,6 +123,7 @@ public class StoreController {
     @ApiResponse(responseCode = "404", description = "Id no existe")
     @ApiResponse(responseCode = "409", description = "Categoría inactiva")
     @PatchMapping("/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> activate(
                 @Parameter(description = "Id de la tienda")
                 @PathVariable Long id) {

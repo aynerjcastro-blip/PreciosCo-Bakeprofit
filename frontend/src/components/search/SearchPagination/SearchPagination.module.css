@@ -1,0 +1,43 @@
+/* ============================================================
+   PAGINACIÓN DE RESULTADOS
+   ============================================================ */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 32px;
+}
+
+.pagination__status {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.pagination__button {
+    background: var(--bg-surface);
+    border: 1.5px solid var(--border-color);
+    padding: 8px 20px;
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.pagination__button:hover:not(:disabled) {
+    border-color: var(--color-dark);
+}
+
+.pagination__button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.pagination__button:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}

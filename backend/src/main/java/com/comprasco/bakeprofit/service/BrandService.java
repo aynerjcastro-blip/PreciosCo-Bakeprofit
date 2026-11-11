@@ -24,12 +24,13 @@ public class BrandService {
     }
 
     /**
-     * Devuelve la marca con ese nombre sin distinguir mayúsculas, o la registra si no existe.
+     * Devuelve la marca con ese nombre sin distinguir tildes ni mayúsculas, o la registra si no existe.
      *
      * <p>
      * Inserta si falta y después busca, en lugar de buscar, crear y capturar el error:
      * dos peticiones que crean la misma marca a la vez obtienen la misma fila sin que
-     * ninguna transacción quede abortada. "diana" reutiliza "Diana".
+     * ninguna transacción quede abortada. "diana" reutiliza "Diana" y "ALQUERIA" reutiliza
+     * "Alquería": la marca conserva el nombre con el que se registró primero.
      * </p>
      */
     @Transactional

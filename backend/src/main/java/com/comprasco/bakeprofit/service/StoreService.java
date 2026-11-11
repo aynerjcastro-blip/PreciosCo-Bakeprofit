@@ -11,11 +11,17 @@ import com.comprasco.bakeprofit.repository.StoreRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
 public class StoreService {
+
+    private static final String UNAVAILABLE_STORES_MESSAGE = "Tienda no encontrada o inactiva: %s";
+    private static final String ID_SEPARATOR = ", ";
 
     private final StoreRepository storeRepository;
     private final CategoryService categoryService;
@@ -52,6 +58,28 @@ public class StoreService {
         return storeRepository.findByActiveTrue().stream()
                 .map(StoreResponse::from)
                 .toList();
+    }
+
+    /**
+     * Comprueba que todas las tiendas existen y están activas; si no, 404 con los ids que
+     * fallan. Para un visitante, una tienda inactiva no existe: por eso no responde 409.
+     * Una sola consulta para todos los ids.
+     */
+    public void requireActive (Collection<Long> storeIds) {
+        if (storeIds.isEmpty()) {
+            return;
+        }
+        Set<Long> activeIds = storeRepository.findAllById(storeIds).stream()
+                .filter(store -> Boolean.TRUE.equals(store.getActive()))
+                .map(Store::getId)
+                .collect(Collectors.toSet());
+        List<Long> unavailable = storeIds.stream()
+                .filter(id -> !activeIds.contains(id))
+                .sorted()
+                .toList();
+        if (!unavailable.isEmpty()) {
+            throw new StoreNotFoundException(UNAVAILABLE_STORES_MESSAGE.formatted(joinIds(unavailable)));
+        }
     }
 
     public List<StoreResponse> findInactive () {
@@ -123,5 +151,9 @@ public class StoreService {
                     "porque su categoría raíz '" + category.getName() + "' está inactiva.");
         }
         return category;
+    }
+
+    private static String joinIds (List<Long> ids) {
+        return ids.stream().map(String::valueOf).collect(Collectors.joining(ID_SEPARATOR));
     }
 }

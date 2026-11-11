@@ -23,7 +23,8 @@ import com.comprasco.bakeprofit.service.BrandService;
 
 /**
  * Dos peticiones que crean la misma marca a la vez obtienen la misma fila
- * (INSERT ... ON CONFLICT DO NOTHING + búsqueda con lower()).
+ * (INSERT ... ON CONFLICT DO NOTHING + búsqueda con lower(f_unaccent())), y un nombre
+ * con tildes y el mismo sin tildes son la misma marca.
  *
  * <p>
  * Necesita PostgreSQL real, por eso no corre con {@code mvn test}: tiene la etiqueta
@@ -40,7 +41,8 @@ import com.comprasco.bakeprofit.service.BrandService;
  * </pre>
  *
  * <p>
- * Crea una sola marca con nombre único y la borra al terminar.
+ * Cada prueba crea una sola marca con nombre único y la borra al terminar. Requiere
+ * {@code 2026-11-marcas-sin-tildes.sql} aplicado.
  * </p>
  */
 @Tag("integration")
@@ -53,9 +55,9 @@ class BrandConcurrencyIntegrationTest {
     private static final Duration TEST_TIMEOUT = Duration.ofSeconds(30);
     private static final String BRAND_NAME_PREFIX = "Marca IT ";
     private static final String COUNT_BY_NAME =
-            "SELECT count(*) FROM brands WHERE lower(name) = lower(?)";
+            "SELECT count(*) FROM brands WHERE lower(f_unaccent(name)) = lower(f_unaccent(?))";
     private static final String DELETE_BY_NAME =
-            "DELETE FROM brands WHERE lower(name) = lower(?)";
+            "DELETE FROM brands WHERE lower(f_unaccent(name)) = lower(f_unaccent(?))";
 
     @Autowired
     private BrandService brandService;
@@ -96,6 +98,23 @@ class BrandConcurrencyIntegrationTest {
         } finally {
             threads.shutdownNow();
             jdbcTemplate.update(DELETE_BY_NAME, brandName);
+        }
+    }
+
+    @Test
+    void elMismoNombreConYSinTildesEsLaMismaMarca() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        String accented = "Alquería IT " + suffix;
+        try {
+            Long first = brandService.resolveByName(accented).getId();
+            Long second = brandService.resolveByName("ALQUERIA IT " + suffix.toUpperCase(Locale.ROOT)).getId();
+
+            assertThat(second).isEqualTo(first);
+            assertThat(jdbcTemplate.queryForObject(COUNT_BY_NAME, Long.class, accented)).isEqualTo(1L);
+            assertThat(jdbcTemplate.queryForObject("SELECT name FROM brands WHERE id = ?", String.class, first))
+                    .isEqualTo(accented);
+        } finally {
+            jdbcTemplate.update(DELETE_BY_NAME, accented);
         }
     }
 

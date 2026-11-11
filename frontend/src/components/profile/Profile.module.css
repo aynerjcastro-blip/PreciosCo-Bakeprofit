@@ -1,0 +1,107 @@
+/**
+/**Contenedor principal de la página de perfil. 
+ ** Se limita el ancho máximo para que en pantallas de escritorio no se estire demasiado y sea difícil de leer. */
+.profileContainer {
+    max-width: 650px;
+    margin: 3rem auto;
+    padding: 2.5rem;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    border: 1px solid #eaeaea;
+}
+
+.title {
+    font-size: 1.75rem;
+    color: #1a1a1a;
+    margin-bottom: 2rem;
+    font-weight: 700;
+    text-align: left;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 0.75rem;
+}
+
+.formContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.inputGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.inputGroup label {
+    font-weight: 600;
+    color: #4a4a4a;
+    font-size: 0.95rem;
+}
+
+/* Input con bordes sutiles y enfoque en color naranja institucional */
+.inputField {
+    padding: 0.85rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 1rem;
+    color: #1f2937;
+    background-color: #f9fafb;
+    transition: all 0.2s ease;
+}
+
+.inputField:focus {
+    outline: none;
+    border-color: #ff9900; /* Naranja institucional de PreciosCo */
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(255, 153, 0, 0.15);
+}
+
+/* Botón principal usando el color naranja característico de PreciosCo */
+.submitButton {
+    padding: 0.85rem;
+    background-color: #ff9900;
+    color: #ffffff;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    margin-top: 0.5rem;
+}
+
+.submitButton:hover:not(:disabled) {
+    background-color: #e68a00; /* Tono naranja más oscuro para el hover */
+}
+
+.submitButton:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.submitButton:disabled {
+    background-color: #e5e7eb;
+    color: #9ca3af;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.feedbackMsg {
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    text-align: center;
+    font-weight: 500;
+}
+
+.success {
+    background-color: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.error {
+    background-color: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}

@@ -55,13 +55,16 @@ class ProductServiceTest {
     private CategoryService categoryService;
     @Mock
     private BrandRepository brandRepository;
+    @Mock
+    private StoreService storeService;
 
     private ProductService productService;
     private Category leafCategory;
 
     @BeforeEach
     void setUp() {
-        productService = new ProductService(productRepository, categoryService, new BrandService(brandRepository));
+        productService = new ProductService(productRepository, categoryService, new BrandService(brandRepository),
+                storeService);
 
         Category root = new Category();
         root.setName("Supermercado");

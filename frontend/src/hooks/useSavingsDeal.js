@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { buildSavingsDeal } from '../utils/buildSavingsDeal';
-
-const API_BASE = 'http://localhost:8080/api';
+import { searchProducts } from '../api/products';
+import { compareByProduct } from '../api/prices';
 
 /**
  * Custom hook para manejar el ciclo de vida (fetch) del ahorro.
@@ -17,14 +17,13 @@ export function useSavingsDeal(searchTerm) {
 
         async function fetchRealDeal() {
             try {
-                const resSearch = await fetch(`${API_BASE}/products/search?name=${searchTerm}`);
-                const products = await resSearch.json();
-                
-                if (!products.length || !isMounted) return;
+                // La búsqueda es paginada (HU-06b): basta con el primer resultado
+                const result = await searchProducts({ name: searchTerm, size: 1 });
+                const product = result.content[0];
 
-                const product = products[0];
-                const resPrices = await fetch(`${API_BASE}/prices/compare?productId=${product.id}`);
-                const prices = await resPrices.json();
+                if (!product || !isMounted) return;
+
+                const prices = await compareByProduct(product.id);
 
                 if (isMounted) {
                     const calculatedDeal = buildSavingsDeal(product, prices);
