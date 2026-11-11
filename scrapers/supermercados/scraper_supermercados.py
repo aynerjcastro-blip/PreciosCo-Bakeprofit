@@ -15,12 +15,14 @@ Patrón de diseño (DECISIONS.md): Strategy. `TiendaStrategy` define cómo se co
 `VtexStrategy` es la implementación para las cuatro tiendas actuales; otra plataforma (Shopify,
 HTML) sería otra estrategia sin tocar el flujo principal.
 """
+import html
 import logging
 import os
 import re
 import sys
 import time
 import unicodedata
+from urllib.parse import quote, urlencode
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -60,13 +62,14 @@ class VtexStrategy(TiendaStrategy):
         params = {"ft": termino, "_from": 0, "_to": RESULTADOS_POR_CATEGORIA - 1}
         if fq:
             params["fq"] = fq
-        url = self.base_url + self.RUTA
+        # Los espacios van como %20 (requests usa '+', y varias tiendas VTEX responden 400 con "agua+sin+gas")
+        url = self.base_url + self.RUTA + "?" + urlencode(params, quote_via=quote, safe=":/")
         ultimo_error = None
         for intento in range(REINTENTOS + 1):
             if intento:
                 time.sleep(PAUSA * (2 ** intento))
             try:
-                r = session.get(url, params=params, timeout=TIMEOUT)
+                r = session.get(url, timeout=TIMEOUT)
             except requests.RequestException as e:
                 ultimo_error = f"error de red: {e}"
                 continue
@@ -81,7 +84,7 @@ class VtexStrategy(TiendaStrategy):
             if r.status_code == 429 or r.status_code >= 500:
                 ultimo_error = f"HTTP {r.status_code}"
                 continue
-            raise RuntimeError(f"HTTP {r.status_code}")
+            raise RuntimeError(f"HTTP {r.status_code} en {r.url} -> {r.text[:150]!r}")
         raise RuntimeError(ultimo_error or "sin respuesta")
 
 
@@ -121,7 +124,11 @@ _UNIDADES = {
     "un": ("UN", 1), "und": ("UN", 1), "unds": ("UN", 1), "unid": ("UN", 1),
     "unidad": ("UN", 1), "unidades": ("UN", 1), "uds": ("UN", 1),
     "rollo": ("UN", 1), "rollos": ("UN", 1),      # papel higiénico, toallas de cocina
+    # Onzas: su unidad base depende del producto (líquido -> ML, sólido -> G); se resuelve con la unidad
+    # esperada del scrape_target (ver parsear_tamano). Sin esa pista, el tamaño queda NULL.
+    "oz": ("OZ", 1), "onza": ("OZ", 1), "onzas": ("OZ", 1),
 }
+_OZ_A_BASE = {"ML": Decimal("29.5735"), "G": Decimal("28.3495")}   # fl oz -> ml, oz -> g
 
 
 def _alt(claves):
@@ -157,10 +164,11 @@ def _numero(txt):
         return None
 
 
-def parsear_tamano(nombre):
+def parsear_tamano(nombre, unidad_esperada=None):
     """
     Devuelve (net_content, unit_base) a partir del nombre, o (None, None) si no se puede leer.
     G, ML o UN. Un pack "6 x 1000 ml" o "1000 ml x6" da 6000 ML.
+    unidad_esperada (la del scrape_target) solo sirve para interpretar las onzas.
     """
     texto = sin_tildes(nombre)
     candidatos = [m for m in _RE_TAMANO.finditer(texto)]
@@ -172,6 +180,10 @@ def parsear_tamano(nombre):
     cantidad = _numero(elegido.group("num"))
     if cantidad is None:
         return None, None
+    if base == "OZ":
+        if unidad_esperada not in _OZ_A_BASE:
+            return None, None
+        base, factor = unidad_esperada, _OZ_A_BASE[unidad_esperada]
     total = cantidad * factor
 
     if base != "UN":
@@ -195,6 +207,23 @@ def parsear_tamano(nombre):
     if total <= 0 or total > MAX_NET_CONTENT:
         return None, None
     return total, base
+
+
+_RE_ETIQUETA_TAMANO = re.compile(r"(?:presentacion|contenido(?:\s+neto)?)\s*:\s*([^\n.]{0,40})")
+
+
+def tamano_desde_descripcion(descripcion, unidad_esperada=None):
+    """
+    Respaldo cuando el nombre no trae tamaño (p. ej. marketplace de Éxito: la ficha dice
+    "<strong>Presentación:</strong> 500ml"). Solo se acepta si el tamaño va tras la etiqueta
+    "Presentación:" o "Contenido (neto):"; no se busca tamaño suelto en el texto libre.
+    """
+    if not descripcion:
+        return None, None
+    texto = sin_tildes(html.unescape(re.sub(r"<[^>]+>", " ", descripcion)))
+    texto = re.sub(r"\s+", " ", texto)
+    m = _RE_ETIQUETA_TAMANO.search(texto)
+    return parsear_tamano(m.group(1), unidad_esperada) if m else (None, None)
 
 
 # ─────────────────────────── Producto VTEX -> fila ───────────────────────────
@@ -248,7 +277,9 @@ def construir_fila(p, target, ahora):
     imagenes = item.get("images") or []
     imagen = imagenes[0].get("imageUrl") if imagenes else None
     marca = (p.get("brand") or "").strip()[:100] or None
-    contenido, unidad = parsear_tamano(nombre)
+    contenido, unidad = parsear_tamano(nombre, target.get("unit_base"))
+    if contenido is None:
+        contenido, unidad = tamano_desde_descripcion(p.get("description"), target.get("unit_base"))
 
     return (target["store_id"], target["id"], ean, nombre, marca, precio, lista,
             p.get("link"), imagen, contenido, unidad, ahora, "PENDING")
