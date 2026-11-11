@@ -21,6 +21,11 @@ import com.comprasco.bakeprofit.util.NetContentLabel;
  * solo se resuelve al crear: buscarla o crearla para un producto que ya existe dejaría
  * marcas que nadie usa.
  * </p>
+ *
+ * <p>
+ * Antes de crear, {@link SizeConflictCheck} confirma que las demás ofertas PENDING del mismo
+ * EAN traigan el mismo tamaño: el tamaño del producto no depende de qué tienda llegó primero.
+ * </p>
  */
 @Component
 public class OfferProductResolver {
@@ -35,13 +40,16 @@ public class OfferProductResolver {
     private final BrandRepository brandRepository;
     private final BrandService brandService;
     private final StoreDomainPolicy domainPolicy;
+    private final SizeConflictCheck sizeConflictCheck;
 
     public OfferProductResolver(ProductRepository productRepository, BrandRepository brandRepository,
-                                BrandService brandService, StoreDomainPolicy domainPolicy) {
+                                BrandService brandService, StoreDomainPolicy domainPolicy,
+                                SizeConflictCheck sizeConflictCheck) {
         this.productRepository = productRepository;
         this.brandRepository = brandRepository;
         this.brandService = brandService;
         this.domainPolicy = domainPolicy;
+        this.sizeConflictCheck = sizeConflictCheck;
     }
 
     /** Exactamente uno de los dos campos tiene valor. */
@@ -76,6 +84,10 @@ public class OfferProductResolver {
     }
 
     private Match createProduct(ScrapedOffer offer, OfferScreening.Accepted accepted) {
+        Optional<String> sizeConflict = sizeConflictCheck.check(offer, accepted);
+        if (sizeConflict.isPresent()) {
+            return Match.rejected(sizeConflict.get());
+        }
         String brandName = offer.getBrandName();
         if (!hasText(brandName)) {
             return Match.of(saveProduct(offer, accepted, null));

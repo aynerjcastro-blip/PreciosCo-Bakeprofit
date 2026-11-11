@@ -60,6 +60,47 @@ public interface ScrapedOfferRepository extends JpaRepository<ScrapedOffer, Long
     @Query("SELECT o FROM ScrapedOffer o WHERE o.id = :id")
     Optional<ScrapedOffer> lockById(@Param("id") Long id);
 
+    /**
+     * Las demás ofertas PENDING con ese EAN y con tamaño, bloqueadas con FOR UPDATE.
+     *
+     * <p>
+     * El EAN de scraped_offers está tal como llegó, así que se compara rellenado a 14
+     * dígitos, igual que {@code Gtin.normalize}; solo se consideran los formatos que
+     * {@code Gtin} acepta (8, 12, 13 o 14 dígitos). El bloqueo evita que otra instancia
+     * procese una de ellas entre la consulta y {@link #unclassifyConflicting}.
+     * </p>
+     */
+    @Query(value = """
+        SELECT o.id AS "id", o.net_content AS "netContent", o.unit_base AS "unitBase", s.name AS "storeName"
+        FROM scraped_offers o
+        JOIN stores s ON s.id = o.store_id
+        WHERE o.status = 'PENDING'
+          AND o.id <> :offerId
+          AND o.net_content IS NOT NULL
+          AND o.ean ~ '^([0-9]{8}|[0-9]{12,14})$'
+          AND lpad(o.ean, 14, '0') = :gtin
+        ORDER BY o.id
+        FOR UPDATE OF o
+        """, nativeQuery = true)
+    List<PendingOfferSize> findOtherPendingSizes(@Param("gtin") String gtin, @Param("offerId") Long offerId);
+
+    /**
+     * Marca UNCLASSIFIED, con el mismo motivo, las ofertas de un conflicto de tamaño.
+     * Solo cambia las que siguen PENDING.
+     */
+    @Modifying
+    @Query("""
+        UPDATE ScrapedOffer o
+        SET o.status = com.comprasco.bakeprofit.entity.OfferStatus.UNCLASSIFIED,
+            o.reason = :reason,
+            o.processedAt = :markedAt
+        WHERE o.id IN :ids
+          AND o.status = com.comprasco.bakeprofit.entity.OfferStatus.PENDING
+        """)
+    int unclassifyConflicting(@Param("ids") List<Long> ids,
+                              @Param("reason") String reason,
+                              @Param("markedAt") LocalDateTime markedAt);
+
     /** Borra las ofertas de ese estado marcadas antes del corte. PENDING no tiene processed_at. */
     @Modifying
     @Query("DELETE FROM ScrapedOffer o WHERE o.status = :status AND o.processedAt < :cutoff")
