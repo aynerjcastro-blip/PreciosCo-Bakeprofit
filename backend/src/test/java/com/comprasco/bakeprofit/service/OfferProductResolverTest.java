@@ -7,6 +7,7 @@ import static com.comprasco.bakeprofit.service.StagingFixtures.SUPERMARKET;
 import static com.comprasco.bakeprofit.service.StagingFixtures.offer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -39,13 +40,16 @@ class OfferProductResolverTest {
     private BrandRepository brandRepository;
     @Mock
     private BrandService brandService;
+    @Mock
+    private SizeConflictCheck sizeConflictCheck;
 
     private OfferProductResolver resolver;
 
     @BeforeEach
     void setUp() {
         resolver = new OfferProductResolver(productRepository, brandRepository, brandService,
-                StagingFixtures.domainPolicy());
+                StagingFixtures.domainPolicy(), sizeConflictCheck);
+        lenient().when(sizeConflictCheck.check(any(), any())).thenReturn(Optional.empty());
     }
 
     private void productIsNew() {
@@ -108,6 +112,30 @@ class OfferProductResolverTest {
         assertThat(match.rejection()).isEqualTo(OfferProductResolver.DIFFERENT_SIZE_REASON
                 .formatted("Arroz Diana 1 kg", "1 kg", "500 g"));
         verify(productRepository, never()).save(any());
+    }
+
+    @Test
+    void conflictoDeTamanoEntreOfertasNoCreaProductoNiMarca() {
+        ScrapedOffer offer = offer(SUPERMARKET);
+        when(productRepository.findByEan(GTIN_14)).thenReturn(Optional.empty());
+        when(sizeConflictCheck.check(offer, ACCEPTED)).thenReturn(Optional.of("conflicto"));
+
+        OfferProductResolver.Match match = resolver.resolve(offer, ACCEPTED);
+
+        assertThat(match.rejection()).isEqualTo("conflicto");
+        verify(productRepository, never()).save(any());
+        verifyNoInteractions(brandService, brandRepository);
+    }
+
+    @Test
+    void productoExistenteNoConsultaConflictosDeTamano() {
+        Product existing = Product.withIdentity("Arroz Diana", null, null, GTIN_14,
+                new BigDecimal("500.00"), UnitBase.G);
+        when(productRepository.findByEan(GTIN_14)).thenReturn(Optional.of(existing));
+
+        resolver.resolve(offer(SUPERMARKET), ACCEPTED);
+
+        verifyNoInteractions(sizeConflictCheck);
     }
 
     @Test

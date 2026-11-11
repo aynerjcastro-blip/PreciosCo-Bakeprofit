@@ -42,7 +42,10 @@ public class OfferIngestionService {
         /** Mismo precio: solo se refrescó el periodo vigente. */
         SAME_PRICE,
         UNCLASSIFIED,
-        /** Ya no estaba PENDING (otra instancia la procesó o se borró). */
+        /**
+         * Ya no estaba PENDING: otra instancia la procesó, se borró o la marcó el conflicto de
+         * tamaño de otra oferta del mismo EAN ({@link SizeConflictCheck}).
+         */
         SKIPPED,
         /** Error inesperado; solo lo asigna el orquestador. */
         FAILED

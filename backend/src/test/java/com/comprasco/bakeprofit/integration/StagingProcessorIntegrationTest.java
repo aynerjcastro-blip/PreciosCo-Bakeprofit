@@ -168,6 +168,27 @@ class StagingProcessorIntegrationTest {
         assertThat(eventsForOurStore()).hasSize(2);
     }
 
+    @Test
+    void dosOfertasDelMismoEanConOtroTamanoNoCreanElProducto() {
+        LocalDateTime t0 = LocalDateTime.now().minusHours(3);
+        Long first = insertOffer(eanRice, PRICE, "500", null, t0);
+        Long second = insertOffer(eanRice, PRICE, "1000", null, t0.plusMinutes(1));
+
+        StagingProcessor.RunSummary summary = processor.processOffers(List.of(first, second));
+
+        // La primera marca a la segunda en su misma transacción; al llegar a ella ya no está PENDING
+        assertThat(summary.count(Result.UNCLASSIFIED)).isEqualTo(1);
+        assertThat(summary.count(Result.SKIPPED)).isEqualTo(1);
+        assertThat(statusCount("UNCLASSIFIED")).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForList(
+                "SELECT DISTINCT reason FROM scraped_offers WHERE id IN (?, ?)", String.class, first, second))
+                .singleElement().asString()
+                .startsWith("Tamaño en conflicto entre ofertas del EAN " + eanRice)
+                .contains("1 kg en Tienda IT " + suffix, "500 g en Tienda IT " + suffix);
+        assertThat(productCount()).isZero();
+        assertThat(eventsForOurStore()).isEmpty();
+    }
+
     // Solo lectura: no procesa nada, verifica el orden (scraped_at, id) de la paginación por clave
     @Test
     void laPaginaSiguienteEmpiezaDespuesDeLaUltimaClaveYDesempataPorId() {
