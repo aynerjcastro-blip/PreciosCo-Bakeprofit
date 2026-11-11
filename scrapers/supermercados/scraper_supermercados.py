@@ -7,15 +7,14 @@ no filtra por rango de tamaño, no crea productos y no toca `prices`: todo eso e
 Precios de Valledupar (DECISIONS.md, "Precios regionales"): la búsqueda de VTEX devuelve el precio
 del vendedor por defecto, que no siempre es el de Valledupar. En las tiendas regionales, el precio
 y la disponibilidad salen de una simulación de compra con el vendedor que atiende Valledupar; un
-producto que ese vendedor no vende no se guarda. D1 no tiene vendedores por ciudad: se usa el precio
-de la búsqueda.
+producto que ese vendedor no vende no se guarda. D1 no vende en línea en Valledupar (solo atiende
+domicilios en otras ciudades): se usa el precio nacional de la búsqueda.
 
 Variables de entorno: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
                       (opcional) DB_SSLMODE, por ejemplo "require" para Supabase.
 
 Uso:
     pip install -r requirements.txt
-    python -m unittest test_scraper_supermercados   # pruebas, sin red ni base de datos
     python scraper_supermercados.py
 
 Código de salida: 0 si todo salió bien; 1 si hubo errores o si alguna tienda no insertó ninguna
@@ -52,6 +51,7 @@ TIMEOUT = 30
 REINTENTOS = 2              # reintentos ante error de red, 429 o 5xx
 STATUS_OK = (200, 206)      # VTEX responde 206 cuando se usa _from/_to
 MAX_NET_CONTENT = Decimal("99999999.99")   # NUMERIC(10,2)
+BLOQUEOS_SEGUIDOS_MAX = 3   # 403/429 seguidos en una tienda -> se omite el resto de sus targets
 
 # Ubicación de los precios: centro de Valledupar, como VTEX espera las coordenadas (longitud, latitud)
 CIUDAD = "Valledupar"
@@ -122,7 +122,7 @@ class VtexStrategy(TiendaStrategy):
         if fq:
             params["fq"] = fq
         # Los espacios van como %20 (requests usa '+', y varias tiendas VTEX responden 400 con "agua+sin+gas")
-        url = self.base_url + self.RUTA_BUSQUEDA + "?" + urlencode(params, quote_via=quote, safe=":/")
+        url = self.base_url + self.RUTA_BUSQUEDA + "?" + urlencode(params, quote_via=quote, safe="")
         data = _pedir(session, "GET", url)
         if not isinstance(data, list):
             raise RuntimeError("la respuesta no es una lista de productos")
@@ -217,7 +217,7 @@ def _centavos(v):
 
 # Clave (dentro del nombre de la tienda, sin tildes y en minúsculas) -> estrategia
 TIENDAS_VTEX = OrderedDict([
-    ("d1",       VtexStrategy("https://www.d1.com.co", regional=False)),   # precio nacional, sin vendedores por ciudad
+    ("d1",       VtexStrategy("https://www.d1.com.co", regional=False)),   # no vende en línea en Valledupar: precio nacional de la búsqueda
     ("exito",    VtexStrategy("https://www.exito.com/io")),   # Éxito cuelga de /io/
     ("jumbo",    VtexStrategy("https://www.jumbocolombia.com")),
     ("olimpica", VtexStrategy("https://www.olimpica.com")),
@@ -610,7 +610,7 @@ def imprimir_resumen(resumenes):
     for r in resumenes:
         log.info("%-12s %-14s %10d %14d %10d %10d %10d%s", r.tienda, r.termino[:14], r.encontrados,
                  r.no_disponibles, r.sin_precio, r.insertados, r.sin_tamano,
-                 f"   ERROR: {r.error}" if r.error else "")
+                 f"   ERROR: {r.error[:110]}" if r.error else "")
     log.info("-" * 96)
     log.info("%-27s %10d %14d %10d %10d %10d", "TOTAL",
              sum(r.encontrados for r in resumenes), sum(r.no_disponibles for r in resumenes),
@@ -621,6 +621,7 @@ def imprimir_resumen(resumenes):
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-7s %(message)s",
                         datefmt="%Y-%m-%d %H:%M:%S")
+    logging.Formatter.converter = lambda *_: datetime.now(HORA_COLOMBIA).timetuple()   # logs en hora de Colombia
     try:
         conn = conectar()
     except KeyError as e:
@@ -636,7 +637,13 @@ def main():
     try:
         targets = leer_targets(conn)
         log.info("%d scrape_targets activos; precios de %s", len(targets), CIUDAD)
+        bloqueos = {}          # store_id -> 403/429 seguidos
+        tiendas_omitidas = set()
         for i, target in enumerate(targets):
+            if target["store_id"] in tiendas_omitidas:
+                resumenes.append(Resumen(target["store_name"], target["search_term"],
+                                         error="omitido: la tienda bloqueó las peticiones (403/429)"))
+                continue
             try:
                 resumen, hubo_peticion = procesar_target(conn, session, target)
             except Exception as e:      # ninguna falla de un target detiene a los demás
@@ -645,6 +652,16 @@ def main():
                 hubo_peticion = True
                 log.exception("[%s][%s] error inesperado", resumen.tienda, resumen.termino)
             resumenes.append(resumen)
+            sid = target["store_id"]
+            if "HTTP 403" in resumen.error or "HTTP 429" in resumen.error:
+                bloqueos[sid] = bloqueos.get(sid, 0) + 1
+                if bloqueos[sid] >= BLOQUEOS_SEGUIDOS_MAX:
+                    tiendas_omitidas.add(sid)
+                    log.error("[%s] %d respuestas 403/429 seguidas: se omiten sus demás targets. "
+                              "La tienda está bloqueando las peticiones desde este servidor.",
+                              resumen.tienda, bloqueos[sid])
+            elif hubo_peticion:
+                bloqueos[sid] = 0
             if hubo_peticion and i < len(targets) - 1:
                 time.sleep(PAUSA)
     finally:
