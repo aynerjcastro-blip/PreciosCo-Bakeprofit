@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.comprasco.bakeprofit.entity.Follow;
 
@@ -21,4 +22,8 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
     /** Ids de los seguimientos con el aviso activo: lo que revisa el detector de bajas. */
     @Query("SELECT f.id FROM Follow f WHERE f.notificationActive = true")
     List<Long> findActiveIds();
+
+    /** Ids de los seguimientos con el aviso activo de un producto: lo que revisa el aviso inmediato. */
+    @Query("SELECT f.id FROM Follow f WHERE f.notificationActive = true AND f.product.id = :productId")
+    List<Long> findActiveIdsByProductId(@Param("productId") Long productId);
 }

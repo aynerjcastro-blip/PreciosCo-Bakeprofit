@@ -168,6 +168,33 @@ class StagingProcessorIntegrationTest {
         assertThat(eventsForOurStore()).hasSize(2);
     }
 
+    // HT-11: la baja que registra el procesador avisa en la misma corrida, sin esperar al detector programado
+    @Test
+    void unaBajaDeUnProductoSeguidoCreaElAvisoAlRegistrarse() {
+        LocalDateTime t0 = LocalDateTime.now().minusHours(3);
+        processor.processOffers(List.of(insertOffer(eanRice, PRICE, "500", null, t0)));
+        Long productId = ((Number) productField(eanRice, "id")).longValue();
+        Long userId = insertId("INSERT INTO users (name, email, role, active, password, registration_date, auth_provider) "
+                + "VALUES (?, ?, 'USER', true, 'x', now(), 'LOCAL') RETURNING id",
+                "Usuario IT " + suffix, "it-" + suffix + "@preciosco.test");
+        try {
+            jdbcTemplate.update("INSERT INTO follows (user_id, product_id, notification_active, alert_active_since, "
+                    + "registration_date) VALUES (?, ?, true, now() - interval '1 day', now())", userId, productId);
+
+            processor.processOffers(List.of(insertOffer(eanRice, LOWER_PRICE, "500", null, t0.plusHours(1))));
+
+            List<Map<String, Object>> alerts = jdbcTemplate.queryForList(
+                    "SELECT previous_value, new_value FROM notifications WHERE user_id = ?", userId);
+            assertThat(alerts).hasSize(1);
+            assertThat((BigDecimal) alerts.get(0).get("previous_value")).isEqualByComparingTo(PRICE);
+            assertThat((BigDecimal) alerts.get(0).get("new_value")).isEqualByComparingTo(LOWER_PRICE);
+        } finally {
+            jdbcTemplate.update("DELETE FROM notifications WHERE user_id = ?", userId);
+            jdbcTemplate.update("DELETE FROM follows WHERE user_id = ?", userId);
+            jdbcTemplate.update("DELETE FROM users WHERE id = ?", userId);
+        }
+    }
+
     @Test
     void dosOfertasDelMismoEanConOtroTamanoNoCreanElProducto() {
         LocalDateTime t0 = LocalDateTime.now().minusHours(3);
