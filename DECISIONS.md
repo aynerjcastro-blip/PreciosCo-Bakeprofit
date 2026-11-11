@@ -4,6 +4,8 @@ Registro de decisiones de equipo: desviaciones deliberadas del MVP y acuerdos to
 
 ## Modelo de datos
 
+- **Zona horaria**: todas las fechas son hora de Colombia (America/Bogota, UTC-5 sin horario de verano) en columnas TIMESTAMP sin zona. Se fija en tres lugares porque cada uno tiene su propio reloj: la base (`scripts/2026-11-zona-horaria-bogota.sql`, para los `DEFAULT now()`), el backend (`TimeZone.setDefault` en `BakeprofitApplication`) y el scraper (`ahora_colombia()`, con UTC-5 fijo para no depender de `tzdata` en Windows). Antes, Supabase y GitHub Actions guardaban UTC y el backend la hora local, con 5 horas de diferencia entre filas de la misma corrida.
+
 - **Jerarquía de categorías**: `category.parent_id` autorreferenciada. Las filas raíz son dominios (Supermercado hoy; Droguería, Cuidado facial y Repuestos más adelante). `store` apunta a una categoría raíz; `product` apunta a una categoría hoja. Reemplaza la idea de una tabla `establishment_type` separada.
 - **Jerarquía de dos niveles**: dominio (raíz) y categoría (hoja); `CategoryService` no admite un tercer nivel. Los productos cuelgan de la hoja, por ejemplo Supermercado › Granos y cereales. Se descartó convertir cada producto genérico ("Arroz") en una categoría: el comparador trabaja sobre un solo producto seleccionado, así que no mezcla productos distintos de una misma categoría.
 - **Campo "marca"**: se integra al modelo en el Sprint 2 (antes estaba excluido). La exclusión se tomó cuando la marca no se podía obtener por separado; la API VTEX la entrega en un campo propio. Tabla `brands` con nombre único sin distinguir mayúsculas y `products.brand_id`.
