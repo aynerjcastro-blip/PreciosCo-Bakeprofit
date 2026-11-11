@@ -4,7 +4,12 @@ on:
   # schedule:
   #   # 10:00 UTC = 5:00 am en Colombia (UTC-5). Ajusta la hora a gusto.
   #   - cron: "0 10 * * *"
-  workflow_dispatch: {}   # permite lanzarlo manualmente desde la pestaña Actions
+  workflow_dispatch:
+    inputs:
+      tiendas:
+        description: "Tiendas a procesar, separadas por coma (exito, jumbo, olimpica, d1). Vacío = todas"
+        required: false
+        default: "exito"
 
 concurrency:
   group: scraper-supermercados   # evita dos corridas a la vez (duplicarían filas en scraped_offers)
@@ -13,7 +18,7 @@ concurrency:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 45   # con la simulación de Valledupar, unos 6 s por target en tiendas regionales
+    timeout-minutes: 45
 
     steps:
       - name: Clonar repositorio
@@ -39,4 +44,5 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_SSLMODE: require
+          SOLO_TIENDAS: ${{ github.event.inputs.tiendas }}
         run: python scraper_supermercados.py

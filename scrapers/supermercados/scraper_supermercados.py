@@ -7,14 +7,17 @@ no filtra por rango de tamaño, no crea productos y no toca `prices`: todo eso e
 Precios de Valledupar (DECISIONS.md, "Precios regionales"): la búsqueda de VTEX devuelve el precio
 del vendedor por defecto, que no siempre es el de Valledupar. En las tiendas regionales, el precio
 y la disponibilidad salen de una simulación de compra con el vendedor que atiende Valledupar; un
-producto que ese vendedor no vende no se guarda. D1 no vende en línea en Valledupar (solo atiende
-domicilios en otras ciudades): se usa el precio nacional de la búsqueda.
+producto que ese vendedor no vende no se guarda. D1 no tiene vendedores por ciudad: se usa el precio
+de la búsqueda.
 
 Variables de entorno: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
                       (opcional) DB_SSLMODE, por ejemplo "require" para Supabase.
+                      (opcional) SOLO_TIENDAS, por ejemplo "exito" o "exito,jumbo": procesa solo esas
+                      tiendas (se compara con el nombre, sin tildes ni mayúsculas). Vacía = todas.
 
 Uso:
     pip install -r requirements.txt
+    python -m unittest test_scraper_supermercados   # pruebas, sin red ni base de datos
     python scraper_supermercados.py
 
 Código de salida: 0 si todo salió bien; 1 si hubo errores o si alguna tienda no insertó ninguna
@@ -50,8 +53,8 @@ RESULTADOS_POR_CATEGORIA = 50   # _from=0, _to=49
 TIMEOUT = 30
 REINTENTOS = 2              # reintentos ante error de red, 429 o 5xx
 STATUS_OK = (200, 206)      # VTEX responde 206 cuando se usa _from/_to
-MAX_NET_CONTENT = Decimal("99999999.99")   # NUMERIC(10,2)
 BLOQUEOS_SEGUIDOS_MAX = 3   # 403/429 seguidos en una tienda -> se omite el resto de sus targets
+MAX_NET_CONTENT = Decimal("99999999.99")   # NUMERIC(10,2)
 
 # Ubicación de los precios: centro de Valledupar, como VTEX espera las coordenadas (longitud, latitud)
 CIUDAD = "Valledupar"
@@ -121,7 +124,8 @@ class VtexStrategy(TiendaStrategy):
         params = {"ft": termino, "_from": 0, "_to": RESULTADOS_POR_CATEGORIA - 1}
         if fq:
             params["fq"] = fq
-        # Los espacios van como %20 (requests usa '+', y varias tiendas VTEX responden 400 con "agua+sin+gas")
+        # Espacios como %20 (requests usa '+' y varias tiendas VTEX responden 400 con "agua+sin+gas") y
+        # ':' '/' codificados (%3A %2F), como los mandaba requests cuando Éxito aún respondía.
         url = self.base_url + self.RUTA_BUSQUEDA + "?" + urlencode(params, quote_via=quote, safe="")
         data = _pedir(session, "GET", url)
         if not isinstance(data, list):
@@ -217,7 +221,7 @@ def _centavos(v):
 
 # Clave (dentro del nombre de la tienda, sin tildes y en minúsculas) -> estrategia
 TIENDAS_VTEX = OrderedDict([
-    ("d1",       VtexStrategy("https://www.d1.com.co", regional=False)),   # no vende en línea en Valledupar: precio nacional de la búsqueda
+    ("d1",       VtexStrategy("https://www.d1.com.co", regional=False)),   # precio nacional, sin vendedores por ciudad
     ("exito",    VtexStrategy("https://www.exito.com/io")),   # Éxito cuelga de /io/
     ("jumbo",    VtexStrategy("https://www.jumbocolombia.com")),
     ("olimpica", VtexStrategy("https://www.olimpica.com")),
@@ -480,6 +484,14 @@ def conectar():
     )
 
 
+def filtrar_targets(targets, solo_tiendas):
+    """Deja solo los targets de las tiendas pedidas en SOLO_TIENDAS ("exito,jumbo"); vacío = todos."""
+    pedidas = [sin_tildes(t).strip() for t in (solo_tiendas or "").split(",") if t.strip()]
+    if not pedidas:
+        return targets
+    return [t for t in targets if any(p in sin_tildes(t["store_name"]) for p in pedidas)]
+
+
 def leer_targets(conn):
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(SQL_TARGETS)
@@ -636,6 +648,11 @@ def main():
     resumenes = []
     try:
         targets = leer_targets(conn)
+        solo = os.environ.get("SOLO_TIENDAS", "")
+        if solo.strip():
+            todos = len(targets)
+            targets = filtrar_targets(targets, solo)
+            log.info("SOLO_TIENDAS=%r: %d de %d scrape_targets", solo, len(targets), todos)
         log.info("%d scrape_targets activos; precios de %s", len(targets), CIUDAD)
         bloqueos = {}          # store_id -> 403/429 seguidos
         tiendas_omitidas = set()
