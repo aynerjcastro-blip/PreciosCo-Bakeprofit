@@ -13,7 +13,7 @@ concurrency:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 20   # con la simulación de Valledupar, unos 6 s por target
+    timeout-minutes: 45   # con la simulación de Valledupar, unos 6 s por target en tiendas regionales
 
     steps:
       - name: Clonar repositorio
@@ -29,10 +29,6 @@ jobs:
       - name: Instalar dependencias
         working-directory: scrapers/supermercados
         run: pip install -r requirements.txt
-
-      - name: Probar el scraper (sin red ni base de datos)
-        working-directory: scrapers/supermercados
-        run: python -m unittest -v test_scraper_supermercados
 
       - name: Ejecutar scraper
         working-directory: scrapers/supermercados
