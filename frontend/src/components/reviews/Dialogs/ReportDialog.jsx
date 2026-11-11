@@ -34,6 +34,8 @@ export default function ReportDialog({ review, onClose }) {
 
     const isOther = reason === 'OTRO';
 
+    if (!review) return null;
+
     const validateClientSide = () => {
         if (!reason) return 'Elige una razón';
         if (isOther && !details.trim()) return 'Describe la razón del reporte';
@@ -79,7 +81,7 @@ export default function ReportDialog({ review, onClose }) {
     }
 
     return (
-        <Dialog title="Reportar comentario" subtitle={`Opinión de ${review.authorName}`} onClose={onClose}>
+        <Dialog title="Reportar comentario" subtitle={`Opinión de ${review?.authorName}`} onClose={onClose}>
             <form className={styles['review-form']} onSubmit={handleSubmit} noValidate>
                 <fieldset className={styles['review-form__options']}>
                     <legend className={styles['review-form__legend']}>Razón</legend>
