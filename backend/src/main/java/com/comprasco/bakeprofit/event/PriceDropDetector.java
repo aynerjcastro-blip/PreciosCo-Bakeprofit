@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
  * Valida que sólo las reducciones de precio del producto exacto disparen alertas,
  * ignorando cambios de tamaño o presentación (SCRUM-267).
  */
-@Component
+@Component("priceDropEvaluator")
 public class PriceDropDetector {
 
     private final StagingIntegrationService stagingIntegrationService;

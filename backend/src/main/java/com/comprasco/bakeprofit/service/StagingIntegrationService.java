@@ -21,7 +21,7 @@ public class StagingIntegrationService {
     private static final Logger logger = LoggerFactory.getLogger(StagingIntegrationService.class);
     private final RestTemplate restTemplate;
 
-    @Value("${staging.processor.url}")
+    @Value("${staging.processor.url:}")
     private String stagingUrl;
 
     public StagingIntegrationService(RestTemplate restTemplate) {
