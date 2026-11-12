@@ -1,47 +1,51 @@
 /* ============================================================
-   RANGO DE PRECIO (HU-06b)
+   RANGO DE PRECIO (HU-06b) — dentro del panel de filtros
    ============================================================ */
 .price-range {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px 16px;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .price-range__label {
-    font-weight: 700;
-    font-size: 0.9rem;
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
     color: var(--text-primary);
-    min-width: 64px;
 }
 
+/* Desde y Hasta lado a lado; los botones ocupan toda la fila */
 .price-range__fields {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 8px 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
 }
 
 .price-range__field {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
 }
 
 .price-range__hint {
     font-size: 0.75rem;
+    font-weight: 600;
     color: var(--text-muted);
 }
 
 .price-range__input {
-    width: 140px;
-    padding: 8px 14px;
+    width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
     border: 1.5px solid var(--border-color);
     border-radius: var(--radius-sm);
     background: var(--bg-surface);
     color: var(--text-primary);
     font-family: var(--font-body);
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-variant-numeric: tabular-nums;
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
@@ -58,24 +62,27 @@
 
 .price-range__apply,
 .price-range__clear {
+    grid-column: 1 / -1;
+    min-height: 44px;
     padding: 8px 18px;
     border-radius: 999px;
     font-family: var(--font-body);
-    font-weight: 600;
-    font-size: 0.85rem;
+    font-weight: 700;
+    font-size: 0.9rem;
     cursor: pointer;
     transition: background-color 0.2s, border-color 0.2s, opacity 0.2s;
 }
 
 .price-range__apply {
-    background: var(--color-primary);
-    border: 1.5px solid var(--color-primary);
-    color: var(--text-alternative);
+    background: var(--color-dark);
+    border: 1.5px solid var(--color-dark);
+    color: var(--bg-surface);
 }
 
 .price-range__apply:hover:not(:disabled) {
     background: var(--color-primary-hover);
     border-color: var(--color-primary-hover);
+    color: #0F172A;
 }
 
 .price-range__apply:disabled {
@@ -93,21 +100,13 @@
     border-color: var(--color-dark);
 }
 
-.price-range__apply:focus-visible,
-.price-range__clear:focus-visible {
-    outline: 3px solid var(--focus-ring-color);
-    outline-offset: 2px;
-}
-
 .price-range__error {
-    flex-basis: 100%;
-    margin: 0;
     font-size: 0.85rem;
     color: var(--state-error-text);
 }
 
-@media (max-width: 480px) {
-    .price-range__input {
-        width: 120px;
-    }
+.price-range__apply:focus-visible,
+.price-range__clear:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 2px;
 }

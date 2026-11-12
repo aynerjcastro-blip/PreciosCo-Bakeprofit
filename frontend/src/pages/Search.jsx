@@ -21,59 +21,34 @@ const API_BASE = 'http://localhost:8080/api';
  * Se define fuera del componente para evitar recrear el arreglo en cada render.
  * El campo 'available' controla si el sector hace peticiones o muestra la pantalla "Llega pronto".
  */
-// Añadimos las propiedades: subtitle, image y brands a cada sector
 const SECTORS = [
     {
         id: 'supermercados',
         label: 'Supermercados',
         subtitle: 'Compara precios y ahorra',
-        image: '/assets/images/cat-supermercados.png',
         Icon: CartIcon,
         available: true,
-        brands: [
-            { id: 'exito', name: 'Exito', logo: '/assets/images/brands/exito.png' },
-            { id: 'olimpica', name: 'Olimpica', logo: '/assets/images/brands/olimpica.png' },
-            { id: 'jumbo', name: 'Jumbo', logo: '/assets/images/brands/jumbo.png' }
-        ]
     },
     {
         id: 'droguerias',
         label: 'Droguerias',
         subtitle: 'Encuentra mejores precios',
-        image: '/assets/images/cat-farmacia.png',
         Icon: PillIcon,
         available: false,
-        brands: [
-            { id: 'cruzverde', name: 'Cruz Verde', logo: '/assets/images/brands/cruzverde.png' },
-            { id: 'farmatodo', name: 'Farmatodo', logo: '/assets/images/brands/farmatodo.png' },
-            { id: 'larebaja', name: 'La Rebaja', logo: '/assets/images/brands/larebaja.png' }
-        ]
     },
     {
         id: 'cuidado-facial',
         label: 'Cuidado Facial',
         subtitle: 'Encuentra el cuidado que mereces',
-        image: '/assets/images/cat-belleza.png',
         Icon: FaceIcon,
         available: false,
-        brands: [
-            { id: 'nivea', name: 'Nivea', logo: '/assets/images/brands/nivea.png' },
-            { id: 'loreal', name: 'LOREAL', logo: '/assets/images/brands/loreal.png' },
-            { id: 'ponds', name: 'Ponds', logo: '/assets/images/brands/ponds.png' }
-        ]
     },
     {
         id: 'repuestos',
         label: 'Repuestos',
         subtitle: 'Encuentra la pieza que necesitas',
-        image: '/assets/images/cat-repuestos.png',
         Icon: GearIcon,
         available: false,
-        brands: [
-            { id: 'bosch', name: 'BOSCH', logo: '/assets/images/brands/bosch.png' },
-            { id: 'michelin', name: 'MICHELIN', logo: '/assets/images/brands/michelin.svg' },
-            { id: 'castrol', name: 'Castrol', logo: '/assets/images/brands/castrol.svg' }
-        ]
     },
 ];
 
@@ -117,6 +92,108 @@ function loadSaved() {
     }
 }
 
+const formatCop = (value) => `$${Number(value).toLocaleString('es-CO')}`;
+
+/**
+ * Ahorro posible de un producto: lo que se paga de más en la tienda más cara frente a la más barata.
+ * Los campos minPrice y maxPrice los entrega el backend (HT-16: contrato del buscador); si no
+ * vienen, el producto se muestra sin precio y no hay ahorro que calcular.
+ */
+function savingOf(product) {
+    if (product.minPrice == null || product.maxPrice == null) return 0;
+    return Math.max(0, Number(product.maxPrice) - Number(product.minPrice));
+}
+
+// Foto del producto; sin imagen (o si no carga) se muestra un marcador
+function Thumb({ src, alt }) {
+    const [failed, setFailed] = useState(false);
+
+    if (!src || failed) {
+        return <span className={styles['product-row__placeholder']} aria-hidden="true">🛒</span>;
+    }
+    return (
+        <img
+            className={styles['product-row__image']}
+            src={src}
+            alt={alt}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={() => setFailed(true)}
+        />
+    );
+}
+
+// Fila de resultado: foto | datos | precio desde | llamada a comparar
+function ProductRow({ product }) {
+    const hasPrice = product.minPrice != null;
+    const saving = savingOf(product);
+
+    return (
+        <Link to={`/comparador?productId=${product.id}`} className={styles['product-row']}>
+            <div className={styles['product-row__media']}>
+                <Thumb src={product.imageUrl} alt={product.name} />
+            </div>
+
+            <div className={styles['product-row__info']}>
+                <p className={styles['product-row__tags']}>
+                    <span className={styles['product-row__category']}>{product.category}</span>
+                    {product.brand && <span className={styles['product-row__brand']}>{product.brand}</span>}
+                    {product.unit && <span className={styles['product-row__unit']}>{product.unit}</span>}
+                </p>
+                <h3 className={styles['product-row__name']}>{product.name}</h3>
+                {hasPrice && product.minPriceStoreName && (
+                    <p className={styles['product-row__best']}>
+                        Más barato en <strong>{product.minPriceStoreName}</strong>
+                    </p>
+                )}
+            </div>
+
+            <div className={styles['product-row__price']}>
+                {hasPrice ? (
+                    <>
+                        <span className={styles['product-row__from']}>Desde</span>
+                        <span className={styles['product-row__value']}>{formatCop(product.minPrice)}</span>
+                        {saving > 0 && (
+                            <span className={styles['product-row__saving']}>Ahorras hasta {formatCop(saving)}</span>
+                        )}
+                        {product.storeCount > 0 && (
+                            <span className={styles['product-row__stores']}>
+                                {product.storeCount === 1 ? 'En 1 tienda' : `En ${product.storeCount} tiendas`}
+                            </span>
+                        )}
+                    </>
+                ) : (
+                    <span className={styles['product-row__stores']}>Sin precio vigente</span>
+                )}
+            </div>
+
+            <span className={styles['product-row__cta']}>Comparar precios <span aria-hidden="true">›</span></span>
+        </Link>
+    );
+}
+
+/** Destaca, entre los resultados de la página, el producto con mayor diferencia entre tiendas. */
+function SavingsBanner({ products }) {
+    let top = null;
+    for (const product of products) {
+        if (savingOf(product) > (top ? savingOf(top) : 0)) top = product;
+    }
+    if (!top) return null;
+
+    const saving = savingOf(top);
+    const percent = Math.round((saving / Number(top.maxPrice)) * 100);
+
+    return (
+        <Link to={`/comparador?productId=${top.id}`} className={styles['savings-banner']}>
+            <span className={styles['savings-banner__tag']}>Mayor ahorro en esta página · {percent} % menos</span>
+            <span className={styles['savings-banner__text']}>
+                {top.name}: ahorras hasta <strong>{formatCop(saving)}</strong>
+                {top.minPriceStoreName ? <> comprando en {top.minPriceStoreName}</> : null}
+            </span>
+        </Link>
+    );
+}
+
 export default function Search() {
     const saved = loadSaved();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -153,6 +230,8 @@ export default function Search() {
     // 'stores-unavailable' = una tienda de la URL ya no existe o se desactivo (404),
     // 'invalid-filters' = el backend rechazo el rango de precio (400)
     const [fetchStatus, setFetchStatus] = useState('idle');
+    // Solo en pantallas angostas: el panel de filtros se abre y se cierra
+    const [filtersOpen, setFiltersOpen] = useState(false);
 
     // =========================================================================
     // SINCRONIZACION CON LA URL
@@ -188,7 +267,7 @@ export default function Search() {
 
     /** Vuelve a la primera pagina cuando cambia un filtro que no vive en la URL (texto, categoria, sector). */
     function backToFirstPage() {
-        if (searchParams.has(PARAM_PAGE)) changeFilters(() => {});
+        if (searchParams.has(PARAM_PAGE)) changeFilters(() => { });
     }
 
     /**
@@ -382,15 +461,31 @@ export default function Search() {
         refineRef.current?.scrollIntoView({ block: 'start' });
     }
 
+    const activeFilterCount =
+        (selectedCategoryId !== null ? 1 : 0) + selectedStoreIds.length + (minPrice !== '' || maxPrice !== '' ? 1 : 0);
+
+    // "Limpiar todo": quita categoría, tiendas y precio; el sector es navegación y se conserva
+    function clearAllFilters() {
+        setSelectedCategoryId(null);
+        setShowAll(false);
+        changeFilters((next) => {
+            next.delete(PARAM_STORE);
+            next.delete(PARAM_MIN_PRICE);
+            next.delete(PARAM_MAX_PRICE);
+        });
+    }
+
     const noFilters = selectedCategoryId === null && selectedSectorId === null;
 
     return (
         <main className={styles['search-page']}>
             <div className={styles['search-page__container']}>
-                <h1 className={styles['search-page__title']}>Busca tu producto</h1>
-                <p className={styles['search-page__subtitle']}>
-                    Escribe un nombre o filtra por categoría, tienda o precio
-                </p>
+                <header className={styles['search-head']}>
+                    <h1 className={styles['search-head__title']}>Busca tu producto</h1>
+                    <p className={styles['search-head__subtitle']}>
+                        Compara el precio en cada tienda y compra donde más ahorras
+                    </p>
+                </header>
 
                 {/* BARRA DE BUSQUEDA */}
                 <div className={styles['search-bar']}>
@@ -407,182 +502,191 @@ export default function Search() {
                     />
                 </div>
 
-                {/* FILTROS DE CATEGORIA */}
-                <div className={styles['category-filter']}>
-                    <button
-                        className={`${styles['category-filter__chip']} ${noFilters ? styles['category-filter__chip--active'] : ''}`}
-                        onClick={showAllProducts}
-                    >
-                        Todas
-                    </button>
-                    {categories.map((cat) => (
-                        <button
-                            key={cat.id}
-                            className={`${styles['category-filter__chip']} ${selectedCategoryId === cat.id ? styles['category-filter__chip--active'] : ''}`}
-                            onClick={() => toggleCategory(cat.id)}
-                        >
-                            {cat.name}
-                        </button>
-                    ))}
-                </div>
-
-                {/* TARJETAS DE SECTOR (Nuevo diseño inmersivo) */}
-                <div className={styles['sector-grid']}>
+                {/* SECTORES: pestañas compactas, ya no tarjetas que empujan los resultados fuera de la pantalla */}
+                <div className={styles['sector-tabs']} role="group" aria-label="Sector">
                     {SECTORS.map((sector) => {
                         const active = selectedSectorId === sector.id;
                         return (
                             <button
                                 key={sector.id}
                                 type="button"
-                                className={`${styles['sector-card']} ${active ? styles['sector-card--active'] : ''}`}
+                                className={`${styles['sector-tab']} ${active ? styles['sector-tab--active'] : ''}`}
                                 onClick={() => toggleSector(sector.id)}
                                 aria-pressed={active}
+                                title={sector.subtitle}
                             >
-                                {/* Capa 1: Imagen de fondo (Collage) */}
-                                <img
-                                    src={sector.image}
-                                    alt={`Fondo de ${sector.label}`}
-                                    className={styles['sector-card__bg']}
-                                    loading="lazy"
-                                />
-
-                                {/* Capa 2: Gradiente oscuro para que el texto resalte */}
-                                <div className={styles['sector-card__overlay']}></div>
-
-                                {/* Capa 3: Contenido (Icono, Textos y Marcas) */}
-                                <div className={styles['sector-card__content']}>
-                                    <div className={styles['sector-card__header']}>
-                                        <sector.Icon />
-                                        <h2 className={styles['sector-card__title']}>{sector.label}</h2>
-                                    </div>
-                                    <p className={styles['sector-card__subtitle']}>{sector.subtitle}</p>
-
-                                    <div className={styles['sector-card__brands']}>
-                                        {sector.brands.map(brand => (
-                                            <div key={brand.id} className={styles['brand-pill']} title={brand.name}>
-                                                {/* Fallback por si no tienes las imagenes aun */}
-                                                <img
-                                                    src={brand.logo}
-                                                    alt={brand.name}
-                                                    onError={(e) => {
-                                                        e.target.style.display = 'none';
-                                                        e.target.nextSibling.style.display = 'inline';
-                                                    }}
-                                                />
-                                                <span style={{ display: 'none', fontSize: '0.7rem', fontWeight: 'bold' }}>{brand.name}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                <sector.Icon />
+                                {sector.label}
+                                {!sector.available && <span className={styles['sector-tab__soon']}>Pronto</span>}
                             </button>
                         );
                     })}
                 </div>
 
-                {/* FILTROS DE TIENDA Y PRECIO (HU-06b): se resuelven en el backend */}
-                <section
-                    ref={refineRef}
-                    className={styles['search-refine']}
-                    aria-label="Filtrar por tienda y precio"
-                >
-                    <StoreFilter
-                        stores={stores}
-                        selectedIds={selectedStoreIds}
-                        onToggle={toggleStore}
-                        onClear={clearStores}
-                    />
-                    <PriceRangeFilter min={minPrice} max={maxPrice} onApply={applyPriceRange} />
-                </section>
-
-                {status === 'success' && (
-                    <p className={styles['search-count']}>
-                        {pageInfo.totalElements === 1 ? '1 producto' : `${pageInfo.totalElements} productos`}
-                    </p>
-                )}
-
-                {/* RENDERIZADO DE RESULTADOS */}
-                {/* aria-live="polite" notifica a lectores de pantalla los cambios sin interrumpir */}
-                <div className={styles['search-results']} aria-live="polite">
-                    {status === 'loading' && (
-                        <div className={styles['search-state']}>
-                            <p className={styles['search-state__title']}>Cargando</p>
-                            <p>Buscando productos...</p>
-                        </div>
-                    )}
-
-                    {status === 'soon' && selectedSector && (
-                        <div className={styles['search-state']}>
-                            <p className={styles['search-state__title']}>
-                                {selectedSector.label} llega pronto
-                            </p>
-                            <p>Todavía no tenemos precios de este sector. Mientras tanto, prueba con Supermercados.</p>
-                        </div>
-                    )}
-
-                    {status === 'empty' && pageNumber > 1 && (
-                        <div className={styles['search-state']}>
-                            <p className={styles['search-state__title']}>Esta página ya no tiene resultados</p>
-                            <p>Los resultados cambiaron desde que se abrió este enlace.</p>
-                            <button type="button" className={styles['search-state__action']} onClick={() => goToPage(1)}>
-                                Ir a la primera página
-                            </button>
-                        </div>
-                    )}
-
-                    {status === 'empty' && pageNumber <= 1 && (
-                        <div className={styles['search-state']}>
-                            <p className={styles['search-state__title']}>Sin resultados</p>
-                            <p>No encontramos productos con esos filtros. Prueba con otro nombre, categoría, tienda o precio.</p>
-                        </div>
-                    )}
-
-                    {status === 'stores-unavailable' && (
-                        <div className={styles['search-state']}>
-                            <p className={styles['search-state__title']}>Una de las tiendas ya no está disponible</p>
-                            <p>Quita el filtro de tienda para ver los resultados de las demás.</p>
-                            <button type="button" className={styles['search-state__action']} onClick={clearStores}>
-                                Quitar filtro de tienda
-                            </button>
-                        </div>
-                    )}
-
-                    {status === 'invalid-filters' && (
-                        <div className={styles['search-state']}>
-                            <p className={styles['search-state__title']}>Revisa el rango de precio</p>
-                            <p>El mínimo no puede ser mayor que el máximo, y ninguno puede ser negativo.</p>
-                            <button
-                                type="button"
-                                className={styles['search-state__action']}
-                                onClick={() => applyPriceRange('', '')}
-                            >
-                                Quitar precio
-                            </button>
-                        </div>
-                    )}
-
-                    {status === 'error' && (
-                        <div className={styles['search-state']}>
-                            <p className={styles['search-state__title']}>Algo salió mal</p>
-                            <p>No pudimos conectar con el servidor. Verifica tu conexión.</p>
-                        </div>
-                    )}
-
-                    {status === 'success' && products.map((product) => (
-                        <Link
-                            key={product.id}
-                            to={`/comparador?productId=${product.id}`}
-                            className={styles['product-card']}
+                <div className={styles['search-layout']}>
+                    {/* PANEL DE FILTROS */}
+                    <aside className={styles.filters} aria-label="Filtros">
+                        <button
+                            type="button"
+                            className={styles['filters__toggle']}
+                            aria-expanded={filtersOpen}
+                            aria-controls="panel-filtros"
+                            onClick={() => setFiltersOpen((open) => !open)}
                         >
-                            <span className={styles['product-card__category']}>{product.category}</span>
-                            <h3 className={styles['product-card__name']}>{product.name}</h3>
-                            <p className={styles['product-card__unit']}>{product.unit || ''}</p>
-                        </Link>
-                    ))}
-                </div>
+                            Filtros{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+                        </button>
 
-                {status === 'success' && (
-                    <SearchPagination page={pageNumber} totalPages={pageInfo.totalPages} onChange={goToPage} />
-                )}
+                        <div
+                            id="panel-filtros"
+                            className={`${styles['filters__panel']} ${filtersOpen ? styles['filters__panel--open'] : ''}`}
+                        >
+                            <div className={styles['filters__head']}>
+                                <h2 className={styles['filters__title']}>Filtros</h2>
+                                {activeFilterCount > 0 && (
+                                    <button type="button" className={styles['filters__clear']} onClick={clearAllFilters}>
+                                        Limpiar todo
+                                    </button>
+                                )}
+                            </div>
+
+                            {categories.length > 0 && (
+                                <div className={styles['filter-card']} role="radiogroup" aria-labelledby="categoria-label">
+                                    <span id="categoria-label" className={styles['filter-card__title']}>Categoría</span>
+                                    <label className={styles['filter-option']}>
+                                        <input
+                                            type="radio"
+                                            name="categoria"
+                                            checked={noFilters}
+                                            onChange={showAllProducts}
+                                        />
+                                        <span>Todas</span>
+                                    </label>
+                                    {categories.map((cat) => (
+                                        <label key={cat.id} className={styles['filter-option']}>
+                                            <input
+                                                type="radio"
+                                                name="categoria"
+                                                checked={selectedCategoryId === cat.id}
+                                                onChange={() => toggleCategory(cat.id)}
+                                            />
+                                            <span>{cat.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* HU-06b: tienda y precio se resuelven en el backend */}
+                            <div className={styles['filter-card']}>
+                                <StoreFilter
+                                    stores={stores}
+                                    selectedIds={selectedStoreIds}
+                                    onToggle={toggleStore}
+                                    onClear={clearStores}
+                                />
+                            </div>
+                            <div className={styles['filter-card']}>
+                                <PriceRangeFilter min={minPrice} max={maxPrice} onApply={applyPriceRange} />
+                            </div>
+                        </div>
+                    </aside>
+
+                    {/* RESULTADOS */}
+                    <section ref={refineRef} className={styles['search-main']} aria-label="Resultados">
+                        {status === 'success' && (
+                            <p className={styles['search-count']}>
+                                {pageInfo.totalElements === 1 ? '1 producto' : `${pageInfo.totalElements} productos`}
+                                {hasTerm && <> para <strong>“{searchTerm.trim()}”</strong></>}
+                            </p>
+                        )}
+
+                        {status === 'success' && <SavingsBanner products={products} />}
+
+                        {/* aria-live="polite" notifica a lectores de pantalla los cambios sin interrumpir */}
+                        <div className={styles['search-results']} aria-live="polite">
+                            {status === 'idle' && (
+                                <div className={styles['search-state']}>
+                                    <p className={styles['search-state__title']}>Empieza tu búsqueda</p>
+                                    <p>Escribe un producto, elige una categoría o una tienda.</p>
+                                    <button type="button" className={styles['search-state__action']} onClick={showAllProducts}>
+                                        Ver todos los productos
+                                    </button>
+                                </div>
+                            )}
+
+                            {status === 'loading' && (
+                                <div className={styles['search-state']}>
+                                    <p className={styles['search-state__title']}>Cargando</p>
+                                    <p>Buscando productos...</p>
+                                </div>
+                            )}
+
+                            {status === 'soon' && selectedSector && (
+                                <div className={styles['search-state']}>
+                                    <p className={styles['search-state__title']}>
+                                        {selectedSector.label} llega pronto
+                                    </p>
+                                    <p>Todavía no tenemos precios de este sector. Mientras tanto, prueba con Supermercados.</p>
+                                </div>
+                            )}
+
+                            {status === 'empty' && pageNumber > 1 && (
+                                <div className={styles['search-state']}>
+                                    <p className={styles['search-state__title']}>Esta página ya no tiene resultados</p>
+                                    <p>Los resultados cambiaron desde que se abrió este enlace.</p>
+                                    <button type="button" className={styles['search-state__action']} onClick={() => goToPage(1)}>
+                                        Ir a la primera página
+                                    </button>
+                                </div>
+                            )}
+
+                            {status === 'empty' && pageNumber <= 1 && (
+                                <div className={styles['search-state']}>
+                                    <p className={styles['search-state__title']}>Sin resultados</p>
+                                    <p>No encontramos productos con esos filtros. Prueba con otro nombre, categoría, tienda o precio.</p>
+                                </div>
+                            )}
+
+                            {status === 'stores-unavailable' && (
+                                <div className={styles['search-state']}>
+                                    <p className={styles['search-state__title']}>Una de las tiendas ya no está disponible</p>
+                                    <p>Quita el filtro de tienda para ver los resultados de las demás.</p>
+                                    <button type="button" className={styles['search-state__action']} onClick={clearStores}>
+                                        Quitar filtro de tienda
+                                    </button>
+                                </div>
+                            )}
+
+                            {status === 'invalid-filters' && (
+                                <div className={styles['search-state']}>
+                                    <p className={styles['search-state__title']}>Revisa el rango de precio</p>
+                                    <p>El mínimo no puede ser mayor que el máximo, y ninguno puede ser negativo.</p>
+                                    <button
+                                        type="button"
+                                        className={styles['search-state__action']}
+                                        onClick={() => applyPriceRange('', '')}
+                                    >
+                                        Quitar precio
+                                    </button>
+                                </div>
+                            )}
+
+                            {status === 'error' && (
+                                <div className={styles['search-state']}>
+                                    <p className={styles['search-state__title']}>Algo salió mal</p>
+                                    <p>No pudimos conectar con el servidor. Verifica tu conexión.</p>
+                                </div>
+                            )}
+
+                            {status === 'success' && products.map((product) => (
+                                <ProductRow key={product.id} product={product} />
+                            ))}
+                        </div>
+
+                        {status === 'success' && (
+                            <SearchPagination page={pageNumber} totalPages={pageInfo.totalPages} onChange={goToPage} />
+                        )}
+                    </section>
+                </div>
             </div>
         </main>
     );
