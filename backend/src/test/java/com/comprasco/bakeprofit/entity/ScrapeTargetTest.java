@@ -6,6 +6,11 @@ import java.math.BigDecimal;
 
 import org.junit.jupiter.api.Test;
 
+import com.comprasco.bakeprofit.catalog.entity.Category;
+import com.comprasco.bakeprofit.catalog.entity.UnitBase;
+import com.comprasco.bakeprofit.staging.entity.ScrapeTarget;
+import com.comprasco.bakeprofit.store.entity.Store;
+
 class ScrapeTargetTest {
 
     private static final BigDecimal MIN = new BigDecimal("400");

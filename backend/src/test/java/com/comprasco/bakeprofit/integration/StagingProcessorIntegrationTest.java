@@ -22,12 +22,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
 
-import com.comprasco.bakeprofit.entity.OfferStatus;
-import com.comprasco.bakeprofit.event.PriceRegisteredEvent;
-import com.comprasco.bakeprofit.repository.PendingOfferKey;
-import com.comprasco.bakeprofit.repository.ScrapedOfferRepository;
-import com.comprasco.bakeprofit.service.OfferIngestionService.Result;
-import com.comprasco.bakeprofit.service.StagingProcessor;
+import com.comprasco.bakeprofit.notification.event.PriceRegisteredEvent;
+import com.comprasco.bakeprofit.staging.repository.PendingOfferKey;
+import com.comprasco.bakeprofit.staging.entity.OfferStatus;
+import com.comprasco.bakeprofit.staging.repository.ScrapedOfferRepository;
+import com.comprasco.bakeprofit.staging.service.StagingProcessor;
+import com.comprasco.bakeprofit.staging.service.OfferIngestionService.Result;
 
 /**
  * El procesador contra PostgreSQL real: crea productos, abre y refresca periodos de

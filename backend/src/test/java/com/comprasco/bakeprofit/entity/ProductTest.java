@@ -6,6 +6,9 @@ import java.math.BigDecimal;
 
 import org.junit.jupiter.api.Test;
 
+import com.comprasco.bakeprofit.catalog.entity.Product;
+import com.comprasco.bakeprofit.catalog.entity.UnitBase;
+
 class ProductTest {
 
     private static final String GTIN = "07702552000141";

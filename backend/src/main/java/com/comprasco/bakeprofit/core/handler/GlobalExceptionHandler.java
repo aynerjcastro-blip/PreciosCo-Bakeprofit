@@ -1,0 +1,522 @@
+package com.comprasco.bakeprofit.core.handler;
+
+import com.comprasco.bakeprofit.auth.exception.EmailAlreadyExistsException;
+import com.comprasco.bakeprofit.auth.exception.ForbiddenActionException;
+import com.comprasco.bakeprofit.auth.exception.InactiveParentException;
+import com.comprasco.bakeprofit.auth.exception.InactiveUserException;
+import com.comprasco.bakeprofit.auth.exception.InvalidCredentialsException;
+import com.comprasco.bakeprofit.auth.exception.UserNotFoundException;
+import com.comprasco.bakeprofit.catalog.exception.CategoryAlreadyExistsException;
+import com.comprasco.bakeprofit.catalog.exception.CategoryNotFoundException;
+import com.comprasco.bakeprofit.catalog.exception.InvalidCategoryHierarchyException;
+import com.comprasco.bakeprofit.catalog.exception.InvalidProductIdentityException;
+import com.comprasco.bakeprofit.catalog.exception.InvalidSearchFilterException;
+import com.comprasco.bakeprofit.catalog.exception.ProductAlreadyExistsException;
+import com.comprasco.bakeprofit.catalog.exception.ProductNotFoundException;
+import com.comprasco.bakeprofit.core.response.ErrorResponse;
+import com.comprasco.bakeprofit.follow.exception.FollowAlreadyExistsException;
+import com.comprasco.bakeprofit.follow.exception.FollowNotAllowedException;
+import com.comprasco.bakeprofit.follow.exception.FollowNotFoundException;
+import com.comprasco.bakeprofit.notification.exception.NotificationNotFoundException;
+import com.comprasco.bakeprofit.price.exception.PriceNotFoundException;
+import com.comprasco.bakeprofit.review.exception.InvalidReviewRequestException;
+import com.comprasco.bakeprofit.review.exception.ReviewAlreadyExistsException;
+import com.comprasco.bakeprofit.review.exception.ReviewNotAllowedException;
+import com.comprasco.bakeprofit.review.exception.ReviewNotFoundException;
+import com.comprasco.bakeprofit.store.exception.StoreAlreadyExistsException;
+import com.comprasco.bakeprofit.store.exception.StoreNotFoundException;
+
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+/**
+ * Manejador global de excepciones para la API REST.
+ *
+ * <p>
+ * Captura las excepciones lanzadas en la capa de controladores o servicios
+ * y las transforma en respuestas JSON estandarizadas de tipo
+ * {@link ErrorResponse}.
+ * </p>
+ */
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+        private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+        /**
+         * Maneja errores de validacion en los atributos de los DTOs.
+         *
+         * @param ex      excepcion de validacion de argumentos
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 400 Bad Request
+         */
+        @ExceptionHandler(MethodArgumentNotValidException.class)
+        public ResponseEntity<ErrorResponse> handleValidationErrors(
+                        MethodArgumentNotValidException ex,
+                        HttpServletRequest request) {
+
+                String mensajes = ex.getBindingResult().getFieldErrors().stream()
+                                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                                .collect(Collectors.joining(", "));
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_REQUEST.value())
+                                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                                .message(mensajes)
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        /**
+         * Maneja errores de jerarquia de categorias no valida.
+         *
+         * @param ex      excepcion de jerarquia invalida
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 400 Bad Request
+         */
+        @ExceptionHandler(InvalidCategoryHierarchyException.class)
+        public ResponseEntity<ErrorResponse> handleInvalidCategoryHierarchy(
+                        InvalidCategoryHierarchyException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_REQUEST.value())
+                                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        /**
+         * Maneja datos de identidad de producto incoherentes entre si: contenido
+         * neto sin unidad base (o al reves) o referencia del fabricante sin marca.
+         *
+         * @param ex      excepcion de identidad de producto invalida
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 400 Bad Request
+         */
+        @ExceptionHandler(InvalidProductIdentityException.class)
+        public ResponseEntity<ErrorResponse> handleInvalidProductIdentity(
+                        InvalidProductIdentityException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_REQUEST.value())
+                                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        /**
+         * Maneja credenciales de acceso invalidas durante la autenticacion.
+         *
+         * @param ex      excepcion de credenciales invalidas
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 401 Unauthorized
+         */
+        @ExceptionHandler(InvalidCredentialsException.class)
+        public ResponseEntity<ErrorResponse> handleInvalidCredentials(
+                        InvalidCredentialsException ex,
+                        HttpServletRequest request) {
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.UNAUTHORIZED.value())
+                                .error(HttpStatus.UNAUTHORIZED.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+        }
+
+        /**
+         * Maneja intentos de acceso o autenticacion de cuentas desactivadas.
+         *
+         * @param ex      excepcion de usuario inactivo
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 401 Unauthorized
+         */
+        @ExceptionHandler(InactiveUserException.class)
+        public ResponseEntity<ErrorResponse> handleInactiveUser(
+                        InactiveUserException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.UNAUTHORIZED.value())
+                                .error(HttpStatus.UNAUTHORIZED.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+        }
+
+        /**
+         * Maneja situaciones donde un recurso solicitado no existe en la base de datos.
+         *
+         * @param ex      excepcion de entidad no encontrada
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 404 Not Found
+         */
+        @ExceptionHandler({
+                        UserNotFoundException.class,
+                        CategoryNotFoundException.class,
+                        StoreNotFoundException.class,
+                        ProductNotFoundException.class,
+                        EntityNotFoundException.class,
+                        PriceNotFoundException.class,
+                        ReviewNotFoundException.class,
+                        FollowNotFoundException.class,
+                        NotificationNotFoundException.class
+
+        })
+        public ResponseEntity<ErrorResponse> handleNotFound(
+                        RuntimeException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.NOT_FOUND.value())
+                                .error(HttpStatus.NOT_FOUND.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        }
+
+        /**
+         * Maneja el intento de registrar un correo electronico duplicado.
+         *
+         * @param ex      excepcion de correo duplicado
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 409 Conflict
+         */
+        @ExceptionHandler(EmailAlreadyExistsException.class)
+        public ResponseEntity<ErrorResponse> handleEmailAlreadyExists(
+                        EmailAlreadyExistsException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.CONFLICT.value())
+                                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+        }
+
+        /**
+         * Maneja el intento de registrar una categoria duplicada.
+         *
+         * @param ex      excepcion de categoria duplicada
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 409 Conflict
+         */
+        @ExceptionHandler(CategoryAlreadyExistsException.class)
+        public ResponseEntity<ErrorResponse> handleCategoryAlreadyExists(
+                        CategoryAlreadyExistsException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.CONFLICT.value())
+                                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+        }
+
+        /**
+         * Maneja el intento de registrar una tienda duplicada.
+         *
+         * @param ex      excepcion de tienda duplicada
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 409 Conflict
+         */
+        @ExceptionHandler(StoreAlreadyExistsException.class)
+        public ResponseEntity<ErrorResponse> handleStoreAlreadyExists(
+                        StoreAlreadyExistsException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.CONFLICT.value())
+                                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+        }
+
+        /**
+         * Maneja el intento de registrar un producto repetido: mismo EAN o misma
+         * marca y referencia del fabricante.
+         *
+         * @param ex      excepcion de producto duplicado
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 409 Conflict
+         */
+        @ExceptionHandler(ProductAlreadyExistsException.class)
+        public ResponseEntity<ErrorResponse> handleProductAlreadyExists(
+                        ProductAlreadyExistsException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.CONFLICT.value())
+                                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+        }
+
+        /**
+         * Maneja operaciones sobre entidades asociadas a una categoria padre inactiva.
+         *
+         * @param ex      excepcion de padre inactivo
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 409 Conflict
+         */
+        @ExceptionHandler(InactiveParentException.class)
+        public ResponseEntity<ErrorResponse> handleInactiveParent(
+                        InactiveParentException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.CONFLICT.value())
+                                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+        }
+
+        /**
+         * Maneja conflictos al opinar: opinion duplicada, producto o tienda
+         * inactivos, plazo de edicion vencido, comentario que ya no se puede
+         * editar o reporte duplicado simultaneo.
+         *
+         * @param ex      excepcion de opinion duplicada o no permitida
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 409 Conflict
+         */
+        @ExceptionHandler({ ReviewAlreadyExistsException.class, ReviewNotAllowedException.class,
+                        FollowAlreadyExistsException.class, FollowNotAllowedException.class })
+        public ResponseEntity<ErrorResponse> handleReviewConflict(
+                        RuntimeException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.CONFLICT.value())
+                                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+        }
+
+        /**
+         * Maneja acciones no permitidas por el rol del usuario o por no ser el
+         * autor del recurso.
+         *
+         * @param ex      excepcion de accion prohibida
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 403 Forbidden
+         */
+        @ExceptionHandler(ForbiddenActionException.class)
+        public ResponseEntity<ErrorResponse> handleForbiddenAction(
+                        ForbiddenActionException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.FORBIDDEN.value())
+                                .error(HttpStatus.FORBIDDEN.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+        }
+
+        /**
+         * Maneja solicitudes de opiniones invalidas: listado sin productId ni
+         * storeId, reporte con razon OTRO sin detalle o reporte del propio
+         * comentario.
+         *
+         * @param ex      excepcion de solicitud de opinion invalida
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 400 Bad Request
+         */
+        @ExceptionHandler(InvalidReviewRequestException.class)
+        public ResponseEntity<ErrorResponse> handleInvalidReviewRequest(
+                        InvalidReviewRequestException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_REQUEST.value())
+                                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        /**
+         * Maneja un filtro invalido de la busqueda de productos (HU-06b): precio
+         * negativo o minimo mayor que maximo.
+         *
+         * @param ex      excepcion de filtro de busqueda invalido
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 400 Bad Request
+         */
+        @ExceptionHandler(InvalidSearchFilterException.class)
+        public ResponseEntity<ErrorResponse> handleInvalidSearchFilter(
+                        InvalidSearchFilterException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_REQUEST.value())
+                                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        /**
+         * Maneja peticiones mal formadas: JSON ilegible, parametro de tipo
+         * incorrecto o parametro obligatorio ausente.
+         *
+         * @param ex      excepcion de peticion mal formada
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 400 Bad Request
+         */
+        @ExceptionHandler({ HttpMessageNotReadableException.class,
+                        MethodArgumentTypeMismatchException.class,
+                        MissingServletRequestParameterException.class })
+        public ResponseEntity<ErrorResponse> handleBadRequest(
+                        Exception ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_REQUEST.value())
+                                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                                .message("Solicitud inválida: revisa los parámetros y el cuerpo de la petición")
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        /**
+         * Maneja cualquier otra excepcion no controlada expliticamente.
+         *
+         * @param ex      excepcion general
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 500 Internal Server Error
+         */
+        @ExceptionHandler(Exception.class)
+        public ResponseEntity<ErrorResponse> handleGeneric(
+                        Exception ex,
+                        HttpServletRequest request) {
+
+                log.error("Error no controlado en {}", request.getRequestURI(), ex);
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                                .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
+                                .message("Error interno del servidor")
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+
+        /**
+         * Maneja las peticiones a rutas que no existen (recursos estaticos o endpoints
+         * inexistentes).
+         * 
+         * @param ex      excepcion lanzada al no encontrar el recurso
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 404 Not Found
+         */
+        @ExceptionHandler(NoResourceFoundException.class)
+        public ResponseEntity<ErrorResponse> handleNoResource(
+                        NoResourceFoundException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.NOT_FOUND.value())
+                                .error(HttpStatus.NOT_FOUND.getReasonPhrase())
+                                .message("Recurso no encontrado")
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        }
+
+        /**
+         * Intercepta la denegación de acceso producida por @PreAuthorize de Spring
+         * Security.
+         * Retorna HTTP 403 Forbidden en lugar de permitir que se transforme en un error
+         * 500.
+         */
+        @ExceptionHandler({ AccessDeniedException.class, AuthorizationDeniedException.class })
+        public ResponseEntity<Map<String, Object>> handleAccessDeniedException(Exception ex) {
+                Map<String, Object> body = new HashMap<>();
+                body.put("timestamp", LocalDateTime.now());
+                body.put("status", HttpStatus.FORBIDDEN.value());
+                body.put("error", "Forbidden");
+                body.put("message", "Acceso denegado: Se requieren permisos de administrador.");
+
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+        }
+}

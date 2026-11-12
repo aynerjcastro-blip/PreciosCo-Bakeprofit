@@ -19,7 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.comprasco.bakeprofit.service.BrandService;
+import com.comprasco.bakeprofit.catalog.service.BrandService;
 
 /**
  * Dos peticiones que crean la misma marca a la vez obtienen la misma fila
