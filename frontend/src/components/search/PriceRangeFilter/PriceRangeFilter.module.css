@@ -1,10 +1,11 @@
 /* ============================================================
    RANGO DE PRECIO (HU-06b) — dentro del panel de filtros
+   Rangos rápidos como lista de texto, y debajo Mínimo — Máximo con un botón redondo.
    ============================================================ */
 .price-range {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
 }
 
 .price-range__label {
@@ -16,39 +17,84 @@
     color: var(--text-primary);
 }
 
-/* Desde y Hasta lado a lado; los botones ocupan toda la fila */
+/* ---------- Rangos rápidos ---------- */
+.price-range__presets {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.price-range__preset {
+    width: 100%;
+    min-height: 36px;
+    padding: 6px 0;
+    border: none;
+    background: none;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    text-align: left;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.price-range__preset:hover {
+    color: var(--text-primary);
+}
+
+.price-range__preset--active {
+    font-weight: 800;
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-decoration-color: var(--color-primary);
+    text-decoration-thickness: 3px;
+    text-underline-offset: 4px;
+}
+
+/* ---------- Mínimo — Máximo y botón ---------- */
 .price-range__fields {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
 }
 
 .price-range__field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
     min-width: 0;
 }
 
-.price-range__hint {
-    font-size: 0.75rem;
-    font-weight: 600;
+.price-range__dash {
     color: var(--text-muted);
 }
 
 .price-range__input {
     width: 100%;
     min-width: 0;
-    padding: 10px 12px;
+    padding: 9px 14px;
     border: 1.5px solid var(--border-color);
-    border-radius: var(--radius-sm);
+    border-radius: 999px;
     background: var(--bg-surface);
     color: var(--text-primary);
     font-family: var(--font-body);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-variant-numeric: tabular-nums;
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Sin las flechas de subir y bajar del navegador: tapan el texto y no aportan nada */
+.price-range__input {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.price-range__input::-webkit-outer-spin-button,
+.price-range__input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 .price-range__input:focus {
@@ -60,29 +106,23 @@
     border-color: var(--alert-error-border);
 }
 
-.price-range__apply,
-.price-range__clear {
-    grid-column: 1 / -1;
-    min-height: 44px;
-    padding: 8px 18px;
-    border-radius: 999px;
-    font-family: var(--font-body);
-    font-weight: 700;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s, opacity 0.2s;
-}
-
 .price-range__apply {
-    background: var(--color-dark);
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
     border: 1.5px solid var(--color-dark);
+    border-radius: 50%;
+    background: var(--color-dark);
     color: var(--bg-surface);
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s;
 }
 
 .price-range__apply:hover:not(:disabled) {
     background: var(--color-primary-hover);
     border-color: var(--color-primary-hover);
-    color: #0F172A;
+    color: var(--color-dark);
 }
 
 .price-range__apply:disabled {
@@ -91,13 +131,20 @@
 }
 
 .price-range__clear {
-    background: transparent;
-    border: 1.5px solid var(--border-color);
-    color: var(--text-primary);
+    align-self: flex-start;
+    padding: 4px 0;
+    border: none;
+    background: none;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-decoration: underline;
+    cursor: pointer;
 }
 
 .price-range__clear:hover {
-    border-color: var(--color-dark);
+    color: var(--text-primary);
 }
 
 .price-range__error {
@@ -105,8 +152,22 @@
     color: var(--state-error-text);
 }
 
+.price-range__preset:focus-visible,
 .price-range__apply:focus-visible,
 .price-range__clear:focus-visible {
     outline: 3px solid var(--focus-ring-color);
     outline-offset: 2px;
+}
+
+/* Texto solo para lectores de pantalla (las etiquetas de los campos) */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
