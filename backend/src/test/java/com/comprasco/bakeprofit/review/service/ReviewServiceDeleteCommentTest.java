@@ -28,7 +28,6 @@ import com.comprasco.bakeprofit.review.exception.ReviewNotFoundException;
 import com.comprasco.bakeprofit.review.repository.CommentReportRepository;
 import com.comprasco.bakeprofit.review.repository.CommentRepository;
 import com.comprasco.bakeprofit.review.repository.RatingRepository;
-import com.comprasco.bakeprofit.review.service.ReviewService;
 import com.comprasco.bakeprofit.store.service.StoreService;
 
 /**
