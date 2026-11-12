@@ -7,7 +7,8 @@ import java.math.BigDecimal;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.comprasco.bakeprofit.entity.UnitBase;
+import com.comprasco.bakeprofit.catalog.entity.UnitBase;
+import com.comprasco.bakeprofit.catalog.util.NetContentLabel;
 
 class NetContentLabelTest {
 

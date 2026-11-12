@@ -6,6 +6,10 @@ import java.math.BigDecimal;
 
 import org.junit.jupiter.api.Test;
 
+import com.comprasco.bakeprofit.catalog.entity.Product;
+import com.comprasco.bakeprofit.price.entity.Price;
+import com.comprasco.bakeprofit.store.entity.Store;
+
 class PriceTest {
 
     private static final String URL = "https://tienda.co/arroz";

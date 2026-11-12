@@ -9,7 +9,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.comprasco.bakeprofit.exception.InvalidSearchFilterException;
+import com.comprasco.bakeprofit.catalog.dto.ProductSearchCriteria;
+import com.comprasco.bakeprofit.catalog.exception.InvalidSearchFilterException;
 
 class ProductSearchCriteriaTest {
 

@@ -14,9 +14,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.comprasco.bakeprofit.dto.PriceCompareResponse;
-import com.comprasco.bakeprofit.repository.PriceRepository;
-import com.comprasco.bakeprofit.service.PriceService;
+import com.comprasco.bakeprofit.price.dto.PriceCompareResponse;
+import com.comprasco.bakeprofit.price.repository.PriceRepository;
+import com.comprasco.bakeprofit.price.service.PriceService;
 
 /**
  * El comparador y el precio más bajo de Seguidos ignoran las tiendas inactivas, igual que la

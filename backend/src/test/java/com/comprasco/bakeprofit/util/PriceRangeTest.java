@@ -7,7 +7,8 @@ import java.math.BigDecimal;
 
 import org.junit.jupiter.api.Test;
 
-import com.comprasco.bakeprofit.exception.InvalidSearchFilterException;
+import com.comprasco.bakeprofit.catalog.exception.InvalidSearchFilterException;
+import com.comprasco.bakeprofit.price.util.PriceRange;
 
 /** Regla 4 de HU-06b: límites opcionales e inclusivos, sin negativos ni rango invertido. */
 class PriceRangeTest {

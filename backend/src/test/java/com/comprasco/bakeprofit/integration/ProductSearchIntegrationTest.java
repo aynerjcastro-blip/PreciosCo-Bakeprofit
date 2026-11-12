@@ -19,10 +19,10 @@ import org.springframework.data.web.PagedModel;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.comprasco.bakeprofit.dto.ProductResponse;
-import com.comprasco.bakeprofit.dto.ProductSearchCriteria;
-import com.comprasco.bakeprofit.exception.StoreNotFoundException;
-import com.comprasco.bakeprofit.service.ProductService;
+import com.comprasco.bakeprofit.catalog.dto.ProductResponse;
+import com.comprasco.bakeprofit.catalog.dto.ProductSearchCriteria;
+import com.comprasco.bakeprofit.catalog.service.ProductService;
+import com.comprasco.bakeprofit.store.exception.StoreNotFoundException;
 
 /**
  * Reglas de HU-06b contra PostgreSQL real: el precio vigente, las tiendas activas y el rango
