@@ -28,9 +28,6 @@ import com.comprasco.bakeprofit.staging.StagingFixtures;
 import com.comprasco.bakeprofit.staging.entity.OfferStatus;
 import com.comprasco.bakeprofit.staging.repository.ScrapedOfferRepository;
 import com.comprasco.bakeprofit.staging.resolver.OfferFailureRecorder;
-import com.comprasco.bakeprofit.staging.service.OfferIngestionService;
-import com.comprasco.bakeprofit.staging.service.StagingProcessor;
-import com.comprasco.bakeprofit.staging.service.StagingRetention;
 import com.comprasco.bakeprofit.staging.service.OfferIngestionService.Outcome;
 import com.comprasco.bakeprofit.staging.service.OfferIngestionService.Result;
 

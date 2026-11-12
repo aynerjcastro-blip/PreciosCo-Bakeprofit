@@ -20,7 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.comprasco.bakeprofit.staging.StagingFixtures;
 import com.comprasco.bakeprofit.staging.entity.OfferStatus;
 import com.comprasco.bakeprofit.staging.repository.ScrapedOfferRepository;
-import com.comprasco.bakeprofit.staging.service.StagingRetention;
+
 
 @ExtendWith(MockitoExtension.class)
 class StagingRetentionTest {

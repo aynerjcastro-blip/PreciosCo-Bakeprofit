@@ -20,7 +20,7 @@ import com.comprasco.bakeprofit.catalog.service.CategoryService;
 import com.comprasco.bakeprofit.store.entity.Store;
 import com.comprasco.bakeprofit.store.exception.StoreNotFoundException;
 import com.comprasco.bakeprofit.store.repository.StoreRepository;
-import com.comprasco.bakeprofit.store.service.StoreService;
+
 
 /** Tiendas del filtro de la búsqueda (HU-06b): inexistente o inactiva responde 404. */
 @ExtendWith(MockitoExtension.class)

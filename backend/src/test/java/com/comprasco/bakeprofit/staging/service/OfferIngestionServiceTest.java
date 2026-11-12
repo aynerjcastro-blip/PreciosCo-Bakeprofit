@@ -29,7 +29,6 @@ import com.comprasco.bakeprofit.staging.entity.ScrapedOffer;
 import com.comprasco.bakeprofit.staging.repository.ScrapedOfferRepository;
 import com.comprasco.bakeprofit.staging.resolver.OfferProductResolver;
 import com.comprasco.bakeprofit.staging.resolver.OfferScreening;
-import com.comprasco.bakeprofit.staging.service.OfferIngestionService;
 import com.comprasco.bakeprofit.staging.service.OfferIngestionService.Outcome;
 import com.comprasco.bakeprofit.staging.service.OfferIngestionService.Result;
 
