@@ -58,6 +58,14 @@
 /* ============================================================
    FILTRO DE CATEGORÍAS (chips dinámicos)
    ============================================================ */
+.category-filter {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 28px;
+}
+
 .category-filter__chip--active {
     background-color: var(--color-primary);
     color: #FFFFFF !important;
@@ -233,6 +241,28 @@
 }
 
 /* ============================================================
+   FILTROS DE TIENDA Y PRECIO (HU-06b)
+   ============================================================ */
+.search-refine {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 32px 0 20px;
+    padding: 20px 24px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    scroll-margin-top: 96px;
+}
+
+.search-count {
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
    RESULTADOS — grilla de productos
    ============================================================ */
 .search-results {
@@ -296,6 +326,28 @@
     color: var(--text-muted);
 }
 
+.search-state__action {
+    margin-top: 16px;
+    background: transparent;
+    border: 1.5px solid var(--border-color);
+    padding: 8px 20px;
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.search-state__action:hover {
+    border-color: var(--color-dark);
+}
+
+.search-state__action:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
 .search-state__title {
     font-family: var(--font-display);
     font-size: 1.2rem;
@@ -317,6 +369,10 @@
 }
 
 @media (max-width: 480px) {
+    .search-refine {
+        padding: 16px;
+    }
+
 
     .search-results,
     .sector-grid {

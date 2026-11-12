@@ -22,7 +22,12 @@ import com.comprasco.bakeprofit.exception.FollowAlreadyExistsException;
 import com.comprasco.bakeprofit.exception.FollowNotAllowedException;
 import com.comprasco.bakeprofit.exception.FollowNotFoundException;
 import com.comprasco.bakeprofit.exception.NotificationNotFoundException;
+import com.comprasco.bakeprofit.exception.InvalidProductIdentityException;
+import com.comprasco.bakeprofit.exception.InvalidSearchFilterException;
+import com.comprasco.bakeprofit.exception.ProductAlreadyExistsException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -32,6 +37,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -103,6 +110,30 @@ public class GlobalExceptionHandler {
         }
 
         /**
+         * Maneja datos de identidad de producto incoherentes entre si: contenido
+         * neto sin unidad base (o al reves) o referencia del fabricante sin marca.
+         *
+         * @param ex      excepcion de identidad de producto invalida
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 400 Bad Request
+         */
+        @ExceptionHandler(InvalidProductIdentityException.class)
+        public ResponseEntity<ErrorResponse> handleInvalidProductIdentity(
+                        InvalidProductIdentityException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_REQUEST.value())
+                                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        /**
          * Maneja credenciales de acceso invalidas durante la autenticacion.
          *
          * @param ex      excepcion de credenciales invalidas
@@ -113,7 +144,6 @@ public class GlobalExceptionHandler {
         public ResponseEntity<ErrorResponse> handleInvalidCredentials(
                         InvalidCredentialsException ex,
                         HttpServletRequest request) {
-
                 ErrorResponse error = ErrorResponse.builder()
                                 .timestamp(LocalDateTime.now())
                                 .status(HttpStatus.UNAUTHORIZED.value())
@@ -252,6 +282,30 @@ public class GlobalExceptionHandler {
         }
 
         /**
+         * Maneja el intento de registrar un producto repetido: mismo EAN o misma
+         * marca y referencia del fabricante.
+         *
+         * @param ex      excepcion de producto duplicado
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 409 Conflict
+         */
+        @ExceptionHandler(ProductAlreadyExistsException.class)
+        public ResponseEntity<ErrorResponse> handleProductAlreadyExists(
+                        ProductAlreadyExistsException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.CONFLICT.value())
+                                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+        }
+
+        /**
          * Maneja operaciones sobre entidades asociadas a una categoria padre inactiva.
          *
          * @param ex      excepcion de padre inactivo
@@ -350,6 +404,30 @@ public class GlobalExceptionHandler {
         }
 
         /**
+         * Maneja un filtro invalido de la busqueda de productos (HU-06b): precio
+         * negativo o minimo mayor que maximo.
+         *
+         * @param ex      excepcion de filtro de busqueda invalido
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 400 Bad Request
+         */
+        @ExceptionHandler(InvalidSearchFilterException.class)
+        public ResponseEntity<ErrorResponse> handleInvalidSearchFilter(
+                        InvalidSearchFilterException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_REQUEST.value())
+                                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        /**
          * Maneja peticiones mal formadas: JSON ilegible, parametro de tipo
          * incorrecto o parametro obligatorio ausente.
          *
@@ -403,6 +481,7 @@ public class GlobalExceptionHandler {
         /**
          * Maneja las peticiones a rutas que no existen (recursos estaticos o endpoints
          * inexistentes).
+         * 
          * @param ex      excepcion lanzada al no encontrar el recurso
          * @param request peticion HTTP actual
          * @return respuesta HTTP 404 Not Found
@@ -421,5 +500,22 @@ public class GlobalExceptionHandler {
                                 .build();
 
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        }
+
+        /**
+         * Intercepta la denegación de acceso producida por @PreAuthorize de Spring
+         * Security.
+         * Retorna HTTP 403 Forbidden en lugar de permitir que se transforme en un error
+         * 500.
+         */
+        @ExceptionHandler({ AccessDeniedException.class, AuthorizationDeniedException.class })
+        public ResponseEntity<Map<String, Object>> handleAccessDeniedException(Exception ex) {
+                Map<String, Object> body = new HashMap<>();
+                body.put("timestamp", LocalDateTime.now());
+                body.put("status", HttpStatus.FORBIDDEN.value());
+                body.put("error", "Forbidden");
+                body.put("message", "Acceso denegado: Se requieren permisos de administrador.");
+
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
         }
 }

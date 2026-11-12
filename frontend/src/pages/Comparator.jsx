@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import styles from './comparator.module.css';
-import ProductRating from '../components/ProductRating';
-import ReviewsSection from '../components/ReviewsSection';
-import StoreReviewBar from '../components/StoreReviewBar';
-import FollowButton from '../components/FollowButton';
-
-const API_BASE = 'http://localhost:8080';
+import styles from '@/pages/Comparator.module.css';
+import ProductRating from '@/components/reviews/ProductRating';
+import ReviewsSection from '@/components/reviews/ReviewsSection/ReviewsSection';
+import StoreReviewBar from '@/components/reviews/StoreReviewBar/StoreReviewBar';
+import FollowButton from '@/components/follows/FollowButton/FollowButton';
+import { compareByProduct } from '@/api/prices';
 
 // Icono de enlace (cadena)
 function LinkIcon() {
@@ -19,7 +18,7 @@ function LinkIcon() {
     );
 }
 
-// Tarjeta de precio: imagen | datos | botón de enlace
+// Tarjeta de precio: imagen | datos | botón de enlace (solo si hay página)
 function PriceCard({ item, isBest, productId, onShowReviews, onReviewsChanged }) {    // Si la imagen no carga (o no existe) se muestra el espacio con un marcador
     const [imageFailed, setImageFailed] = useState(false);
     const showImage = item.imageUrl && !imageFailed;
@@ -51,8 +50,9 @@ function PriceCard({ item, isBest, productId, onShowReviews, onReviewsChanged })
                 <p className={styles['price-card__value']}>
                     ${Number(item.value).toLocaleString('es-CO')}
                 </p>
+                {/* RF10, DP-32: la última vez que la tienda confirmó este precio, no cuándo empezó */}
                 <p className={styles['price-card__date']}>
-                    Actualizado: {new Date(item.registrationDate).toLocaleDateString('es-CO')}
+                    Confirmado el {new Date(item.lastSeenAt).toLocaleDateString('es-CO')}
                 </p>
                 <StoreReviewBar
                     productId={productId}
@@ -64,7 +64,8 @@ function PriceCard({ item, isBest, productId, onShowReviews, onReviewsChanged })
                 />
             </div>
 
-            {item.productUrl ? (
+            {/* RF57: un precio sin página registrada se muestra sin enlace (ni un ícono deshabilitado) */}
+            {item.productUrl && (
                 <a
                     className={styles['price-card__link']}
                     href={item.productUrl}
@@ -75,14 +76,6 @@ function PriceCard({ item, isBest, productId, onShowReviews, onReviewsChanged })
                 >
                     <LinkIcon />
                 </a>
-            ) : (
-                <span
-                    className={`${styles['price-card__link']} ${styles['price-card__link--disabled']}`}
-                    title="Enlace no disponible"
-                    aria-hidden="true"
-                >
-                    <LinkIcon />
-                </span>
             )}
         </div>
     );
@@ -106,9 +99,7 @@ export default function Comparator() {
 
         const fetchPrices = async () => {
             try {
-                const res = await fetch(`${API_BASE}/api/prices/compare?productId=${productId}`);
-                if (!res.ok) throw new Error('Error al consultar precios');
-                const data = await res.json();
+                const data = await compareByProduct(productId);
                 if (data.length === 0) { setStatus('empty'); return; }
                 setProductName(data[0].productName);
                 setPrices(data);
@@ -136,7 +127,6 @@ export default function Comparator() {
 
             <div className={styles.comparador__header}>
                 <h1 className={styles.comparador__title}>{productName}</h1>
-                {status === 'success' && <ProductRating productId={productId} refreshKey={reviewsVersion} />}
                 {status === 'success' && <ProductRating productId={productId} refreshKey={reviewsVersion} />}
                 {status === 'success' && <FollowButton productId={productId} productName={productName} />}
                 <p className={styles.comparador__subtitle}>

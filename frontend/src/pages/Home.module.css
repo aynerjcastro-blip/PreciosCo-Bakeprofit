@@ -149,15 +149,16 @@
    Antes: #AboutUs
    ============================================================ */
 .about {
-    background: var(--color-dark);
-    color: var(--bg-surface);
+    background: var(--bg-surface);
+    color: var(--text-primary);
     padding: 80px 24px;
     margin: 80px 0;
     text-align: center;
+
 }
 
 .about__title {
-    color: #FFF;
+    color: var(--text-primary);
     font-size: 2.2rem;
     margin-bottom: 30px;
 }
@@ -165,13 +166,24 @@
 .about__image {
     margin: 0 auto 30px;
     max-width: 280px;
+    filter: drop-shadow(0 0 20px rgba(0, 0, 0, 0.1));
+}
+
+/* En modo oscuro, ajustamos la sombra de la imagen para que brille */
+:root[data-theme="dark"] .about__image {
     filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.1));
+}
+
+@media (prefers-color-scheme: dark) {
+    .about__image {
+        filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.1));
+    }
 }
 
 .about__eslogan {
     max-width: 700px;
     margin: 0 auto 16px;
-    color: var(--color-dark-muted);
+    color: var(--text-muted);
     font-size: 1.1rem;
 }
 
@@ -312,4 +324,20 @@
 .testimonials__button:hover {
     background: var(--color-dark);
     color: var(--bg-surface);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    html:has(#sobre-nosotros) {
+        /* Habilita el scroll snap vertical */
+        scroll-snap-type: y mandatory;
+    }
+}
+
+.about,
+.how-it-works,
+.testimonials {
+    /* Centra el elemento en el contenedor de scroll */
+    scroll-snap-align: start;
+    /* Obliga a detenerse en este elemento */
+    scroll-snap-stop: always;
 }

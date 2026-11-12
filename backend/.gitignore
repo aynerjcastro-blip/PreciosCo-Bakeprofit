@@ -35,5 +35,6 @@ build/
 ### Logs fxm y yml ###
 logback.xml
 application-local.properties
+repomix-output.xml
 
 

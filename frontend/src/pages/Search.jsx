@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styles from './Search.module.css';
 import {
     CartIcon,
@@ -6,8 +6,13 @@ import {
     FaceIcon,
     GearIcon,
     SearchIcon,
-} from '../components/Sectoricons.jsx';
+} from '../components/ui/icons/Sectoricons.jsx';
 import { Link, useSearchParams } from 'react-router-dom';
+import { searchProducts } from '../api/products';
+import { findActiveStores } from '../api/stores';
+import StoreFilter from '../components/search/StoreFilter/StoreFilter.jsx';
+import PriceRangeFilter from '../components/search/PriceRangeFilter/PriceRangeFilter.jsx';
+import SearchPagination from '../components/search/SearchPagination/SearchPagination.jsx';
 
 const API_BASE = 'http://localhost:8080/api';
 
@@ -74,6 +79,30 @@ const SECTORS = [
 
 const SAVED_KEY = 'searchState';
 
+// Filtros de HU-06b en la URL: se pueden compartir y sobreviven a Atrás y Adelante.
+// La tienda se repite para varias (?tienda=1&tienda=3); la página empieza en 1 para el usuario.
+const PARAM_STORE = 'tienda';
+const PARAM_MIN_PRICE = 'min';
+const PARAM_MAX_PRICE = 'max';
+const PARAM_PAGE = 'pagina';
+const PAGE_SIZE = 20;
+const STORE_SEPARATOR = ',';
+
+/** Página de la URL; cualquier valor que no sea un entero desde 1 es la primera. */
+function parsePage(value) {
+    const page = Number.parseInt(value, 10);
+    return Number.isInteger(page) && page >= 1 ? page : 1;
+}
+
+/** Pone el parámetro, o lo quita si el valor está vacío. */
+function setOrDelete(params, key, value) {
+    if (value) {
+        params.set(key, value);
+    } else {
+        params.delete(key);
+    }
+}
+
 /**
  * Recupera el estado de busqueda anterior de la sesion del navegador.
  * Por que: Mejora la experiencia del usuario al mantener sus filtros 
@@ -97,6 +126,13 @@ export default function Search() {
     const urlQuery = searchParams.get('q');
     const urlSector = searchParams.get('sector');
 
+    // Filtros de tienda, precio y página: la URL es su única fuente de verdad (sin estado local)
+    const selectedStoreIds = searchParams.getAll(PARAM_STORE);
+    const storeKey = selectedStoreIds.join(STORE_SEPARATOR);
+    const minPrice = searchParams.get(PARAM_MIN_PRICE) ?? '';
+    const maxPrice = searchParams.get(PARAM_MAX_PRICE) ?? '';
+    const pageNumber = parsePage(searchParams.get(PARAM_PAGE));
+
     // 2. ESTADOS LOCALES
     // Inicializacion inteligente: La prioridad es 1. URL, 2. Sesion guardada, 3. Valor por defecto.
     // Por que: Garantiza que un link externo siempre sobreescriba una busqueda vieja guardada.
@@ -107,8 +143,15 @@ export default function Search() {
     const [selectedCategoryId, setSelectedCategoryId] = useState(saved.selectedCategoryId ?? null);
     const [showAll, setShowAll] = useState(saved.showAll ?? false);
 
+    const [stores, setStores] = useState([]);
+    // Al cambiar de pagina se vuelve al inicio de los filtros, no al inicio de la pagina
+    const refineRef = useRef(null);
+
     const [fetchedProducts, setFetchedProducts] = useState([]);
-    // 'idle' = inactivo, 'loading' = cargando, 'empty' = vacio, 'error' = fallo de red, 'success' = exito
+    const [pageInfo, setPageInfo] = useState({ totalElements: 0, totalPages: 0 });
+    // 'idle' = inactivo, 'loading' = cargando, 'empty' = vacio, 'error' = fallo de red, 'success' = exito,
+    // 'stores-unavailable' = una tienda de la URL ya no existe o se desactivo (404),
+    // 'invalid-filters' = el backend rechazo el rango de precio (400)
     const [fetchStatus, setFetchStatus] = useState('idle');
 
     // =========================================================================
@@ -131,18 +174,35 @@ export default function Search() {
     }
 
     /**
+     * Cambia los filtros de la URL y vuelve a la primera pagina: con otros filtros,
+     * la pagina en la que estaba el usuario ya no corresponde a los mismos resultados.
+     */
+    function changeFilters(mutate) {
+        setSearchParams((current) => {
+            const next = new URLSearchParams(current);
+            mutate(next);
+            next.delete(PARAM_PAGE);
+            return next;
+        });
+    }
+
+    /** Vuelve a la primera pagina cuando cambia un filtro que no vive en la URL (texto, categoria, sector). */
+    function backToFirstPage() {
+        if (searchParams.has(PARAM_PAGE)) changeFilters(() => {});
+    }
+
+    /**
      * Maneja el cambio de texto en el input de busqueda.
-     * Por que: Actualiza el estado local inmediatamente, pero limpia la URL. 
-     * Si no limpiaramos la URL, el historial del navegador se ensuciaria, 
-     * y el estado local chocaria con el parametro estatico '?q=' anterior.
+     * Por que: Actualiza el estado local inmediatamente, pero quita '?q=' de la URL.
+     * Si no lo quitaramos, el estado local chocaria con el parametro estatico anterior.
+     * Solo se quitan 'q' y la pagina: los filtros de tienda y precio se conservan.
      */
     const handleSearchChange = (e) => {
         const newValue = e.target.value;
         setSearchTerm(newValue);
 
-        if (urlQuery) {
-            // Limpia la barra de direcciones reemplazandola por la ruta base
-            setSearchParams(new URLSearchParams());
+        if (urlQuery || searchParams.has(PARAM_PAGE)) {
+            changeFilters((next) => next.delete('q'));
         }
     };
 
@@ -153,7 +213,8 @@ export default function Search() {
     // para evitar problemas de sincronizacion ("React anti-pattern: derived state").
     const selectedSector = SECTORS.find((s) => s.id === selectedSectorId) || null;
     const hasTerm = searchTerm.trim() !== '';
-    const hasFilter = selectedCategoryId !== null || selectedSectorId !== null || showAll;
+    const hasPriceFilter = storeKey !== '' || minPrice !== '' || maxPrice !== '';
+    const hasFilter = selectedCategoryId !== null || selectedSectorId !== null || showAll || hasPriceFilter;
 
     // isIdle: Evita hacer peticiones a la API cuando el usuario no ha pedido nada.
     const isIdle = !hasTerm && !hasFilter;
@@ -195,6 +256,18 @@ export default function Search() {
     }, []);
 
     // =========================================================================
+    // CARGA INICIAL: TIENDAS ACTIVAS (selector de HU-06b)
+    // =========================================================================
+    useEffect(() => {
+        findActiveStores()
+            .then(setStores)
+            .catch((error) => {
+                // Igual que las categorias: sin tiendas la busqueda sigue funcionando
+                console.error(error);
+            });
+    }, []);
+
+    // =========================================================================
     // MOTOR DE BUSQUEDA (DEBOUNCE + ABORT CONTROLLER)
     // =========================================================================
     useEffect(() => {
@@ -208,24 +281,37 @@ export default function Search() {
 
         const fetchProducts = async () => {
             setFetchStatus('loading');
-            const params = new URLSearchParams();
-
-            if (hasTerm) params.set('name', searchTerm.trim());
-            if (selectedCategoryId !== null) params.set('idCategory', selectedCategoryId);
+            // Se reconstruye desde storeKey: un arreglo nuevo en cada render dispararia el efecto sin fin
+            const storeIds = storeKey ? storeKey.split(STORE_SEPARATOR) : [];
 
             try {
-                const response = await fetch(`${API_BASE}/products/search?${params.toString()}`, {
-                    signal: controller.signal,
+                const result = await searchProducts(
+                    {
+                        name: hasTerm ? searchTerm.trim() : undefined,
+                        categoryId: selectedCategoryId,
+                        storeIds,
+                        minPrice,
+                        maxPrice,
+                        page: pageNumber - 1,
+                        size: PAGE_SIZE,
+                    },
+                    { signal: controller.signal },
+                );
+                setFetchedProducts(result.content);
+                setPageInfo({
+                    totalElements: result.page.totalElements,
+                    totalPages: result.page.totalPages,
                 });
-                if (!response.ok) throw new Error('Error en la peticion');
-
-                const data = await response.json();
-                setFetchedProducts(data);
-                setFetchStatus(data.length === 0 ? 'empty' : 'success');
+                setFetchStatus(result.content.length === 0 ? 'empty' : 'success');
             } catch (error) {
                 // Se ignora el AbortError porque es el comportamiento esperado al seguir escribiendo
-                if (error.name !== 'AbortError') {
-                    console.error(error);
+                if (error.name === 'AbortError') return;
+                console.error(error);
+                if (error.status === 404 && storeIds.length > 0) {
+                    setFetchStatus('stores-unavailable');
+                } else if (error.status === 400) {
+                    setFetchStatus('invalid-filters');
+                } else {
                     setFetchStatus('error');
                 }
             }
@@ -241,7 +327,7 @@ export default function Search() {
             clearTimeout(debounceTimer);
             controller.abort();
         };
-    }, [isIdle, isSoon, hasTerm, searchTerm, selectedCategoryId]);
+    }, [isIdle, isSoon, hasTerm, searchTerm, selectedCategoryId, storeKey, minPrice, maxPrice, pageNumber]);
 
     // =========================================================================
     // MANEJADORES DE UI
@@ -250,11 +336,50 @@ export default function Search() {
         setSelectedCategoryId(null);
         setSelectedSectorId(null);
         setShowAll(true);
+        backToFirstPage();
     }
 
     function toggleSector(id) {
         setShowAll(false);
         setSelectedSectorId((current) => (current === id ? null : id));
+        backToFirstPage();
+    }
+
+    function toggleCategory(id) {
+        setShowAll(false);
+        setSelectedCategoryId(selectedCategoryId === id ? null : id);
+        backToFirstPage();
+    }
+
+    function toggleStore(id) {
+        changeFilters((next) => {
+            const current = next.getAll(PARAM_STORE);
+            const updated = current.includes(id)
+                ? current.filter((storeId) => storeId !== id)
+                : [...current, id];
+            next.delete(PARAM_STORE);
+            updated.forEach((storeId) => next.append(PARAM_STORE, storeId));
+        });
+    }
+
+    function clearStores() {
+        changeFilters((next) => next.delete(PARAM_STORE));
+    }
+
+    function applyPriceRange(min, max) {
+        changeFilters((next) => {
+            setOrDelete(next, PARAM_MIN_PRICE, min);
+            setOrDelete(next, PARAM_MAX_PRICE, max);
+        });
+    }
+
+    function goToPage(page) {
+        setSearchParams((current) => {
+            const next = new URLSearchParams(current);
+            setOrDelete(next, PARAM_PAGE, page > 1 ? String(page) : '');
+            return next;
+        });
+        refineRef.current?.scrollIntoView({ block: 'start' });
     }
 
     const noFilters = selectedCategoryId === null && selectedSectorId === null;
@@ -264,7 +389,7 @@ export default function Search() {
             <div className={styles['search-page__container']}>
                 <h1 className={styles['search-page__title']}>Busca tu producto</h1>
                 <p className={styles['search-page__subtitle']}>
-                    Escribe un nombre o filtra por categoria
+                    Escribe un nombre o filtra por categoría, tienda o precio
                 </p>
 
                 {/* BARRA DE BUSQUEDA */}
@@ -294,10 +419,7 @@ export default function Search() {
                         <button
                             key={cat.id}
                             className={`${styles['category-filter__chip']} ${selectedCategoryId === cat.id ? styles['category-filter__chip--active'] : ''}`}
-                            onClick={() => {
-                                setShowAll(false);
-                                setSelectedCategoryId(selectedCategoryId === cat.id ? null : cat.id);
-                            }}
+                            onClick={() => toggleCategory(cat.id)}
                         >
                             {cat.name}
                         </button>
@@ -357,6 +479,27 @@ export default function Search() {
                     })}
                 </div>
 
+                {/* FILTROS DE TIENDA Y PRECIO (HU-06b): se resuelven en el backend */}
+                <section
+                    ref={refineRef}
+                    className={styles['search-refine']}
+                    aria-label="Filtrar por tienda y precio"
+                >
+                    <StoreFilter
+                        stores={stores}
+                        selectedIds={selectedStoreIds}
+                        onToggle={toggleStore}
+                        onClear={clearStores}
+                    />
+                    <PriceRangeFilter min={minPrice} max={maxPrice} onApply={applyPriceRange} />
+                </section>
+
+                {status === 'success' && (
+                    <p className={styles['search-count']}>
+                        {pageInfo.totalElements === 1 ? '1 producto' : `${pageInfo.totalElements} productos`}
+                    </p>
+                )}
+
                 {/* RENDERIZADO DE RESULTADOS */}
                 {/* aria-live="polite" notifica a lectores de pantalla los cambios sin interrumpir */}
                 <div className={styles['search-results']} aria-live="polite">
@@ -372,21 +515,55 @@ export default function Search() {
                             <p className={styles['search-state__title']}>
                                 {selectedSector.label} llega pronto
                             </p>
-                            <p>Todavia no tenemos precios de este sector. Mientras tanto, prueba con Supermercados.</p>
+                            <p>Todavía no tenemos precios de este sector. Mientras tanto, prueba con Supermercados.</p>
                         </div>
                     )}
 
-                    {status === 'empty' && (
+                    {status === 'empty' && pageNumber > 1 && (
+                        <div className={styles['search-state']}>
+                            <p className={styles['search-state__title']}>Esta página ya no tiene resultados</p>
+                            <p>Los resultados cambiaron desde que se abrió este enlace.</p>
+                            <button type="button" className={styles['search-state__action']} onClick={() => goToPage(1)}>
+                                Ir a la primera página
+                            </button>
+                        </div>
+                    )}
+
+                    {status === 'empty' && pageNumber <= 1 && (
                         <div className={styles['search-state']}>
                             <p className={styles['search-state__title']}>Sin resultados</p>
-                            <p>No encontramos productos con esos filtros. Prueba con otro nombre o categoria.</p>
+                            <p>No encontramos productos con esos filtros. Prueba con otro nombre, categoría, tienda o precio.</p>
+                        </div>
+                    )}
+
+                    {status === 'stores-unavailable' && (
+                        <div className={styles['search-state']}>
+                            <p className={styles['search-state__title']}>Una de las tiendas ya no está disponible</p>
+                            <p>Quita el filtro de tienda para ver los resultados de las demás.</p>
+                            <button type="button" className={styles['search-state__action']} onClick={clearStores}>
+                                Quitar filtro de tienda
+                            </button>
+                        </div>
+                    )}
+
+                    {status === 'invalid-filters' && (
+                        <div className={styles['search-state']}>
+                            <p className={styles['search-state__title']}>Revisa el rango de precio</p>
+                            <p>El mínimo no puede ser mayor que el máximo, y ninguno puede ser negativo.</p>
+                            <button
+                                type="button"
+                                className={styles['search-state__action']}
+                                onClick={() => applyPriceRange('', '')}
+                            >
+                                Quitar precio
+                            </button>
                         </div>
                     )}
 
                     {status === 'error' && (
                         <div className={styles['search-state']}>
-                            <p className={styles['search-state__title']}>Algo salio mal</p>
-                            <p>No pudimos conectar con el servidor. Verifica tu conexion.</p>
+                            <p className={styles['search-state__title']}>Algo salió mal</p>
+                            <p>No pudimos conectar con el servidor. Verifica tu conexión.</p>
                         </div>
                     )}
 
@@ -402,6 +579,10 @@ export default function Search() {
                         </Link>
                     ))}
                 </div>
+
+                {status === 'success' && (
+                    <SearchPagination page={pageNumber} totalPages={pageInfo.totalPages} onChange={goToPage} />
+                )}
             </div>
         </main>
     );

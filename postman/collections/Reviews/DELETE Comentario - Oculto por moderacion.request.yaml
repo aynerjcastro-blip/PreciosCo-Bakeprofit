@@ -1,0 +1,23 @@
+$kind: http-request
+name: DELETE Comentario - Oculto por moderacion
+description: "SCRUM-151. Precondición (solo en la base de pruebas, nunca en la compartida): una opinión del usuario del token con su comentario en estado OCULTO, por ejemplo UPDATE comments SET status = 'OCULTO' WHERE rating_id = {{reviewIdOculto}}. Esperado: 409 y el comentario sigue OCULTO."
+url: http://localhost:8080/api/reviews/{{reviewIdOculto}}/comment
+method: DELETE
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code es 409\", function () {\r
+
+      \    pm.response.to.have.status(409);\r
+
+      });\r
+
+      pm.test(\"El mensaje explica que el comentario está oculto\", function () {\r
+
+      \    pm.expect(pm.response.json().message).to.include(\"ocultó\");\r
+
+      });"
+    language: text/javascript
+order: 1000

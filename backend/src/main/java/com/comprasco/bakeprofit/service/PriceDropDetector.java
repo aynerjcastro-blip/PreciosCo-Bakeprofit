@@ -11,9 +11,11 @@ import com.comprasco.bakeprofit.repository.FollowRepository;
  * Tarea programada que revisa las bajas de precio de los productos seguidos.
  *
  * <p>
- * El scraper inserta directo en la BD desde Python, así que no hay un punto del
- * código Java donde enganchar el aviso: el detector lee la tabla {@code prices}
- * cada cierto tiempo. La frecuencia sale de {@code app.notifications.check-interval}
+ * El aviso inmediato lo da {@link PriceDropListener} cada vez que el procesador de
+ * staging registra un precio nuevo. Esta pasada queda como respaldo: encuentra las bajas
+ * cuyo evento se perdió (la aplicación se detuvo entre el commit y la publicación) y no
+ * duplica avisos, porque {@code detectForFollow} nunca repite uno. Lee la tabla
+ * {@code prices} cada cierto tiempo. La frecuencia sale de {@code app.notifications.check-interval}
  * (duración ISO-8601, {@code PT24H} por defecto). Cada seguimiento se procesa en su
  * propia transacción y un fallo en uno no detiene a los demás.
  * </p>

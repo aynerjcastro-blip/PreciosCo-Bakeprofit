@@ -1,0 +1,50 @@
+/* ============================================================
+   FILTRO DE TIENDAS (HU-06b) — mismos chips que las categorías
+   ============================================================ */
+.store-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+}
+
+.store-filter__label {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    min-width: 64px;
+}
+
+.store-filter__options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.store-filter__chip {
+    background: var(--bg-surface);
+    border: 1.5px solid var(--border-color);
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    font-family: var(--font-body);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.store-filter__chip:hover {
+    border-color: var(--color-dark);
+}
+
+.store-filter__chip:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+.store-filter__chip--active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--text-alternative);
+}

@@ -41,10 +41,10 @@ Objetivos del negocio asociados (ver el documento de Análisis y especificación
 - Registro, inicio de sesión (con correo y contraseña o con una cuenta de Google), cierre de sesión y recuperación de contraseña.
 - Perfil básico del usuario.
 - Búsqueda por nombre, marca o categoría.
-- Filtros por precio, tienda, marca y categoría.
+- Filtros por precio, tienda, marca y categoría, con resultados por páginas.
 - Comparación de precios entre establecimientos.
 - Ordenamiento de resultados del menor al mayor precio.
-- Visualización de la fecha de actualización del precio.
+- Visualización de la fecha en que la tienda confirmó el precio por última vez.
 - Enlace a la página del producto en la tienda, junto a cada precio.
 - Diseño adaptable para computador, tableta y celular.
 
@@ -190,6 +190,7 @@ Inicialmente, el sistema no incluye compras, pagos, domicilios, aplicación móv
 | ORM | Spring Data JPA + Hibernate | Mapea las entidades (Usuario, Producto, Tienda, Categoría, Precio) a la base de datos sin escribir SQL manual |
 | Base de datos | PostgreSQL en Supabase | Motor relacional gestionado; requisito del profesor de usar BD en la nube |
 | Autenticación | Spring Security + JWT | Cubre registro, inicio de sesión, cierre de sesión y recuperación de contraseña del alcance |
+| Búsqueda sin tildes | Extensión `unaccent` de PostgreSQL | La búsqueda por nombre no distingue tildes ni mayúsculas ("cafe" encuentra "Café") y se resuelve en SQL, para poder paginar |
 | Documentación de API | Swagger / OpenAPI (springdoc-openapi) | Genera documentación interactiva automática de los endpoints |
 | Pruebas manuales de API | Postman | Probar endpoints (GET/POST/PUT/DELETE) antes de tener el frontend listo |
 | Inicio de sesión con Google | Spring Security OAuth2 Client | Valida la cuenta de Google y, tras validarla, el backend emite su propio JWT como en el inicio de sesión normal |
@@ -210,9 +211,16 @@ Inicialmente, el sistema no incluye compras, pagos, domicilios, aplicación móv
 | Envío de notificaciones | Spring Boot Starter Mail (JavaMailSender) | Avisos por correo electrónico cuando baja el precio de un producto seguido |
 | Tareas periódicas | Spring @Scheduled | Revisa periódicamente cambios de precio para disparar alertas |
 
-### 4. Fase 3 — Nuevos comparadores (droguerías, cuidado facial)
+### 4. Fase 3 — Nuevos comparadores (droguerías, cuidado facial y repuestos)
 
-No se agrega tecnología nueva: se extiende el modelo de datos (categorías raíz Droguería, Cuidado facial y Repuestos) reutilizando la misma base Spring Boot + PostgreSQL, y se agregan scrapers para las nuevas fuentes de precios.
+Se extiende el modelo de datos (categorías raíz Droguería, Cuidado facial y Repuestos; marca, EAN y contenido neto del producto) reutilizando la misma base Spring Boot + PostgreSQL.
+
+| Componente | Tecnología | Por qué / rol en el proyecto |
+| --- | --- | --- |
+| Carga de precios | Python + requests contra la API pública de catálogo VTEX | Reemplaza a Selenium: D1, Éxito, Jumbo y Olímpica usan VTEX y entregan nombre, marca, EAN, URL, imagen y precio en campos separados |
+| Tabla de staging | `scraped_offers` en PostgreSQL | El scraper solo escribe datos crudos; el backend los procesa |
+| Procesamiento | Spring @Scheduled | Empareja por EAN, crea productos, registra precios por periodos (un precio que no cambió solo actualiza su fecha de confirmación) y dispara la detección de bajas |
+| Ejecución programada | GitHub Actions | Corre el scraper una vez al día, sin instalar un navegador |
 
 ### 5. Fase 4 — Inteligencia artificial especializada
 
@@ -249,3 +257,5 @@ DBeaver o pgAdmin para inspeccionar la base de datos; Docker, opcional, para emp
 | 16-oct-2026 | 8, 10 | Nota de moderación manual hasta la Fase 5; supuestos y restricciones del proyecto (RP) agregados | Resolver inconsistencias de fases y dejar explícitas las restricciones del proyecto |
 | 26-oct-2026 | 1, 2, 3, 4.A, 4.B, 4.C, 8, 9, Stack | Comparador de repuestos para vehículos y motos en la Fase 3; inicio de sesión con Google | Decisión del equipo |
 | 27-oct-2026 | 4.A | Enlace a la tienda junto a cada precio (RF57) | Funcionalidad ya implementada que no estaba documentada; las plataformas de los antecedentes también la ofrecen |
+| 04-nov-2026 | Stack (Fase 3) | Carga de precios con la API VTEX y tabla de staging procesada por el backend; marca, EAN y contenido neto en el modelo | Decisión del equipo en el Sprint 2 |
+| 09-nov-2026 | 4.A, Stack (Fase 1 y Fase 3) | Resultados de búsqueda por páginas; la fecha mostrada es la de la última confirmación del precio; búsqueda sin tildes en SQL; precios registrados por periodos | Decisiones del equipo en el Sprint 2 (HU-06b, DP-32 y HT-10) |
