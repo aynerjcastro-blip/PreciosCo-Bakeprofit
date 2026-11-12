@@ -1,0 +1,13 @@
+DEFINICIÓN DE TERMINADO (DoD) — PreciosCo
+
+Historia:
+1. Cumple todos sus criterios de aceptación.
+2. Cumple los criterios comunes: diseño adaptable (RNF01), errores en JSON con el código correcto (RNF08), Swagger, caso de éxito y de error en Postman, prueba de extremo a extremo y tokens del sistema de diseño.
+3. El PR lo revisó y aprobó alguien distinto al autor, y está en develop.
+4. La prueba de humo pasa: buscar, comparar, iniciar sesión y opinar siguen funcionando.
+5. Todo cambio de esquema está en un script SQL versionado y se avisó al equipo.
+6. Todas sus subtareas están en Finalizado y el enlace al PR está en la tarjeta.
+
+Tarea técnica: puntos 3 a 6, más sus criterios técnicos; Swagger y Postman solo si expone un endpoint; si implica una decisión, se registra en DECISIONS.md.
+
+Bug: el caso que reproducía el error ya no falla y hay una prueba que lo detecta si vuelve; más los puntos 3 y 6.
