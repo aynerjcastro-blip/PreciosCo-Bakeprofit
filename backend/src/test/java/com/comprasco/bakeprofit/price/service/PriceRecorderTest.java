@@ -21,7 +21,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.comprasco.bakeprofit.catalog.entity.Product;
 import com.comprasco.bakeprofit.price.entity.Price;
 import com.comprasco.bakeprofit.price.repository.PriceRepository;
-import com.comprasco.bakeprofit.price.service.PriceRecorder;
 import com.comprasco.bakeprofit.staging.StagingFixtures;
 import com.comprasco.bakeprofit.staging.entity.ScrapedOffer;
 

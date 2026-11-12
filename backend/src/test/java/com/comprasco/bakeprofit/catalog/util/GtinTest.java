@@ -8,10 +8,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import com.comprasco.bakeprofit.catalog.util.Gtin;
-import com.comprasco.bakeprofit.catalog.util.GtinKind;
-import com.comprasco.bakeprofit.catalog.util.GtinVerdict;
-
 class GtinTest {
 
     private static final String EAN_13 = "7702552000141";

@@ -16,7 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.comprasco.bakeprofit.catalog.entity.Brand;
 import com.comprasco.bakeprofit.catalog.repository.BrandRepository;
-import com.comprasco.bakeprofit.catalog.service.BrandService;
+
 
 /**
  * Orden y datos con los que BrandService usa el repositorio. Que dos peticiones

@@ -7,10 +7,8 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-
 import java.util.List;
 import java.util.Set;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,15 +19,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-
 import com.comprasco.bakeprofit.catalog.dto.ProductSearchCriteria;
 import com.comprasco.bakeprofit.catalog.entity.Product;
 import com.comprasco.bakeprofit.catalog.exception.CategoryNotFoundException;
 import com.comprasco.bakeprofit.catalog.repository.BrandRepository;
 import com.comprasco.bakeprofit.catalog.repository.ProductRepository;
-import com.comprasco.bakeprofit.catalog.service.BrandService;
-import com.comprasco.bakeprofit.catalog.service.CategoryService;
-import com.comprasco.bakeprofit.catalog.service.ProductService;
 import com.comprasco.bakeprofit.store.exception.StoreNotFoundException;
 import com.comprasco.bakeprofit.store.service.StoreService;
 

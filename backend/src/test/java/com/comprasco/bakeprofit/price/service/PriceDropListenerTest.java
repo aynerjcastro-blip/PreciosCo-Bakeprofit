@@ -15,7 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.comprasco.bakeprofit.follow.repository.FollowRepository;
 import com.comprasco.bakeprofit.notification.event.PriceRegisteredEvent;
 import com.comprasco.bakeprofit.notification.service.NotificationService;
-import com.comprasco.bakeprofit.price.service.PriceDropListener;
+
 
 @ExtendWith(MockitoExtension.class)
 class PriceDropListenerTest {

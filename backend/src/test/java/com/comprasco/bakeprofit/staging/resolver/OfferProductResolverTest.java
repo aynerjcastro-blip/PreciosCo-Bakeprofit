@@ -30,9 +30,7 @@ import com.comprasco.bakeprofit.catalog.repository.ProductRepository;
 import com.comprasco.bakeprofit.catalog.service.BrandService;
 import com.comprasco.bakeprofit.staging.StagingFixtures;
 import com.comprasco.bakeprofit.staging.entity.ScrapedOffer;
-import com.comprasco.bakeprofit.staging.resolver.OfferProductResolver;
-import com.comprasco.bakeprofit.staging.resolver.OfferScreening;
-import com.comprasco.bakeprofit.staging.resolver.SizeConflictCheck;
+
 
 @ExtendWith(MockitoExtension.class)
 class OfferProductResolverTest {

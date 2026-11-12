@@ -27,9 +27,7 @@ import com.comprasco.bakeprofit.catalog.entity.UnitBase;
 import com.comprasco.bakeprofit.staging.repository.PendingOfferSize;
 import com.comprasco.bakeprofit.staging.entity.ScrapedOffer;
 import com.comprasco.bakeprofit.staging.repository.ScrapedOfferRepository;
-import com.comprasco.bakeprofit.staging.resolver.OfferScreening;
-import com.comprasco.bakeprofit.staging.resolver.SizeConflictCheck;
-import com.comprasco.bakeprofit.staging.resolver.OfferScreening.Accepted;
+
 
 @ExtendWith(MockitoExtension.class)
 class SizeConflictCheckTest {

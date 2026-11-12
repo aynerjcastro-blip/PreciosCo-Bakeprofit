@@ -5,13 +5,10 @@ import static com.comprasco.bakeprofit.staging.StagingFixtures.SPARE_PARTS;
 import static com.comprasco.bakeprofit.staging.StagingFixtures.SUPERMARKET;
 import static com.comprasco.bakeprofit.staging.StagingFixtures.store;
 import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.List;
-
 import org.junit.jupiter.api.Test;
-
 import com.comprasco.bakeprofit.staging.StagingFixtures;
-import com.comprasco.bakeprofit.store.rule.StoreDomainPolicy;
+
 
 class StoreDomainPolicyTest {
 

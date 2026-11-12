@@ -9,21 +9,17 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.Optional;
-
 import org.hibernate.exception.ConstraintViolationException;
 import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataIntegrityViolationException;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import com.comprasco.bakeprofit.catalog.dto.ProductRequest;
 import com.comprasco.bakeprofit.catalog.dto.ProductResponse;
 import com.comprasco.bakeprofit.catalog.entity.Brand;
@@ -34,9 +30,6 @@ import com.comprasco.bakeprofit.catalog.exception.InvalidProductIdentityExceptio
 import com.comprasco.bakeprofit.catalog.exception.ProductAlreadyExistsException;
 import com.comprasco.bakeprofit.catalog.repository.BrandRepository;
 import com.comprasco.bakeprofit.catalog.repository.ProductRepository;
-import com.comprasco.bakeprofit.catalog.service.BrandService;
-import com.comprasco.bakeprofit.catalog.service.CategoryService;
-import com.comprasco.bakeprofit.catalog.service.ProductService;
 import com.comprasco.bakeprofit.store.service.StoreService;
 
 /**
