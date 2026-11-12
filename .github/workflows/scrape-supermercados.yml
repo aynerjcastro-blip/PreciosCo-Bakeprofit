@@ -7,12 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       tiendas:
-        description: "Tiendas a procesar, separadas por coma (exito, jumbo, olimpica, d1). Vacío = todas"
+        description: "Tiendas separadas por coma (d1, jumbo, olimpica, exito). Vacío = d1,jumbo,olimpica"
         required: false
-        default: "exito"
+        default: "d1,jumbo,olimpica"
 
 concurrency:
-  group: scraper-supermercados   # evita dos corridas a la vez (duplicarían filas en scraped_offers)
+  group: scraper-supermercados
   cancel-in-progress: false
 
 jobs:
@@ -44,5 +44,5 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_SSLMODE: require
-          SOLO_TIENDAS: ${{ github.event.inputs.tiendas }}
+          SOLO_TIENDAS: ${{ github.event.inputs.tiendas || 'd1,jumbo,olimpica' }}
         run: python scraper_supermercados.py

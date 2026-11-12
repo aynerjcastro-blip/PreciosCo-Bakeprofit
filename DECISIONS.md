@@ -25,7 +25,7 @@ Registro de decisiones de equipo: desviaciones deliberadas del MVP y acuerdos to
 
 ## Fase 3 — Carga de precios y comparadores (Sprint 2)
 
-
+- **Éxito en pausa (11-nov-2026)**: la API de Éxito (`www.exito.com/io`) responde HTTP 403 con la verificación de Cloudflare ("Just a moment...") desde GitHub Actions y desde el equipo de desarrollo, ya en la primera petición de una corrida, así que no se atribuye al ritmo del scraper. Respondió bien en la primera corrida del día y se bloqueó horas después. D1, Jumbo y Olímpica responden bien. Decisión: Éxito queda fuera de las corridas programadas (`SOLO_TIENDAS` por defecto `d1,jumbo,olimpica`) y no se intenta esquivar la verificación (sin cabeceras de navegador, navegador automatizado ni proxies). Se reintenta una vez al día con `importprueba.py` y se reactiva cuando devuelva datos. Si el bloqueo persiste, se pide acceso o autorización por escrito a Éxito, como con Cruz Verde y Ánimus Lab. El scraper corta una tienda tras 3 respuestas 403/429 seguidas para no insistir.
 
 - **Scraper con la API VTEX**: D1, Éxito, Jumbo y Olímpica usan VTEX y exponen una API pública de catálogo en JSON (`/api/catalog_system/pub/products/search`; Éxito con el prefijo `/io/`; D1 en su dominio nuevo, `www.d1.com.co`). Reemplaza a Selenium: un solo cliente con la URL base de cada tienda, pausas entre peticiones y un User-Agent que identifica al proyecto. Riesgos aceptados: es una API pública sin acuerdo con las tiendas, y el precio puede depender de la región (se verifica contra la web con ubicación en Valledupar antes de confiar en él).
 
