@@ -3,10 +3,14 @@ import { Link } from 'react-router-dom';
 import { getNotifications, markNotificationRead } from '@/api/notifications';
 import { formatDateTime } from '@/utils/format-helper';
 import { formatPrice } from '@/utils/follow-helper';
+import { usePresence } from '@/hooks/usePresence';
 import styles from '@/components/follows/NotificationBell/NotificationBell.module.css';
 
 // Cada cuánto se consulta el contador de no leídos con la página abierta
 const POLL_INTERVAL_MS = 60_000;
+
+// Duración de la animación de salida del panel (debe coincidir con NotificationBell.module.css)
+const PANEL_EXIT_MS = 140;
 
 // Campana de avisos del Header (solo se monta con sesión y rol USER)
 function BellIcon() {
@@ -43,6 +47,9 @@ export default function NotificationBell() {
     const [markingId, setMarkingId] = useState(null);
     const [actionError, setActionError] = useState(null);
     const [announcement, setAnnouncement] = useState('');
+
+    // Mantiene el panel montado mientras se ve su animación de salida
+    const panel = usePresence(open, PANEL_EXIT_MS);
 
     const refresh = useCallback(async () => {
         if (stoppedRef.current) return;
@@ -173,8 +180,14 @@ export default function NotificationBell() {
             {/* Región viva: anuncia avisos nuevos a lectores de pantalla sin mover el foco */}
             <span className={styles['visually-hidden']} role="status" aria-live="polite">{announcement}</span>
 
-            {open && (
-                <div id={panelId} className={styles.bell__panel} role="region" aria-label="Avisos de baja de precio">
+            {panel.mounted && (
+                <div
+                    id={panelId}
+                    className={styles.bell__panel}
+                    role="region"
+                    aria-label="Avisos de baja de precio"
+                    data-state={panel.closing ? 'closing' : 'open'}
+                >
                     <div className={styles['bell__panel-head']}>
                         <h2 className={styles['bell__panel-title']}>Avisos</h2>
                         <span className={styles['bell__panel-count']}>

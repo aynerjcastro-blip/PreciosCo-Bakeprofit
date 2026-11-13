@@ -109,11 +109,11 @@ function Thumb({ src, alt }) {
     const [failed, setFailed] = useState(false);
 
     if (!src || failed) {
-        return <span className={styles['product-row__placeholder']} aria-hidden="true">🛒</span>;
+        return <span className={styles['product-card__placeholder']} aria-hidden="true">🛒</span>;
     }
     return (
         <img
-            className={styles['product-row__image']}
+            className={styles['product-card__image']}
             src={src}
             alt={alt}
             loading="lazy"
@@ -123,57 +123,182 @@ function Thumb({ src, alt }) {
     );
 }
 
-// Fila de resultado: foto | datos | precio desde | llamada a comparar
-function ProductRow({ product, index = 0 }) {
-    const hasPrice = product.minPrice != null;
-    const saving = savingOf(product);
+// Cuántas tiendas se ven de entrada; el resto se despliega con "Ver N tiendas más"
+const VISIBLE_OFFERS = 2;
+
+// Fecha corta de la última confirmación del precio (RF10); sin fecha válida no se muestra
+function formatShortDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+}
+
+function ExternalLinkIcon() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M15 3h6v6" />
+            <path d="M10 14 21 3" />
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+        </svg>
+    );
+}
+
+function ChevronIcon() {
+    return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m6 9 6 6 6-6" />
+        </svg>
+    );
+}
+
+/**
+ * Una tienda con su precio vigente. Si el producto está en varias tiendas, la más barata (o las
+ * empatadas en lo más barato) se resalta, y las demás muestran cuánto cuestan de más.
+ * El enlace a la tienda (RF57) solo existe si el scraper registró la página: nunca se muestra roto.
+ */
+function OfferRow({ offer, cheapestValue, compare, entering }) {
+    const value = Number(offer.value);
+    const isCheapest = compare && value === cheapestValue;
+    const extra = compare ? value - cheapestValue : 0;
+    const confirmedOn = offer.lastSeenAt ? formatShortDate(offer.lastSeenAt) : '';
 
     return (
-        <Link
-            to={`/comparador?productId=${product.id}`}
-            className={styles['product-row']}
-            // Retraso de la animación de entrada: cada fila entra un poco después de la anterior
+        <li className={[
+            styles.offer,
+            isCheapest ? styles['offer--best'] : '',
+            entering ? styles['offer--enter'] : '',
+        ].join(' ')}>
+            <span className={styles.offer__avatar} aria-hidden="true">
+                {offer.storeName.charAt(0).toUpperCase()}
+            </span>
+
+            <div className={styles.offer__store}>
+                <p className={styles.offer__name}>
+                    {offer.storeName}
+                    {isCheapest && <span className={styles.offer__chip}>Más barato</span>}
+                </p>
+                {confirmedOn && <p className={styles.offer__date}>Precio confirmado el {confirmedOn}</p>}
+            </div>
+
+            <div className={styles.offer__price}>
+                <span className={styles.offer__value}>{formatCop(value)}</span>
+                {extra > 0 && <span className={styles.offer__extra}>+{formatCop(extra)} más</span>}
+            </div>
+
+            {offer.productUrl ? (
+                <a
+                    className={styles.offer__link}
+                    href={offer.productUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Ir a ${offer.storeName} (se abre en una pestaña nueva)`}
+                >
+                    <ExternalLinkIcon />
+                </a>
+            ) : (
+                <span className={styles['offer__link-slot']} aria-hidden="true" />
+            )}
+        </li>
+    );
+}
+
+/**
+ * Tarjeta de resultado: foto y nombre arriba, y debajo una fila por tienda (las 2 más baratas;
+ * el resto se despliega). El título es el enlace principal al comparador y "Comparar precios"
+ * es un enlace aparte: no se anidan enlaces dentro de otro enlace.
+ */
+function ProductCard({ product, index = 0 }) {
+    const [expanded, setExpanded] = useState(false);
+
+    const offers = product.offers ?? [];
+    const hasPrice = offers.length > 0;
+    const compare = offers.length > 1;
+    const saving = savingOf(product);
+    const maxPrice = Number(product.maxPrice);
+    const savingPercent = maxPrice > 0 ? Math.round((saving / maxPrice) * 100) : 0;
+    const hiddenCount = offers.length - VISIBLE_OFFERS;
+    const visibleOffers = expanded ? offers : offers.slice(0, VISIBLE_OFFERS);
+    const listId = `offers-${product.id}`;
+
+    return (
+        <article
+            className={styles['product-card']}
+            // Retraso de la animación de entrada: cada tarjeta entra un poco después de la anterior
             style={{ '--row-index': Math.min(index, 8) }}
         >
-            <div className={styles['product-row__media']}>
-                <Thumb src={product.imageUrl} alt={product.name} />
-            </div>
+            <header className={styles['product-card__head']}>
+                <div className={styles['product-card__media']}>
+                    <Thumb src={product.imageUrl} alt="" />
+                </div>
 
-            <div className={styles['product-row__info']}>
-                <p className={styles['product-row__tags']}>
-                    <span className={styles['product-row__category']}>{product.category}</span>
-                    {product.brand && <span className={styles['product-row__brand']}>{product.brand}</span>}
-                    {product.unit && <span className={styles['product-row__unit']}>{product.unit}</span>}
-                </p>
-                <h3 className={styles['product-row__name']}>{product.name}</h3>
-                {hasPrice && product.minPriceStoreName && (
-                    <p className={styles['product-row__best']}>
-                        Más barato en <strong>{product.minPriceStoreName}</strong>
+                <div className={styles['product-card__info']}>
+                    <h3 className={styles['product-card__name']}>
+                        <Link to={`/comparador?productId=${product.id}`} className={styles['product-card__name-link']}>
+                            {product.name}
+                        </Link>
+                    </h3>
+                    <p className={styles['product-card__tags']}>
+                        <span className={styles['product-card__category']}>{product.category}</span>
+                        {product.brand && <span className={styles['product-card__brand']}>{product.brand}</span>}
+                        {product.unit && <span className={styles['product-card__unit']}>{product.unit}</span>}
                     </p>
-                )}
-            </div>
-
-            <div className={styles['product-row__price']}>
-                {hasPrice ? (
-                    <>
-                        <span className={styles['product-row__from']}>Desde</span>
-                        <span className={styles['product-row__value']}>{formatCop(product.minPrice)}</span>
-                        {saving > 0 && (
-                            <span className={styles['product-row__saving']}>Ahorras hasta {formatCop(saving)}</span>
-                        )}
-                        {product.storeCount > 0 && (
-                            <span className={styles['product-row__stores']}>
-                                {product.storeCount === 1 ? 'En 1 tienda' : `En ${product.storeCount} tiendas`}
+                    {hasPrice && (
+                        <p className={styles['product-card__chips']}>
+                            <span className={styles.chip}>
+                                {offers.length === 1 ? '1 tienda' : `${offers.length} tiendas`}
                             </span>
-                        )}
-                    </>
-                ) : (
-                    <span className={styles['product-row__stores']}>Sin precio vigente</span>
-                )}
-            </div>
+                            {compare && saving > 0 && (
+                                <span className={`${styles.chip} ${styles['chip--saving']}`}>
+                                    Ahorras hasta {formatCop(saving)} ({savingPercent}%)
+                                </span>
+                            )}
+                            {compare && saving === 0 && (
+                                <span className={styles.chip}>Mismo precio en todas</span>
+                            )}
+                        </p>
+                    )}
+                </div>
 
-            <span className={styles['product-row__cta']}>Comparar precios <span aria-hidden="true">›</span></span>
-        </Link>
+                <Link
+                    to={`/comparador?productId=${product.id}`}
+                    className={styles['product-card__cta']}
+                    aria-label={`Comparar precios de ${product.name}`}
+                >
+                    Comparar precios <span aria-hidden="true">›</span>
+                </Link>
+            </header>
+
+            {hasPrice ? (
+                <ul id={listId} className={styles.offers}>
+                    {visibleOffers.map((offer, position) => (
+                        <OfferRow
+                            key={offer.storeId}
+                            offer={offer}
+                            cheapestValue={Number(product.minPrice)}
+                            compare={compare}
+                            entering={expanded && position >= VISIBLE_OFFERS}
+                        />
+                    ))}
+                </ul>
+            ) : (
+                <p className={styles['product-card__empty']}>Aún sin precios</p>
+            )}
+
+            {hiddenCount > 0 && (
+                <button
+                    type="button"
+                    className={`${styles.more} ${expanded ? styles['more--open'] : ''}`}
+                    aria-expanded={expanded}
+                    aria-controls={listId}
+                    onClick={() => setExpanded((open) => !open)}
+                >
+                    {expanded ? 'Ver menos' : `Ver ${hiddenCount} ${hiddenCount === 1 ? 'tienda más' : 'tiendas más'}`}
+                    <ChevronIcon />
+                </button>
+            )}
+        </article>
     );
 }
 
@@ -187,13 +312,15 @@ function ResultsSkeleton() {
             <span className={styles['visually-hidden']}>Buscando productos...</span>
             {Array.from({ length: SKELETON_ROWS }, (_, index) => (
                 <div key={index} className={styles['skeleton-row']} aria-hidden="true">
-                    <span className={`${styles.skeleton} ${styles['skeleton-row__media']}`} />
-                    <div className={styles['skeleton-row__info']}>
-                        <span className={`${styles.skeleton} ${styles['skeleton-row__tags']}`} />
-                        <span className={`${styles.skeleton} ${styles['skeleton-row__name']}`} />
-                        <span className={`${styles.skeleton} ${styles['skeleton-row__name-short']}`} />
+                    <div className={styles['skeleton-row__head']}>
+                        <span className={`${styles.skeleton} ${styles['skeleton-row__media']}`} />
+                        <div className={styles['skeleton-row__info']}>
+                            <span className={`${styles.skeleton} ${styles['skeleton-row__name']}`} />
+                            <span className={`${styles.skeleton} ${styles['skeleton-row__tags']}`} />
+                        </div>
                     </div>
-                    <span className={`${styles.skeleton} ${styles['skeleton-row__cta']}`} />
+                    <span className={`${styles.skeleton} ${styles['skeleton-row__offer']}`} />
+                    <span className={`${styles.skeleton} ${styles['skeleton-row__offer']}`} />
                 </div>
             ))}
         </div>
@@ -701,7 +828,7 @@ export default function Search() {
                             )}
 
                             {status === 'success' && products.map((product, index) => (
-                                <ProductRow key={product.id} product={product} index={index} />
+                                <ProductCard key={product.id} product={product} index={index} />
                             ))}
                         </div>
 

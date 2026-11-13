@@ -6,12 +6,64 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { toggleTheme } from '../../../utils/theme';
 import { useAuth } from '../../../context/useAuth';
+import { usePresence } from '@/hooks/usePresence';
 import NotificationBell from "@/components/follows/NotificationBell/NotificationBell";
+import ThemeToggle from './ThemeToogle';
 
 // Importación del módulo de CSS para garantizar el encapsulamiento de estilos
 import styles from './Header.module.css';
+
+// Sectores de la navegación inferior; "sector" es el valor del parámetro ?sector= de /buscar
+const NAV_ITEMS = [
+    { sector: 'supermercados', label: 'Supermercados' },
+    { sector: 'droguerias', label: 'Droguerías' },
+    { sector: 'cuidado-facial', label: 'Cuidado facial' },
+    { sector: 'repuestos', label: 'Repuestos' },
+];
+
+// Duración de la animación de salida del menú de usuario (debe coincidir con Header.module.css)
+const PANEL_EXIT_MS = 140;
+
+function MenuIcon() {
+    return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+            <path className={styles['menu-line-top']} d="M4 7h16" />
+            <path className={styles['menu-line-middle']} d="M4 12h16" />
+            <path className={styles['menu-line-bottom']} d="M4 17h16" />
+        </svg>
+    );
+}
+
+function SearchIcon() {
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+        </svg>
+    );
+}
+
+function UserIcon() {
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 21a8 8 0 0 1 16 0" />
+        </svg>
+    );
+}
+
+function ChevronIcon() {
+    return (
+        <svg className={styles['user-menu__chevron']} width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m6 9 6 6 6-6" />
+        </svg>
+    );
+}
 
 /**
  * Componente Header.
@@ -33,6 +85,9 @@ export default function Header() {
     // Referencia al DOM para detectar interacciones fuera del menú desplegable del usuario
     const userMenuRef = useRef(null);
 
+    // Mantiene el panel montado mientras se ve su animación de salida
+    const userPanel = usePresence(userMenuOpen, PANEL_EXIT_MS);
+
     // Permisos derivados: solo los usuarios estándar pueden interactuar con seguimientos
     const canFollow = isAuthenticated && user?.role === 'USER';
 
@@ -41,6 +96,9 @@ export default function Header() {
     const showSearch = location.pathname !== '/' && location.pathname !== '/buscar' && location.pathname !== '/login' && location.pathname !== '/register';
 
     // Derivación segura de datos del usuario para la interfaz
+    // Sector marcado en la navegación: solo cuando /buscar trae ?sector= en la dirección
+    const activeSector = location.pathname === '/buscar' ? new URLSearchParams(location.search).get('sector') : null;
+
     const firstName = user?.name?.split(' ')[0];
     const initial = user?.name?.charAt(0).toUpperCase();
 
@@ -105,19 +163,19 @@ export default function Header() {
             <div className={styles['site-header__inner']}>
                 {/* Botón Hamburguesa (Móvil) */}
                 <button
-                    className={`${styles['icon-button']} ${styles['site-header__menu']}`}
+                    className={`${styles['icon-button']} ${styles['site-header__menu']} ${menuOpen ? styles['site-header__menu--open'] : ''}`}
                     type="button"
-                    aria-label="Abrir menu"
+                    aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
                     aria-expanded={menuOpen}
                     onClick={() => setMenuOpen(!menuOpen)}
                 >
-                    <span className={`${styles.icon} ${styles['icon--menu']}`}></span>
+                    <MenuIcon />
                 </button>
 
                 {/* Logotipo de la plataforma */}
-                <Link to="/" className={styles['site-header__title']}>
+                <Link to="/" className={styles['site-header__title']} aria-label="PreciosCo, ir al inicio">
                     <span className={styles['logo-text']}>Precios</span>
-                    <img src="/assets/images/co-badge.png" alt="Badge Colombia" className={styles['logo-co']} />
+                    <img src="/assets/images/co-badge.png" alt="" className={styles['logo-co']} />
                 </Link>
 
                 {/* Buscador Condicional */}
@@ -131,16 +189,14 @@ export default function Header() {
                             aria-label="Buscar productos"
                         />
                         <button type="submit" aria-label="Buscar">
-                            <span className={`${styles.icon} ${styles['icon--search']}`}></span>
+                            <SearchIcon />
                         </button>
                     </form>
                 )}
 
                 {/* Acciones de Cabecera (Tema, Notificaciones, Menú de Usuario) */}
                 <div className={styles['header-actions']}>
-                    <button id="theme-toggle" className={styles['theme-toggle']} onClick={toggleTheme}>
-                        Modo oscuro
-                    </button>
+                    <ThemeToggle />
 
                     {/* Campana de avisos: exclusiva para roles con permiso (USER) */}
                     {canFollow && <NotificationBell />}
@@ -158,20 +214,31 @@ export default function Header() {
                                 <>
                                     <span className={styles['user-menu__avatar']} aria-hidden="true">
                                         {initial}
+                                        <span className={styles['user-menu__status']} />
                                     </span>
-                                    <span className={styles['user-menu__label']}>{firstName}</span>
+                                    <span className={styles['user-menu__text']}>
+                                        <span className={styles['user-menu__label']}>{firstName}</span>
+                                        <span className={styles['user-menu__hint']}>Mi cuenta</span>
+                                    </span>
                                 </>
                             ) : (
                                 <>
-                                    <span className={`${styles.icon} ${styles['icon--user']}`} aria-hidden="true"></span>
+                                    <span className={styles['user-menu__guest-icon']} aria-hidden="true">
+                                        <UserIcon />
+                                    </span>
                                     <span className={styles['user-menu__label']}>Ingresa</span>
                                 </>
                             )}
+                            <ChevronIcon />
                         </button>
 
                         {/* Panel Desplegable del Usuario */}
-                        {userMenuOpen && (
-                            <div className={styles['user-menu__panel']} role="menu">
+                        {userPanel.mounted && (
+                            <div
+                                className={styles['user-menu__panel']}
+                                role="menu"
+                                data-state={userPanel.closing ? 'closing' : 'open'}
+                            >
                                 {isAuthenticated ? (
                                     <>
                                         <div className={styles['user-menu__profile']}>
@@ -223,11 +290,21 @@ export default function Header() {
             {/* Navegación por sectores comerciales (Se colapsa en móvil) */}
             <nav className={`${styles['site-nav']} ${menuOpen ? styles['site-nav--open'] : ''}`} aria-label="Principal">
                 <ul className={styles['site-nav__list']}>
-                    <li><Link to="/buscar?sector=supermercados" onClick={closeMenus}>Supermercados</Link></li>
-                    <li><Link to="/buscar?sector=droguerias" onClick={closeMenus}>Farmacia</Link></li>
-                    <li><Link to="/buscar?sector=repuestos" onClick={closeMenus}>Repuestos</Link></li>
-                    <li><Link to="/buscar?sector=cuidado-facial" onClick={closeMenus}>Belleza</Link></li>
-                    <li><Link to="/buscar" onClick={closeMenus}>Tecnologia</Link></li>
+                    {NAV_ITEMS.map((item) => {
+                        const active = activeSector === item.sector;
+                        return (
+                            <li key={item.sector}>
+                                <Link
+                                    to={`/buscar?sector=${item.sector}`}
+                                    className={`${styles['site-nav__link']} ${active ? styles['site-nav__link--active'] : ''}`}
+                                    aria-current={active ? 'page' : undefined}
+                                    onClick={closeMenus}
+                                >
+                                    {item.label}
+                                </Link>
+                            </li>
+                        );
+                    })}
                 </ul>
             </nav>
         </header>

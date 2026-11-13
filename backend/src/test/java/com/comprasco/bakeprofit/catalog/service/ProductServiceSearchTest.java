@@ -26,10 +26,11 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PagedModel;
 import com.comprasco.bakeprofit.catalog.dto.ProductResponse;
 import com.comprasco.bakeprofit.catalog.dto.ProductSearchCriteria;
+import com.comprasco.bakeprofit.catalog.dto.ProductSort;
 import com.comprasco.bakeprofit.catalog.entity.Category;
 import com.comprasco.bakeprofit.catalog.entity.Product;
 import com.comprasco.bakeprofit.catalog.exception.CategoryNotFoundException;
-import com.comprasco.bakeprofit.catalog.repository.BrandRepository;
+import com.comprasco.bakeprofit.catalog.repository.BestSavingsRepository;
 import com.comprasco.bakeprofit.catalog.repository.ProductRepository;
 import com.comprasco.bakeprofit.store.exception.StoreNotFoundException;
 import com.comprasco.bakeprofit.price.dto.ProductImage;
@@ -54,25 +55,27 @@ class ProductServiceSearchTest {
     @Mock
     private CategoryService categoryService;
     @Mock
-    private BrandRepository brandRepository;
+    private BrandService brandService;
     @Mock
     private StoreService storeService;
     @Mock
     private PriceRepository priceRepository;
+    @Mock
+    private BestSavingsRepository bestSavingsRepository;
 
     private ProductService productService;
 
     @BeforeEach
     void setUp() {
         productService = new ProductService(productRepository, categoryService,
-                new BrandService(brandRepository), storeService, priceRepository);
+            brandService, storeService, priceRepository, bestSavingsRepository);
     }
 
     @SuppressWarnings("unchecked")
     private Pageable searchAndCapturePageable(ProductSearchCriteria criteria, int page, int size) {
         when(productRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(Page.<Product>empty());
-        productService.search(criteria, page, size);
+        productService.search(criteria, ProductSort.NAME, page, size);
         ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
         verify(productRepository).findAll(any(Specification.class), pageable.capture());
         return pageable.getValue();
@@ -83,7 +86,7 @@ class ProductServiceSearchTest {
         when(categoryService.findById(CATEGORY_ID)).thenThrow(new CategoryNotFoundException("no existe"));
         ProductSearchCriteria criteria = ProductSearchCriteria.of(null, CATEGORY_ID, null, null, null);
 
-        assertThatThrownBy(() -> productService.search(criteria, 0, 20))
+        assertThatThrownBy(() -> productService.search(criteria, ProductSort.NAME, 0, 20))
                 .isInstanceOf(CategoryNotFoundException.class);
         verifyNoInteractions(productRepository);
     }
@@ -94,7 +97,7 @@ class ProductServiceSearchTest {
                 .when(storeService).requireActive(Set.of(STORE_ID));
         ProductSearchCriteria criteria = ProductSearchCriteria.of(null, null, List.of(STORE_ID), null, null);
 
-        assertThatThrownBy(() -> productService.search(criteria, 0, 20))
+        assertThatThrownBy(() -> productService.search(criteria, ProductSort.NAME, 0, 20))
                 .isInstanceOf(StoreNotFoundException.class);
         verifyNoInteractions(productRepository);
     }
@@ -139,7 +142,7 @@ class ProductServiceSearchTest {
     private PagedModel<ProductResponse> searchPageOf(Product... products) {
         when(productRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(products)));
-        return productService.search(ProductSearchCriteria.of(null, null, null, null, null), 0, 20);
+        return productService.search(ProductSearchCriteria.of(null, null, null, null, null), ProductSort.NAME, 0, 20);
     }
 
     @Test
@@ -183,7 +186,7 @@ class ProductServiceSearchTest {
         when(productRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(Page.<Product>empty());
 
-        productService.search(ProductSearchCriteria.of(null, null, null, null, null), 0, 20);
+        productService.search(ProductSearchCriteria.of(null, null, null, null, null), ProductSort.NAME, 0, 20);
 
         verify(priceRepository, never()).findCurrentImagesByProductIds(any());
         verify(priceRepository, never()).findCurrentOffersByProductIds(any());
