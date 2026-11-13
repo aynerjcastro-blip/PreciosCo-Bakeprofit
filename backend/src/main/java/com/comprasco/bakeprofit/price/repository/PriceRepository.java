@@ -94,8 +94,6 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
     @Query("SELECT DISTINCT p.store.id FROM Price p WHERE p.product.id = :productId")
     List<Long> findStoreIdsByProductId(@Param("productId") Long productId);
 
-
-    //TODO: Terminar integracion para mostrar ofertas por producto en la búsqueda
     @Query("""
                 SELECT new com.comprasco.bakeprofit.price.dto.ProductOffer(
                     p.product.id, p.store.id, p.store.name, p.value, p.lastSeenAt, p.productUrl)

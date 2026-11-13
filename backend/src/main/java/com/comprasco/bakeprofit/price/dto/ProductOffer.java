@@ -8,4 +8,3 @@ public record ProductOffer(Long productId, Long storeId, String storeName,
       BigDecimal value, LocalDateTime lastSeenAt, String productUrl) {
 }
 
-//TODO: Pendiente para integrar ofertas por producto en la búsqueda
