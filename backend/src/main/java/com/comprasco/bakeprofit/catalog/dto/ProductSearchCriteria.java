@@ -13,17 +13,20 @@ import com.comprasco.bakeprofit.price.util.PriceRange;
 /**
  * Filtros de la búsqueda de productos (HU-06a y HU-06b), ya validados.
  *
- * @param words      palabras del nombre; el producto debe contenerlas todas, en cualquier orden
+ * @param words      palabras del nombre; el producto debe contenerlas todas, en
+ *                   cualquier orden
  * @param categoryId categoría hoja, o null
- * @param storeIds   tiendas seleccionadas, sin repetir; vacío significa todas las activas
- * @param priceRange rango del precio vigente; {@link PriceRange#UNBOUNDED} si no hay
+ * @param storeIds   tiendas seleccionadas, sin repetir; vacío significa todas
+ *                   las activas
+ * @param priceRange rango del precio vigente; {@link PriceRange#UNBOUNDED} si
+ *                   no hay
  */
 public record ProductSearchCriteria(
         List<String> words,
         Long categoryId,
+        Long sectionId,
         Set<Long> storeIds,
-        PriceRange priceRange
-) {
+        PriceRange priceRange) {
 
     public ProductSearchCriteria {
         words = List.copyOf(words);
@@ -33,11 +36,13 @@ public record ProductSearchCriteria(
 
     /**
      * Crea los filtros desde los parámetros de la petición. Un rango inválido lanza
-     * {@code InvalidSearchFilterException} (400). Los ids de tienda nulos (un "storeId="
+     * {@code InvalidSearchFilterException} (400). Los ids de tienda nulos (un
+     * "storeId="
      * vacío) se ignoran y los repetidos cuentan una vez.
      */
-    public static ProductSearchCriteria of(String name, Long categoryId, Collection<Long> storeIds,
-                                           BigDecimal minPrice, BigDecimal maxPrice) {
+    public static ProductSearchCriteria of(String name, Long categoryId, Long sectionId,
+            Collection<Long> storeIds, BigDecimal minPrice,
+            BigDecimal maxPrice) {
         Set<Long> distinctStoreIds = new TreeSet<>();
         if (storeIds != null) {
             storeIds.stream().filter(Objects::nonNull).forEach(distinctStoreIds::add);
@@ -45,12 +50,19 @@ public record ProductSearchCriteria(
         return new ProductSearchCriteria(
                 SearchTerms.words(name),
                 categoryId,
+                sectionId,
                 distinctStoreIds,
                 new PriceRange(minPrice, maxPrice));
     }
 
+    public static ProductSearchCriteria of(String name, Long categoryId, Collection<Long> storeIds,
+            BigDecimal minPrice, BigDecimal maxPrice) {
+        return of(name, categoryId, null, storeIds, minPrice, maxPrice);
+    }
+
     /**
-     * Sin tienda ni rango no se exige ningún precio: la búsqueda de HU-06a también muestra
+     * Sin tienda ni rango no se exige ningún precio: la búsqueda de HU-06a también
+     * muestra
      * productos que todavía no tienen precio.
      */
     public boolean filtersByPrice() {

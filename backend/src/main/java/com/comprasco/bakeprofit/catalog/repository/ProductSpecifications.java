@@ -27,7 +27,7 @@ import jakarta.persistence.criteria.Subquery;
  * Condiciones de la búsqueda de productos (HU-06a, HU-06b), una por filtro.
  *
  * <p>
- * Todos los filtros se resuelven en SQL para que la paginación cuente bien. Un filtro nuevo
+ *  Todos los filtros se resuelven en SQL para que la paginación cuente bien. Un filtro nuevo
  * (por ejemplo, la marca) es un método más, sin tocar los demás.
  * </p>
  */
@@ -149,4 +149,20 @@ public final class ProductSpecifications {
     private static Expression<String> comparable(CriteriaBuilder cb, Expression<String> text) {
         return cb.lower(cb.function(UNACCENT_FUNCTION, String.class, text));
     }
+
+
+    public static Specification<Product> inSection(Long sectionId) {
+    if (sectionId == null) return null; // Specification.where(null) no filtra
+    return (root, query, cb) -> {
+        Subquery<Long> sq = query.subquery(Long.class);
+        Root<Price> price = sq.from(Price.class);
+        Join<Price, Store> store = price.join("store");
+        sq.select(price.<Long>get("id")).where(
+            cb.equal(price.get("product"), root),
+            cb.isTrue(store.get("active")),
+            cb.equal(store.get("category").get("id"), sectionId));
+        return cb.exists(sq); // DP-26: precio en al menos una tienda activa del dominio
+    };
+}
+
 }

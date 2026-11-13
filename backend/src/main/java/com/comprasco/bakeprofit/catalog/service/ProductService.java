@@ -1,9 +1,12 @@
 package com.comprasco.bakeprofit.catalog.service;
 
 import com.comprasco.bakeprofit.auth.exception.InactiveParentException;
+import com.comprasco.bakeprofit.catalog.dto.BestSavingsGroup;
+import com.comprasco.bakeprofit.catalog.dto.BestSavingsItem;
 import com.comprasco.bakeprofit.catalog.dto.ProductRequest;
 import com.comprasco.bakeprofit.catalog.dto.ProductResponse;
 import com.comprasco.bakeprofit.catalog.dto.ProductSearchCriteria;
+import com.comprasco.bakeprofit.catalog.dto.ProductSort;
 import com.comprasco.bakeprofit.catalog.entity.Brand;
 import com.comprasco.bakeprofit.catalog.entity.Category;
 import com.comprasco.bakeprofit.catalog.entity.Product;
@@ -11,6 +14,7 @@ import com.comprasco.bakeprofit.catalog.exception.InvalidCategoryHierarchyExcept
 import com.comprasco.bakeprofit.catalog.exception.InvalidProductIdentityException;
 import com.comprasco.bakeprofit.catalog.exception.ProductAlreadyExistsException;
 import com.comprasco.bakeprofit.catalog.exception.ProductNotFoundException;
+import com.comprasco.bakeprofit.catalog.repository.BestSavingsRepository;
 import com.comprasco.bakeprofit.catalog.repository.ProductRepository;
 import com.comprasco.bakeprofit.catalog.repository.ProductSpecifications;
 import com.comprasco.bakeprofit.catalog.util.Gtin;
@@ -27,10 +31,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PagedModel;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -67,24 +74,27 @@ public class ProductService {
      * opiniones).
      */
     public static final int MAX_PAGE_SIZE = 50;
-    private static final Sort SEARCH_ORDER = Sort.by(Sort.Order.asc("name"), Sort.Order.asc("id"));
+
 
     private final ProductRepository productRepository;
     private final CategoryService categoryService;
     private final BrandService brandService;
     private final StoreService storeService;
     private final PriceRepository priceRepository;
+    private final BestSavingsRepository bestSavingsRepository;
 
     public ProductService(ProductRepository productRepository,
             CategoryService categoryService,
             BrandService brandService,
             StoreService storeService,
-            PriceRepository priceRepository) {
+            PriceRepository priceRepository,
+            BestSavingsRepository bestSavingsRepository) {
         this.productRepository = productRepository;
         this.categoryService = categoryService;
         this.brandService = brandService;
         this.storeService = storeService;
         this.priceRepository = priceRepository;
+        this.bestSavingsRepository = bestSavingsRepository;
     }
 
     public List<ProductResponse> findAll() {
@@ -130,18 +140,37 @@ public class ProductService {
      * productos.
      * </p>
      */
-    public PagedModel<ProductResponse> search(ProductSearchCriteria criteria, int page, int size) {
+    public PagedModel<ProductResponse> search(ProductSearchCriteria criteria, ProductSort sort, int page, int size) {
+
+        // Validación de Sección (categoría raíz)
+        if (criteria.sectionId() != null) {
+            // categoryService.findById ya debe manejar su propio 404 si el ID no existe
+            Category section = categoryService.findById(criteria.sectionId());
+            if (section.getParent() != null) {
+                // Usamos ResponseStatusException de Spring para el 404
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "La categoría " + criteria.sectionId() + " no es una sección raíz.");
+            }
+        }
+
+        // Validaciones existentes
         if (criteria.categoryId() != null) {
             categoryService.findById(criteria.categoryId());
         }
         storeService.requireActive(criteria.storeIds());
 
+        // Ordenamiento dinámico de la HT-13
+        Sort order = (sort == ProductSort.NAME)
+                ? Sort.by("name", "id")
+                : Sort.by(Sort.Order.desc("savings.savingsPct"), Sort.Order.asc("name"), Sort.Order.asc("id"));
+
         Pageable pageable = PageRequest.of(
                 Math.max(page, 0),
                 Math.min(Math.max(size, 1), MAX_PAGE_SIZE),
-                SEARCH_ORDER);
+                order);
 
         Page<Product> found = productRepository.findAll(ProductSpecifications.matching(criteria), pageable);
+
         List<Long> productIds = found.getContent().stream().map(Product::getId).toList();
         Map<Long, String> images = imagesOf(productIds);
         Map<Long, List<ProductOffer>> offers = offersOf(productIds);
@@ -412,4 +441,19 @@ public class ProductService {
         Matcher matcher = CONSTRAINT_IN_MESSAGE.matcher(message);
         return matcher.find() ? Optional.of(matcher.group(1)) : Optional.empty();
     }
+
+    public List<BestSavingsGroup> bestSavings(Long sectionId, int limit) {
+        if (limit < 1 || limit > 20)
+            throw new IllegalArgumentException("limit debe estar entre 1 y 20"); // -> 400
+        // validar sección igual que arriba
+        Map<Long, BestSavingsGroup> groups = new LinkedHashMap<>();
+        for (var r : bestSavingsRepository.findTopBySubcategory(sectionId, limit)) {
+            groups.computeIfAbsent(r.getCategoryId(), k -> new BestSavingsGroup(
+                    r.getSectionId(), r.getSectionName(), r.getCategoryId(), r.getCategoryName(), new ArrayList<>()))
+                    .products().add(new BestSavingsItem(r.getId(), r.getName(),
+                            r.getMinPrice(), r.getMaxPrice(), r.getSavingsPct(), r.getStoreCount()));
+        }
+        return new ArrayList<>(groups.values());
+    }
+
 }

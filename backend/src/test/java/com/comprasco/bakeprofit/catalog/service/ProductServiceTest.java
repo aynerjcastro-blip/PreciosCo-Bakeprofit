@@ -28,6 +28,7 @@ import com.comprasco.bakeprofit.catalog.entity.Product;
 import com.comprasco.bakeprofit.catalog.entity.UnitBase;
 import com.comprasco.bakeprofit.catalog.exception.InvalidProductIdentityException;
 import com.comprasco.bakeprofit.catalog.exception.ProductAlreadyExistsException;
+import com.comprasco.bakeprofit.catalog.repository.BestSavingsRepository;
 import com.comprasco.bakeprofit.catalog.repository.BrandRepository;
 import com.comprasco.bakeprofit.catalog.repository.ProductRepository;
 import com.comprasco.bakeprofit.price.repository.PriceRepository;
@@ -57,14 +58,15 @@ class ProductServiceTest {
     private StoreService storeService;
     @Mock
     private PriceRepository priceRepository;
-
+    @Mock
+    private BestSavingsRepository bestSavingsRepository;
     private ProductService productService;
     private Category leafCategory;
 
     @BeforeEach
     void setUp() {
         productService = new ProductService(productRepository, categoryService, new BrandService(brandRepository),
-                storeService, priceRepository);
+                storeService, priceRepository, bestSavingsRepository);
 
         Category root = new Category();
         root.setName("Supermercado");

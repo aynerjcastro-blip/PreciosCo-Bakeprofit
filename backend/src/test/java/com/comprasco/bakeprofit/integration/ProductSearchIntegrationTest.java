@@ -173,14 +173,14 @@ class ProductSearchIntegrationTest {
         ProductSearchCriteria criteria = ProductSearchCriteria.of(
                 "arroz", leafCategoryId, List.of(storeA), null, new BigDecimal("6000"));
 
-        assertThat(idsOf(productService.search(criteria, 0, PAGE_SIZE))).containsExactly(arroz);
+        assertThat(idsOf(productService.search(criteria, null, 0, PAGE_SIZE))).containsExactly(arroz);
     }
 
     @Test
     void unaTiendaInactivaEnElFiltroResponde404() {
         ProductSearchCriteria criteria = ProductSearchCriteria.of(null, leafCategoryId, List.of(inactiveStore), null, null);
 
-        assertThatThrownBy(() -> productService.search(criteria, 0, PAGE_SIZE))
+        assertThatThrownBy(() -> productService.search(criteria, null, 0, PAGE_SIZE))
                 .isInstanceOf(StoreNotFoundException.class);
     }
 
@@ -188,8 +188,8 @@ class ProductSearchIntegrationTest {
     void lasPaginasEstanCompletasYElTotalEsExactoConFiltroDeNombre() {
         ProductSearchCriteria criteria = ProductSearchCriteria.of("a " + suffix, leafCategoryId, List.of(), null, null);
 
-        PagedModel<ProductResponse> first = productService.search(criteria, 0, 2);
-        PagedModel<ProductResponse> second = productService.search(criteria, 1, 2);
+        PagedModel<ProductResponse> first = productService.search(criteria, null, 0, 2);
+        PagedModel<ProductResponse> second = productService.search(criteria, null, 1, 2);
 
         // "a" aparece en Arroz Blanco, Azúcar, Café Molido, Lenteja y Sal: los cinco
         assertThat(first.getMetadata().totalElements()).isEqualTo(5);
@@ -200,11 +200,11 @@ class ProductSearchIntegrationTest {
 
     private PagedModel<ProductResponse> inCategory(List<Long> storeIds, BigDecimal min, BigDecimal max) {
         return productService.search(
-                ProductSearchCriteria.of(null, leafCategoryId, storeIds, min, max), 0, PAGE_SIZE);
+                ProductSearchCriteria.of(null, leafCategoryId, storeIds, min, max), null, 0, PAGE_SIZE);
     }
 
     private PagedModel<ProductResponse> byName(String name) {
-        return productService.search(ProductSearchCriteria.of(name, null, List.of(), null, null), 0, PAGE_SIZE);
+        return productService.search(ProductSearchCriteria.of(name, null, List.of(), null, null), null, 0, PAGE_SIZE);
     }
 
     private static List<Long> idsOf(PagedModel<ProductResponse> page) {

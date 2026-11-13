@@ -4,6 +4,7 @@ import com.comprasco.bakeprofit.catalog.dto.ProductRequest;
 import com.comprasco.bakeprofit.catalog.dto.ProductResponse;
 import com.comprasco.bakeprofit.catalog.dto.ProductSearchCriteria;
 import com.comprasco.bakeprofit.catalog.service.ProductService;
+import com.comprasco.bakeprofit.catalog.dto.ProductSort;
 
 import jakarta.validation.Valid;
 import org.springframework.data.web.PagedModel;
@@ -83,7 +84,7 @@ public class ProductController {
                                         + ")") @RequestParam(defaultValue = DEFAULT_PAGE_SIZE) int size) {
                 ProductSearchCriteria criteria = ProductSearchCriteria.of(name, idCategory, storeIds, minPrice,
                                 maxPrice);
-                return ResponseEntity.ok(productService.search(criteria, page, size));
+                return ResponseEntity.ok(productService.search(criteria, ProductSort.NAME, page, size));
         }
 
         @Operation(summary = "Registrar productos", description = "Registra el nuevo producto en la base de datos")

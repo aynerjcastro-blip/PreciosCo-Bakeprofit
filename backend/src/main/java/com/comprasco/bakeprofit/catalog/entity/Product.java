@@ -14,6 +14,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -21,6 +22,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -90,6 +92,10 @@ public class Product {
 
     @Column(length = MANUFACTURER_REF_MAX_LENGTH)
     private String manufacturerRef;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="id", referencedColumnName = "product_id")
+    private ProductSavings savings;
 
     // La calcula PostgreSQL; INSERT y UPDATE porque cambia cada vez que cambia manufacturerRef.
     // El columnDefinition es idéntico al del script y solo documenta: ddl-auto=validate no lo usa.
