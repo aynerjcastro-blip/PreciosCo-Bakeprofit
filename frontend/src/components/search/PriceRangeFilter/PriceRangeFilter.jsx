@@ -31,14 +31,14 @@ function rangeError(min, max) {
     return '';
 }
 
-function ArrowIcon() {
-    return (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="m9 6 6 6-6 6" />
-        </svg>
-    );
-}
+// function ArrowIcon() {
+//     return (
+//         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+//             strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+//             <path d="m9 6 6 6-6 6" />
+//         </svg>
+//     );
+// }
 
 /**
  * Rango del precio vigente (HU-06b). Tiene dos formas de elegirlo: un rango rápido, que se
@@ -104,45 +104,64 @@ export default function PriceRangeFilter({ min, max, onApply }) {
                 })}
             </ul>
 
-            <div className={styles['price-range__fields']} role="group" aria-label="Rango personalizado">
-                <label className={styles['price-range__field']}>
-                    <span className={styles['visually-hidden']}>Precio mínimo</span>
-                    <input
-                        type="number"
-                        inputMode="numeric"
-                        min="0"
-                        step="any"
-                        placeholder="Mínimo"
-                        value={draftMin}
-                        onChange={(event) => setDraftMin(event.target.value)}
-                        aria-invalid={error !== ''}
-                        aria-describedby={error ? 'price-range-error' : undefined}
-                        className={styles['price-range__input']}
-                    />
-                </label>
-                <span className={styles['price-range__dash']} aria-hidden="true">—</span>
-                <label className={styles['price-range__field']}>
-                    <span className={styles['visually-hidden']}>Precio máximo</span>
-                    <input
-                        type="number"
-                        inputMode="numeric"
-                        min="0"
-                        step="any"
-                        placeholder="Máximo"
-                        value={draftMax}
-                        onChange={(event) => setDraftMax(event.target.value)}
-                        aria-invalid={error !== ''}
-                        aria-describedby={error ? 'price-range-error' : undefined}
-                        className={styles['price-range__input']}
-                    />
-                </label>
+            <div className={styles['price-range__custom']} role="group" aria-label="Rango personalizado">
+                <div className={styles['price-range__display']}>
+                    {/* Input camuflado para el Mínimo */}
+                    <div className={styles['price-range__input-wrapper']}>
+                        <span className={styles['price-range__currency']}>
+                            {draftMin ? '$' : ''}
+                        </span>
+                        <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder="$0"
+                            value={draftMin}
+                            onChange={(event) => setDraftMin(event.target.value)}
+                            className={styles['price-range__input-text']}
+                            aria-label="Precio mínimo"
+                        />
+                    </div>
+
+                    {/* Input camuflado para el Máximo */}
+                    <div className={styles['price-range__input-wrapper']} data-align="right">
+                        <span className={styles['price-range__currency']}>
+                            {draftMax ? '$' : ''}
+                        </span>
+                        <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder="Sin límite"
+                            value={draftMax}
+                            onChange={(event) => setDraftMax(event.target.value)}
+                            className={styles['price-range__input-text']}
+                            aria-label="Precio máximo"
+                        />
+                    </div>
+                </div>
+
+                <input
+                    type="range"
+                    min="0"
+                    max="150000" /* Define aquí un tope visual para el slider */
+                    step="1000"
+                    value={draftMax || '150000'}
+                    onChange={(event) => {
+                        const val = event.target.value;
+                        // Si arrastra el slider hasta el final, lo dejamos como "Sin límite"
+                        setDraftMax(val === '150000' ? '' : val);
+                    }}
+                    className={styles['price-range__slider']}
+                    aria-label="Ajustar precio máximo"
+                />
+
                 <button
                     type="submit"
-                    className={styles['price-range__apply']}
+                    className={styles['price-range__apply-btn']}
                     disabled={!hasChanges}
-                    aria-label="Aplicar precio"
                 >
-                    <ArrowIcon />
+                    Aplicar
                 </button>
             </div>
 

@@ -1,6 +1,6 @@
 /* ============================================================
    RANGO DE PRECIO (HU-06b) — dentro del panel de filtros
-   Rangos rápidos como lista de texto, y debajo Mínimo — Máximo con un botón redondo.
+   Rangos rápidos como lista de texto, inputs camuflados y slider.
    ============================================================ */
 .price-range {
     display: flex;
@@ -54,82 +54,155 @@
     text-underline-offset: 4px;
 }
 
-/* ---------- Mínimo — Máximo y botón ---------- */
-.price-range__fields {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+/* ---------- Rango personalizado (Inputs editables + Slider) ---------- */
+.price-range__custom {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+/* Contenedor de los inputs de texto */
+.price-range__display {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 8px;
 }
 
-.price-range__field {
-    min-width: 0;
+.price-range__input-wrapper {
+    display: flex;
+    align-items: center;
+    border-bottom: 1.5px solid transparent;
+    transition: border-color 0.2s;
 }
 
-.price-range__dash {
+/* Subrayado sutil al hacer clic para editar */
+.price-range__input-wrapper:focus-within {
+    border-bottom-color: var(--color-primary);
+}
+
+.price-range__input-wrapper[data-align="right"] {
+    justify-content: flex-end;
+}
+
+.price-range__currency {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
     color: var(--text-muted);
 }
 
-.price-range__input {
-    width: 100%;
-    min-width: 0;
-    padding: 9px 14px;
-    border: 1.5px solid var(--border-color);
-    border-radius: 999px;
-    background: var(--bg-surface);
-    color: var(--text-primary);
+/* Inputs numéricos camuflados como texto plano */
+.price-range__input-text {
+    width: 75px;
+    background: transparent;
+    border: none;
+    padding: 2px 4px;
     font-family: var(--font-body);
-    font-size: 0.9rem;
-    font-variant-numeric: tabular-nums;
+    font-size: 0.95rem;
+    color: var(--text-muted);
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-/* Sin las flechas de subir y bajar del navegador: tapan el texto y no aportan nada */
-.price-range__input {
+.price-range__input-wrapper[data-align="right"] .price-range__input-text {
+    text-align: right;
+    width: 85px;
+}
+
+/* Oscurece el texto cuando el usuario escribe algo */
+.price-range__input-text:focus,
+.price-range__input-text:not(:placeholder-shown) {
+    color: var(--text-primary);
+}
+
+/* Ocultar flechas nativas de los input number */
+.price-range__input-text {
     -moz-appearance: textfield;
     appearance: textfield;
 }
 
-.price-range__input::-webkit-outer-spin-button,
-.price-range__input::-webkit-inner-spin-button {
+.price-range__input-text::-webkit-outer-spin-button,
+.price-range__input-text::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
 
-.price-range__input:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-primary-soft);
+/* ---------- Barra del Slider ---------- */
+.price-range__slider {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: var(--border-color);
+    /* Línea base gris clara */
+    border-radius: 999px;
+    outline: none;
+    margin: 4px 0;
 }
 
-.price-range__input[aria-invalid='true'] {
-    border-color: var(--alert-error-border);
-}
-
-.price-range__apply {
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border: 1.5px solid var(--color-dark);
+/* Thumb (el círculo deslizable) en Chrome/Safari */
+.price-range__slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: var(--color-dark);
-    color: var(--bg-surface);
+    /* Círculo oscuro */
+    border: 3px solid var(--bg-surface);
+    /* Borde blanco/fondo */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
     cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s;
+    transition: transform 0.1s;
 }
 
-.price-range__apply:hover:not(:disabled) {
-    background: var(--color-primary-hover);
-    border-color: var(--color-primary-hover);
-    color: var(--color-dark);
+.price-range__slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
 }
 
-.price-range__apply:disabled {
-    opacity: 0.45;
+/* Thumb (el círculo deslizable) en Firefox */
+.price-range__slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--color-dark);
+    border: 3px solid var(--bg-surface);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.price-range__slider:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+/* ---------- Botón Aplicar de ancho completo ---------- */
+.price-range__apply-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 999px;
+    background: #9ca3af;
+    /* Gris similar a la foto */
+    color: #ffffff;
+    border: none;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.2s;
+    margin-top: 8px;
+}
+
+.price-range__apply-btn:hover:not(:disabled) {
+    background: var(--color-dark);
+}
+
+.price-range__apply-btn:disabled {
+    opacity: 0.6;
     cursor: not-allowed;
 }
 
+/* ---------- Acciones extras ---------- */
 .price-range__clear {
     align-self: flex-start;
     padding: 4px 0;
@@ -154,14 +227,15 @@
     color: var(--state-error-text);
 }
 
+/* Estados de foco accesibles */
 .price-range__preset:focus-visible,
-.price-range__apply:focus-visible,
+.price-range__apply-btn:focus-visible,
 .price-range__clear:focus-visible {
     outline: 3px solid var(--focus-ring-color);
     outline-offset: 2px;
 }
 
-/* Texto solo para lectores de pantalla (las etiquetas de los campos) */
+/* Texto solo para lectores de pantalla */
 .visually-hidden {
     position: absolute;
     width: 1px;
