@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.comprasco.bakeprofit.price.dto.ProductImage;
+import com.comprasco.bakeprofit.price.dto.ProductOffer;
 import com.comprasco.bakeprofit.price.entity.Price;
 
 public interface PriceRepository extends JpaRepository<Price, Long> {
@@ -92,4 +93,19 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
     /** Tiendas que tienen al menos un precio del producto. */
     @Query("SELECT DISTINCT p.store.id FROM Price p WHERE p.product.id = :productId")
     List<Long> findStoreIdsByProductId(@Param("productId") Long productId);
+
+
+    //TODO: Terminar integracion para mostrar ofertas por producto en la búsqueda
+    @Query("""
+                SELECT new com.comprasco.bakeprofit.price.dto.ProductOffer(
+                    p.product.id, p.store.id, p.store.name, p.value, p.lastSeenAt, p.productUrl)
+                FROM Price p
+                WHERE p.product.id IN :productIds
+                  AND p.store.active = true
+                  AND p.registrationDate = (
+                      SELECT MAX(p2.registrationDate) FROM Price p2
+                      WHERE p2.product.id = p.product.id AND p2.store.id = p.store.id)
+                ORDER BY p.product.id, p.value ASC, p.id ASC
+            """)
+    List<ProductOffer> findCurrentOffersByProductIds(@Param("productIds") Collection<Long> productIds);
 }
