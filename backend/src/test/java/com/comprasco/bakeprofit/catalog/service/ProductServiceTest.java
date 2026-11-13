@@ -30,6 +30,7 @@ import com.comprasco.bakeprofit.catalog.exception.InvalidProductIdentityExceptio
 import com.comprasco.bakeprofit.catalog.exception.ProductAlreadyExistsException;
 import com.comprasco.bakeprofit.catalog.repository.BrandRepository;
 import com.comprasco.bakeprofit.catalog.repository.ProductRepository;
+import com.comprasco.bakeprofit.price.repository.PriceRepository;
 import com.comprasco.bakeprofit.store.service.StoreService;
 
 /**
@@ -54,6 +55,8 @@ class ProductServiceTest {
     private BrandRepository brandRepository;
     @Mock
     private StoreService storeService;
+    @Mock
+    private PriceRepository priceRepository;
 
     private ProductService productService;
     private Category leafCategory;
@@ -61,7 +64,7 @@ class ProductServiceTest {
     @BeforeEach
     void setUp() {
         productService = new ProductService(productRepository, categoryService, new BrandService(brandRepository),
-                storeService);
+                storeService, priceRepository);
 
         Category root = new Category();
         root.setName("Supermercado");
@@ -72,7 +75,7 @@ class ProductServiceTest {
     }
 
     private static ProductRequest request(String brand, String ean, BigDecimal content,
-                                          UnitBase unit, String reference) {
+            UnitBase unit, String reference) {
         return new ProductRequest("Arroz Diana 1 kg", "1 kg", CATEGORY_ID, brand, ean, content, unit, reference);
     }
 
@@ -80,7 +83,8 @@ class ProductServiceTest {
         when(productRepository.saveAndFlush(any(Product.class))).thenAnswer(call -> call.getArgument(0));
     }
 
-    // Lo que Spring lanza cuando PostgreSQL rechaza el INSERT: Hibernate ya extrajo el nombre
+    // Lo que Spring lanza cuando PostgreSQL rechaza el INSERT: Hibernate ya extrajo
+    // el nombre
     private static DataIntegrityViolationException violationOf(String constraint, String sqlState) {
         SQLException sqlException = new SQLException("violates constraint \"" + constraint + "\"", sqlState);
         return new DataIntegrityViolationException("could not execute statement",
@@ -187,7 +191,8 @@ class ProductServiceTest {
 
     @Test
     void choqueSimultaneoDetectadoSoloPorElMensajeDePostgresResponde409() {
-        // Sin ConstraintViolationException de Hibernate: queda el SQLState 23505 y el mensaje
+        // Sin ConstraintViolationException de Hibernate: queda el SQLState 23505 y el
+        // mensaje
         SQLException sqlException = new SQLException(
                 "ERROR: duplicate key value violates unique constraint \"uq_products_brand_ref\"",
                 UNIQUE_VIOLATION_SQLSTATE);
@@ -213,7 +218,8 @@ class ProductServiceTest {
     void marcaMasReferenciaRepetidaConOtraEscrituraResponde409() {
         Brand bosch = Brand.named("Bosch");
         when(brandRepository.findByNameMatchingIndex("Bosch")).thenReturn(Optional.of(bosch));
-        // "ABC-123" ya está guardada; "abc.123" se normaliza a lo mismo antes de consultar
+        // "ABC-123" ya está guardada; "abc.123" se normaliza a lo mismo antes de
+        // consultar
         when(productRepository.existsByBrandAndManufacturerRefNorm(bosch, "ABC123")).thenReturn(true);
 
         assertThatThrownBy(() -> productService.create(request("Bosch", null, null, null, "abc.123")))
@@ -229,7 +235,8 @@ class ProductServiceTest {
 
         ProductResponse response = productService.create(request("  DIANA ", EAN, ONE_KILO, UnitBase.G, null));
 
-        // La BD no inserta "DIANA" (ON CONFLICT) y la búsqueda devuelve la "Diana" existente
+        // La BD no inserta "DIANA" (ON CONFLICT) y la búsqueda devuelve la "Diana"
+        // existente
         assertThat(response.brand()).isEqualTo("Diana");
         verify(brandRepository).insertIfAbsent("DIANA");
         verify(brandRepository, never()).save(any());

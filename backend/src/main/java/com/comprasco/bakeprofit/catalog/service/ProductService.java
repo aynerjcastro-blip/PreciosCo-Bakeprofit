@@ -15,10 +15,14 @@ import com.comprasco.bakeprofit.catalog.repository.ProductRepository;
 import com.comprasco.bakeprofit.catalog.repository.ProductSpecifications;
 import com.comprasco.bakeprofit.catalog.util.Gtin;
 import com.comprasco.bakeprofit.catalog.util.ManufacturerReference;
+import com.comprasco.bakeprofit.price.dto.ProductImage;
+import com.comprasco.bakeprofit.price.dto.ProductOffer;
+import com.comprasco.bakeprofit.price.repository.PriceRepository;
 import com.comprasco.bakeprofit.store.service.StoreService;
 
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -27,7 +31,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.SQLException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -37,28 +45,27 @@ import java.util.regex.Pattern;
 @Transactional(readOnly = true)
 public class ProductService {
 
-    private static final String CONTENT_PAIR_MESSAGE =
-            "El contenido neto y la unidad base van juntos: envía los dos o ninguno.";
-    private static final String REFERENCE_WITHOUT_BRAND_MESSAGE =
-            "La referencia del fabricante exige una marca.";
-    private static final String EMPTY_REFERENCE_MESSAGE =
-            "La referencia del fabricante debe tener al menos una letra o un número.";
-    private static final String DUPLICATE_EAN_MESSAGE =
-            "Ya existe un producto con el EAN %s: '%s'.";
-    private static final String DUPLICATE_REFERENCE_MESSAGE =
-            "Ya existe un producto de la marca '%s' con la referencia '%s'.";
-    private static final String DUPLICATE_IDENTITY_MESSAGE =
-            "Ya existe un producto con el mismo EAN o con la misma marca y referencia del fabricante.";
+    private static final String CONTENT_PAIR_MESSAGE = "El contenido neto y la unidad base van juntos: envía los dos o ninguno.";
+    private static final String REFERENCE_WITHOUT_BRAND_MESSAGE = "La referencia del fabricante exige una marca.";
+    private static final String EMPTY_REFERENCE_MESSAGE = "La referencia del fabricante debe tener al menos una letra o un número.";
+    private static final String DUPLICATE_EAN_MESSAGE = "Ya existe un producto con el EAN %s: '%s'.";
+    private static final String DUPLICATE_REFERENCE_MESSAGE = "Ya existe un producto de la marca '%s' con la referencia '%s'.";
+    private static final String DUPLICATE_IDENTITY_MESSAGE = "Ya existe un producto con el mismo EAN o con la misma marca y referencia del fabricante.";
 
-    // Restricciones de identidad del script: solo su violación es un producto repetido (409)
+    // Restricciones de identidad del script: solo su violación es un producto
+    // repetido (409)
     private static final String UQ_PRODUCTS_EAN = "uq_products_ean";
     private static final String UQ_PRODUCTS_BRAND_REF = "uq_products_brand_ref";
     private static final Set<String> IDENTITY_CONSTRAINTS = Set.of(UQ_PRODUCTS_EAN, UQ_PRODUCTS_BRAND_REF);
-    // Respaldo si Hibernate no extrae el nombre: SQLState unique_violation y nombre entre comillas
+    // Respaldo si Hibernate no extrae el nombre: SQLState unique_violation y nombre
+    // entre comillas
     private static final String UNIQUE_VIOLATION_SQLSTATE = "23505";
     private static final Pattern CONSTRAINT_IN_MESSAGE = Pattern.compile("constraint \"([^\"]+)\"");
 
-    /** Tamaño máximo de una página de la búsqueda (el mismo límite que las opiniones). */
+    /**
+     * Tamaño máximo de una página de la búsqueda (el mismo límite que las
+     * opiniones).
+     */
     public static final int MAX_PAGE_SIZE = 50;
     private static final Sort SEARCH_ORDER = Sort.by(Sort.Order.asc("name"), Sort.Order.asc("id"));
 
@@ -66,56 +73,64 @@ public class ProductService {
     private final CategoryService categoryService;
     private final BrandService brandService;
     private final StoreService storeService;
+    private final PriceRepository priceRepository;
 
-    public ProductService (ProductRepository productRepository,
-                           CategoryService categoryService,
-                           BrandService brandService,
-                           StoreService storeService) {
+    public ProductService(ProductRepository productRepository,
+            CategoryService categoryService,
+            BrandService brandService,
+            StoreService storeService,
+            PriceRepository priceRepository) {
         this.productRepository = productRepository;
         this.categoryService = categoryService;
         this.brandService = brandService;
         this.storeService = storeService;
+        this.priceRepository = priceRepository;
     }
 
-    public List<ProductResponse> findAll () {
+    public List<ProductResponse> findAll() {
         return productRepository.findAll().stream()
                 .map(ProductResponse::from)
                 .toList();
     }
 
-    public Product findById (Long id) {
-        return productRepository.findById(id).
-                orElseThrow(() -> new ProductNotFoundException("Producto no encontrado con id: " + id));
+    public Product findById(Long id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Producto no encontrado con id: " + id));
     }
 
-    public ProductResponse findByIdResponse (Long id) {
+    public ProductResponse findByIdResponse(Long id) {
         return ProductResponse.from(findById(id));
     }
 
-    public List<ProductResponse> findActive () {
+    public List<ProductResponse> findActive() {
         return productRepository.findByActiveTrue().stream()
                 .map(ProductResponse::from)
                 .toList();
     }
 
-    public List<ProductResponse> findInactive () {
+    public List<ProductResponse> findInactive() {
         return productRepository.findByActiveFalse().stream()
                 .map(ProductResponse::from)
                 .toList();
     }
 
     /**
-     * Busca productos activos con los filtros de HU-06a (nombre y categoría) y HU-06b
-     * (tiendas y rango del precio vigente). Todos se resuelven en SQL, así que cada página
+     * Busca productos activos con los filtros de HU-06a (nombre y categoría) y
+     * HU-06b
+     * (tiendas y rango del precio vigente). Todos se resuelven en SQL, así que cada
+     * página
      * está completa y el total es exacto.
      *
      * <p>
-     * Orden: categoría inexistente (404) -> tienda inexistente o inactiva (404) -> consulta.
-     * El rango ya llega validado en los filtros (400). El cliente no elige el orden: por
-     * nombre y, si empatan, por id, para que las páginas no repitan ni salten productos.
+     * Orden: categoría inexistente (404) -> tienda inexistente o inactiva (404) ->
+     * consulta.
+     * El rango ya llega validado en los filtros (400). El cliente no elige el
+     * orden: por
+     * nombre y, si empatan, por id, para que las páginas no repitan ni salten
+     * productos.
      * </p>
      */
-    public PagedModel<ProductResponse> search (ProductSearchCriteria criteria, int page, int size) {
+    public PagedModel<ProductResponse> search(ProductSearchCriteria criteria, int page, int size) {
         if (criteria.categoryId() != null) {
             categoryService.findById(criteria.categoryId());
         }
@@ -126,18 +141,67 @@ public class ProductService {
                 Math.min(Math.max(size, 1), MAX_PAGE_SIZE),
                 SEARCH_ORDER);
 
-        return new PagedModel<>(productRepository
-                .findAll(ProductSpecifications.matching(criteria), pageable)
-                .map(ProductResponse::from));
+        Page<Product> found = productRepository.findAll(ProductSpecifications.matching(criteria), pageable);
+        List<Long> productIds = found.getContent().stream().map(Product::getId).toList();
+        Map<Long, String> images = imagesOf(productIds);
+        Map<Long, List<ProductOffer>> offers = offersOf(productIds);
+
+        return new PagedModel<>(found.map(product -> ProductResponse.from(product)
+                .withImageUrl(images.get(product.getId()))
+                .withOffers(offers.getOrDefault(product.getId(), List.of()))));
     }
 
     /**
-     * Registra un producto. Orden: categoría (404/400/409) -> identidad incoherente (400)
-     * -> EAN o marca + referencia repetidos (409). Todo se comprueba antes de tocar la
+     * Ofertas vigentes de los productos de la página, con una sola consulta (RP-04:
+     * nunca una por
+     * producto). Cada lista queda de la más barata a la más cara y con una sola
+     * oferta por tienda:
+     * si una tienda tuviera dos periodos con la misma fecha de registro, se queda
+     * con el más barato,
+     * para que storeCount y la lista no cuenten dos veces la misma tienda.
+     */
+    private Map<Long, List<ProductOffer>> offersOf(Collection<Long> productIds) {
+        if (productIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, Map<Long, ProductOffer>> byProduct = new HashMap<>();
+        for (ProductOffer offer : priceRepository.findCurrentOffersByProductIds(productIds)) {
+            byProduct.computeIfAbsent(offer.productId(), id -> new LinkedHashMap<>())
+                    .putIfAbsent(offer.storeId(), offer);
+        }
+        Map<Long, List<ProductOffer>> offers = new HashMap<>();
+        byProduct.forEach((productId, byStore) -> offers.put(productId, List.copyOf(byStore.values())));
+        return offers;
+    }
+
+    /**
+     * Una foto por producto para la vista previa de la búsqueda, con una sola
+     * consulta para toda
+     * la página (no una por producto). Es la del precio vigente más bajo que tenga
+     * foto, la
+     * misma que muestra la cabecera del comparador. Un producto sin foto no aparece
+     * en el mapa.
+     */
+    private Map<Long, String> imagesOf(Collection<Long> productIds) {
+        if (productIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, String> images = new HashMap<>();
+        for (ProductImage image : priceRepository.findCurrentImagesByProductIds(productIds)) {
+            images.putIfAbsent(image.productId(), image.imageUrl());
+        }
+        return images;
+    }
+
+    /**
+     * Registra un producto. Orden: categoría (404/400/409) -> identidad incoherente
+     * (400)
+     * -> EAN o marca + referencia repetidos (409). Todo se comprueba antes de tocar
+     * la
      * entidad; el índice único de la BD es la segunda barrera.
      */
     @Transactional
-    public ProductResponse create (ProductRequest request) {
+    public ProductResponse create(ProductRequest request) {
         Category category = categoryService.findById(request.idCategory());
 
         if (category.getParent() == null) {
@@ -147,7 +211,7 @@ public class ProductService {
         if (!Boolean.TRUE.equals(category.getActive())) {
             throw new InactiveParentException(
                     "No se puede crear el producto '" + request.name() +
-                    "' porque la categoría '" + category.getName() + "' está inactiva.");
+                            "' porque la categoría '" + category.getName() + "' está inactiva.");
         }
 
         ResolvedIdentity identity = prepareIdentity(request, null);
@@ -167,7 +231,7 @@ public class ProductService {
      * al editar el nombre. Si trae alguno, la identidad se reemplaza completa.
      */
     @Transactional
-    public ProductResponse update (Long id, ProductRequest request) {
+    public ProductResponse update(Long id, ProductRequest request) {
         Product product = findById(id);
         Category category = categoryService.findById(request.idCategory());
 
@@ -178,7 +242,7 @@ public class ProductService {
         if (!Boolean.TRUE.equals(category.getActive())) {
             throw new InactiveParentException(
                     "No se puede actualizar el producto '" + product.getName() +
-                    "' porque la nueva categoría '" + category.getName() + "' está inactiva.");
+                            "' porque la nueva categoría '" + category.getName() + "' está inactiva.");
         }
 
         if (carriesIdentity(request)) {
@@ -194,13 +258,13 @@ public class ProductService {
     }
 
     @Transactional
-    public void activateProduct (Long id) {
+    public void activateProduct(Long id) {
         Product product = findById(id);
 
         if (!Boolean.TRUE.equals(product.getCategory().getActive())) {
             throw new InactiveParentException(
                     "No se puede activar el producto '" + product.getName() +
-                    "' porque su categoría '" + product.getCategory().getName() + "' está inactiva.");
+                            "' porque su categoría '" + product.getCategory().getName() + "' está inactiva.");
         }
 
         product.setActive(true);
@@ -209,7 +273,7 @@ public class ProductService {
     }
 
     @Transactional
-    public void deactivateProduct (Long id) {
+    public void deactivateProduct(Long id) {
         Product product = findById(id);
         product.setActive(false);
 
@@ -218,12 +282,16 @@ public class ProductService {
 
     /* IDENTIDAD (HT-09) */
 
-    /** Marca resuelta y EAN ya normalizado a GTIN-14, listos para asignar al producto. */
-    private record ResolvedIdentity (Brand brand, String gtin) {
+    /**
+     * Marca resuelta y EAN ya normalizado a GTIN-14, listos para asignar al
+     * producto.
+     */
+    private record ResolvedIdentity(Brand brand, String gtin) {
     }
 
-    // Valida y comprueba duplicados con los datos de la petición; productId es null al crear
-    private ResolvedIdentity prepareIdentity (ProductRequest request, Long productId) {
+    // Valida y comprueba duplicados con los datos de la petición; productId es null
+    // al crear
+    private ResolvedIdentity prepareIdentity(ProductRequest request, Long productId) {
         validateIdentity(request);
         String gtin = Gtin.normalize(request.ean());
         ensureUniqueEan(gtin, request.ean(), productId);
@@ -232,7 +300,7 @@ public class ProductService {
         return new ResolvedIdentity(brand, gtin);
     }
 
-    private void validateIdentity (ProductRequest request) {
+    private void validateIdentity(ProductRequest request) {
         if (request.ean() != null) {
             Gtin.assess(request.ean()).rejectionMessage(request.ean()).ifPresent(message -> {
                 throw new InvalidProductIdentityException(message);
@@ -252,8 +320,9 @@ public class ProductService {
         }
     }
 
-    // Busca por el GTIN-14 normalizado; el mensaje muestra el código tal como lo envió el cliente
-    private void ensureUniqueEan (String gtin, String requestedEan, Long productId) {
+    // Busca por el GTIN-14 normalizado; el mensaje muestra el código tal como lo
+    // envió el cliente
+    private void ensureUniqueEan(String gtin, String requestedEan, Long productId) {
         if (gtin == null) {
             return;
         }
@@ -265,7 +334,7 @@ public class ProductService {
                 });
     }
 
-    private void ensureUniqueReference (Brand brand, String reference, Long productId) {
+    private void ensureUniqueReference(Brand brand, String reference, Long productId) {
         if (reference == null) {
             return;
         }
@@ -279,11 +348,11 @@ public class ProductService {
         }
     }
 
-    private Brand resolveBrand (String brandName) {
+    private Brand resolveBrand(String brandName) {
         return brandName == null ? null : brandService.resolveByName(brandName);
     }
 
-    private static void applyIdentity (Product product, ProductRequest request, ResolvedIdentity identity) {
+    private static void applyIdentity(Product product, ProductRequest request, ResolvedIdentity identity) {
         product.setBrand(identity.brand());
         product.setEan(identity.gtin());
         product.setNetContent(request.netContent());
@@ -291,7 +360,7 @@ public class ProductService {
         product.setManufacturerRef(request.manufacturerRef());
     }
 
-    private static boolean carriesIdentity (ProductRequest request) {
+    private static boolean carriesIdentity(ProductRequest request) {
         return request.brandName() != null
                 || request.ean() != null
                 || request.netContent() != null
@@ -299,12 +368,14 @@ public class ProductService {
                 || request.manufacturerRef() != null;
     }
 
-    private Product saveUnique (Product product) {
+    private Product saveUnique(Product product) {
         try {
             return productRepository.saveAndFlush(product);
         } catch (DataIntegrityViolationException e) {
-            // Dos peticiones simultáneas pasaron la pre-comprobación: gana el índice único de la BD.
-            // Cualquier otra violación (un CHECK, una FK) es un error de programación y no se disfraza de 409
+            // Dos peticiones simultáneas pasaron la pre-comprobación: gana el índice único
+            // de la BD.
+            // Cualquier otra violación (un CHECK, una FK) es un error de programación y no
+            // se disfraza de 409
             if (violatesIdentityConstraint(e)) {
                 throw new ProductAlreadyExistsException(DUPLICATE_IDENTITY_MESSAGE);
             }
@@ -312,14 +383,15 @@ public class ProductService {
         }
     }
 
-    private static boolean violatesIdentityConstraint (DataIntegrityViolationException exception) {
+    private static boolean violatesIdentityConstraint(DataIntegrityViolationException exception) {
         return violatedConstraintName(exception)
                 .map(IDENTITY_CONSTRAINTS::contains)
                 .orElse(false);
     }
 
-    // Primero el nombre que extrae Hibernate; si no lo trae, el mensaje de PostgreSQL de una violación única
-    private static Optional<String> violatedConstraintName (DataIntegrityViolationException exception) {
+    // Primero el nombre que extrae Hibernate; si no lo trae, el mensaje de
+    // PostgreSQL de una violación única
+    private static Optional<String> violatedConstraintName(DataIntegrityViolationException exception) {
         for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
             if (cause instanceof ConstraintViolationException hibernateViolation
                     && hibernateViolation.getConstraintName() != null) {
@@ -333,7 +405,7 @@ public class ProductService {
         return Optional.empty();
     }
 
-    private static Optional<String> constraintNamedIn (String message) {
+    private static Optional<String> constraintNamedIn(String message) {
         if (message == null) {
             return Optional.empty();
         }
