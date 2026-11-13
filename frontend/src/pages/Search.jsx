@@ -124,12 +124,17 @@ function Thumb({ src, alt }) {
 }
 
 // Fila de resultado: foto | datos | precio desde | llamada a comparar
-function ProductRow({ product }) {
+function ProductRow({ product, index = 0 }) {
     const hasPrice = product.minPrice != null;
     const saving = savingOf(product);
 
     return (
-        <Link to={`/comparador?productId=${product.id}`} className={styles['product-row']}>
+        <Link
+            to={`/comparador?productId=${product.id}`}
+            className={styles['product-row']}
+            // Retraso de la animación de entrada: cada fila entra un poco después de la anterior
+            style={{ '--row-index': Math.min(index, 8) }}
+        >
             <div className={styles['product-row__media']}>
                 <Thumb src={product.imageUrl} alt={product.name} />
             </div>
@@ -169,6 +174,29 @@ function ProductRow({ product }) {
 
             <span className={styles['product-row__cta']}>Comparar precios <span aria-hidden="true">›</span></span>
         </Link>
+    );
+}
+
+// Filas de relleno que ocupan el lugar de los resultados mientras se piden: la página no salta
+// al llegar la respuesta y se ve que algo está pasando.
+const SKELETON_ROWS = 6;
+
+function ResultsSkeleton() {
+    return (
+        <div className={styles['skeleton-list']} role="status" aria-label="Buscando productos">
+            <span className={styles['visually-hidden']}>Buscando productos...</span>
+            {Array.from({ length: SKELETON_ROWS }, (_, index) => (
+                <div key={index} className={styles['skeleton-row']} aria-hidden="true">
+                    <span className={`${styles.skeleton} ${styles['skeleton-row__media']}`} />
+                    <div className={styles['skeleton-row__info']}>
+                        <span className={`${styles.skeleton} ${styles['skeleton-row__tags']}`} />
+                        <span className={`${styles.skeleton} ${styles['skeleton-row__name']}`} />
+                        <span className={`${styles.skeleton} ${styles['skeleton-row__name-short']}`} />
+                    </div>
+                    <span className={`${styles.skeleton} ${styles['skeleton-row__cta']}`} />
+                </div>
+            ))}
+        </div>
     );
 }
 
@@ -613,12 +641,7 @@ export default function Search() {
                                 </div>
                             )}
 
-                            {status === 'loading' && (
-                                <div className={styles['search-state']}>
-                                    <p className={styles['search-state__title']}>Cargando</p>
-                                    <p>Buscando productos...</p>
-                                </div>
-                            )}
+                            {status === 'loading' && <ResultsSkeleton />}
 
                             {status === 'soon' && selectedSector && (
                                 <div className={styles['search-state']}>
@@ -677,8 +700,8 @@ export default function Search() {
                                 </div>
                             )}
 
-                            {status === 'success' && products.map((product) => (
-                                <ProductRow key={product.id} product={product} />
+                            {status === 'success' && products.map((product, index) => (
+                                <ProductRow key={product.id} product={product} index={index} />
                             ))}
                         </div>
 

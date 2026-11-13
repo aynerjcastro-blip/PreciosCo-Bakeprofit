@@ -16,6 +16,7 @@ import com.comprasco.bakeprofit.catalog.repository.ProductSpecifications;
 import com.comprasco.bakeprofit.catalog.util.Gtin;
 import com.comprasco.bakeprofit.catalog.util.ManufacturerReference;
 import com.comprasco.bakeprofit.price.dto.ProductImage;
+import com.comprasco.bakeprofit.price.dto.ProductOffer;
 import com.comprasco.bakeprofit.price.repository.PriceRepository;
 import com.comprasco.bakeprofit.store.service.StoreService;
 
@@ -32,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -140,10 +142,36 @@ public class ProductService {
                 SEARCH_ORDER);
 
         Page<Product> found = productRepository.findAll(ProductSpecifications.matching(criteria), pageable);
-        Map<Long, String> images = imagesOf(found.getContent().stream().map(Product::getId).toList());
+        List<Long> productIds = found.getContent().stream().map(Product::getId).toList();
+        Map<Long, String> images = imagesOf(productIds);
+        Map<Long, List<ProductOffer>> offers = offersOf(productIds);
 
-        return new PagedModel<>(
-                found.map(product -> ProductResponse.from(product).withImageUrl(images.get(product.getId()))));
+        return new PagedModel<>(found.map(product -> ProductResponse.from(product)
+                .withImageUrl(images.get(product.getId()))
+                .withOffers(offers.getOrDefault(product.getId(), List.of()))));
+    }
+
+    /**
+     * Ofertas vigentes de los productos de la página, con una sola consulta (RP-04:
+     * nunca una por
+     * producto). Cada lista queda de la más barata a la más cara y con una sola
+     * oferta por tienda:
+     * si una tienda tuviera dos periodos con la misma fecha de registro, se queda
+     * con el más barato,
+     * para que storeCount y la lista no cuenten dos veces la misma tienda.
+     */
+    private Map<Long, List<ProductOffer>> offersOf(Collection<Long> productIds) {
+        if (productIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, Map<Long, ProductOffer>> byProduct = new HashMap<>();
+        for (ProductOffer offer : priceRepository.findCurrentOffersByProductIds(productIds)) {
+            byProduct.computeIfAbsent(offer.productId(), id -> new LinkedHashMap<>())
+                    .putIfAbsent(offer.storeId(), offer);
+        }
+        Map<Long, List<ProductOffer>> offers = new HashMap<>();
+        byProduct.forEach((productId, byStore) -> offers.put(productId, List.copyOf(byStore.values())));
+        return offers;
     }
 
     /**

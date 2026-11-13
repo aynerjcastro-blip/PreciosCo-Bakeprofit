@@ -169,6 +169,8 @@
     font-size: 0.9rem;
     font-weight: 600;
     text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
     cursor: pointer;
 }
 
@@ -607,5 +609,132 @@
     .product-row__cta {
         grid-column: 1 / -1;
         justify-content: center;
+    }
+}
+
+/* ============================================================
+   ANIMACIONES — carga y entrada de resultados
+   Solo se mueven si la persona no pidió menos movimiento; con "reducir movimiento" el esqueleto
+   queda quieto y las filas aparecen sin desplazarse. Cuando HT-14 deje tokens de movimiento
+   (duración y curva), estos valores se reemplazan por ellos.
+   ============================================================ */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.skeleton-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.skeleton-row {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr) 150px;
+    align-items: center;
+    gap: 20px;
+    padding: 14px 20px 14px 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.skeleton-row__info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.skeleton {
+    display: block;
+    border-radius: var(--radius-sm);
+    background: var(--border-color);
+}
+
+.skeleton-row__media {
+    width: 96px;
+    height: 96px;
+}
+
+.skeleton-row__tags {
+    width: 38%;
+    height: 12px;
+}
+
+.skeleton-row__name {
+    width: 86%;
+    height: 18px;
+}
+
+.skeleton-row__name-short {
+    width: 58%;
+    height: 18px;
+}
+
+.skeleton-row__cta {
+    width: 100%;
+    height: 40px;
+    border-radius: 999px;
+}
+
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: 100% 0;
+    }
+
+    100% {
+        background-position: -100% 0;
+    }
+}
+
+@keyframes row-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .skeleton {
+        background: linear-gradient(90deg, var(--border-color) 30%, var(--bg-main) 50%, var(--border-color) 70%);
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 1.4s ease-in-out infinite;
+    }
+
+    /* Cada fila entra un poco después de la anterior (máximo 8 escalones) */
+    .product-row {
+        animation: row-in 0.35s ease-out both;
+        animation-delay: calc(var(--row-index, 0) * 45ms);
+    }
+}
+
+@media (max-width: 720px) {
+    .skeleton-row {
+        grid-template-columns: 80px minmax(0, 1fr);
+        gap: 12px 16px;
+        padding: 14px;
+    }
+
+    .skeleton-row__media {
+        width: 80px;
+        height: 80px;
+    }
+
+    .skeleton-row__cta {
+        grid-column: 1 / -1;
     }
 }

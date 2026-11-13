@@ -1,10 +1,12 @@
 package com.comprasco.bakeprofit.catalog.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import com.comprasco.bakeprofit.catalog.entity.Product;
 import com.comprasco.bakeprofit.catalog.entity.UnitBase;
 import com.comprasco.bakeprofit.catalog.util.Gtin;
+import com.comprasco.bakeprofit.price.dto.ProductOffer;
 
 /**
  * Producto tal como lo ve el cliente. El EAN se guarda como GTIN-14 y se
@@ -22,9 +24,18 @@ public record ProductResponse(
         BigDecimal netContent,
         UnitBase unitBase,
         String manufacturerRef,
-        // Foto del producto en una tienda; solo la trae la búsqueda (null en el resto
-        // de respuestas)
-        String imageUrl) {
+        // Lo que sigue solo lo llena la búsqueda; en el resto de respuestas es null.
+        // Foto del producto en una tienda (la del precio vigente más bajo que tenga
+        // foto)
+        String imageUrl,
+        // Resumen de los precios vigentes en tiendas activas; null si ninguna tienda lo
+        // vende
+        BigDecimal minPrice,
+        BigDecimal maxPrice,
+        String minPriceStoreName,
+        Integer storeCount,
+        // Una oferta por tienda, de la más barata a la más cara
+        List<ProductOffer> offers) {
     public static ProductResponse from(Product product) {
         return new ProductResponse(
                 product.getId(),
@@ -37,11 +48,31 @@ public record ProductResponse(
                 product.getNetContent(),
                 product.getUnitBase(),
                 product.getManufacturerRef(),
-                null);
+                null, null, null, null, null, null);
     }
 
     public ProductResponse withImageUrl(String imageUrl) {
         return new ProductResponse(id, name, unit, active, category, brand, ean, netContent, unitBase,
-                manufacturerRef, imageUrl);
+                manufacturerRef, imageUrl, minPrice, maxPrice, minPriceStoreName, storeCount, offers);
+    }
+
+    /**
+     * Agrega las ofertas vigentes y su resumen. La lista debe venir ordenada de la
+     * más barata a
+     * la más cara y con una sola oferta por tienda: la primera da el precio mínimo
+     * y la tienda
+     * más barata, la última el máximo. Sin ofertas, el resumen queda vacío y
+     * storeCount en 0.
+     */
+    public ProductResponse withOffers(List<ProductOffer> offers) {
+        if (offers.isEmpty()) {
+            return new ProductResponse(id, name, unit, active, category, brand, ean, netContent, unitBase,
+                    manufacturerRef, imageUrl, null, null, null, 0, List.of());
+        }
+        ProductOffer cheapest = offers.get(0);
+        ProductOffer dearest = offers.get(offers.size() - 1);
+        return new ProductResponse(id, name, unit, active, category, brand, ean, netContent, unitBase,
+                manufacturerRef, imageUrl, cheapest.value(), dearest.value(), cheapest.storeName(),
+                offers.size(), offers);
     }
 }

@@ -32,6 +32,8 @@
     font-size: 0.85rem;
     font-weight: 600;
     text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
     cursor: pointer;
 }
 
