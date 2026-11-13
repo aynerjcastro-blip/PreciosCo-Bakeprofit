@@ -1,0 +1,34 @@
+/* ============================================================
+   CAMBIO DE TEMA (claro / oscuro)
+   Dos formas de animarlo, según lo que soporte el navegador:
+   1. View Transitions: la pantalla nueva se revela como un círculo que crece desde el botón.
+      El círculo lo dibuja utils/theme.js; aquí solo se apagan las animaciones por defecto.
+   2. Sin View Transitions: durante 350 ms los colores se mezclan suavemente (clase
+      .theme-changing, que pone y quita theme.js).
+   Con "reducir movimiento" no se anima nada: theme.js cambia el tema de golpe.
+   ============================================================ */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+    z-index: 1;
+}
+
+::view-transition-new(root) {
+    z-index: 2;
+}
+
+html.theme-changing,
+html.theme-changing *,
+html.theme-changing *::before,
+html.theme-changing *::after {
+    transition:
+        background-color 0.3s ease,
+        color 0.3s ease,
+        border-color 0.3s ease,
+        fill 0.3s ease,
+        stroke 0.3s ease !important;
+}

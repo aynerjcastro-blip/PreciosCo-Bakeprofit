@@ -1,4 +1,6 @@
-NotificationBell.module.css/* ============================================================
+NotificationBell.module.css
+
+/* ============================================================
    CAMPANA DE AVISOS (Header)
    Solo tokens del sistema de diseño: badge, alertas y estados vacío/cargando/error.
    Mismo lenguaje que el menú de usuario: botón en círculo y panel desplegable.
@@ -66,6 +68,7 @@ NotificationBell.module.css/* ==================================================
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-card);
     overflow: hidden;
+    transform-origin: top right;
 }
 
 .bell__panel-head {
@@ -123,7 +126,9 @@ NotificationBell.module.css/* ==================================================
 }
 
 @keyframes bell-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -247,5 +252,74 @@ NotificationBell.module.css/* ==================================================
         right: 12px;
         width: auto;
         margin-top: 4px;
+    }
+}
+
+/* ---------- Animación del panel (abre y cierra) ---------- */
+@keyframes bell-panel-in {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.96);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes bell-panel-out {
+    from {
+        opacity: 1;
+        transform: none;
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.97);
+    }
+}
+
+/* La duración de salida (140 ms) debe coincidir con PANEL_EXIT_MS de NotificationBell.jsx */
+@media (prefers-reduced-motion: no-preference) {
+    .bell__panel[data-state='open'] {
+        animation: bell-panel-in 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .bell__panel[data-state='closing'] {
+        animation: bell-panel-out 0.14s ease-in both;
+        pointer-events: none;
+    }
+
+    /* Cada aviso entra un poco después del anterior, solo los primeros */
+    .bell__panel[data-state='open'] .bell__item {
+        animation: bell-panel-in 0.25s ease-out both;
+    }
+
+    .bell__panel[data-state='open'] .bell__item:nth-child(2) {
+        animation-delay: 40ms;
+    }
+
+    .bell__panel[data-state='open'] .bell__item:nth-child(3) {
+        animation-delay: 80ms;
+    }
+
+    .bell__panel[data-state='open'] .bell__item:nth-child(4) {
+        animation-delay: 120ms;
+    }
+
+    /* El contador de no leídos aparece con un pequeño rebote */
+    .bell__badge {
+        animation: bell-badge-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+}
+
+@keyframes bell-badge-pop {
+    from {
+        transform: scale(0);
+    }
+
+    to {
+        transform: scale(1);
     }
 }
