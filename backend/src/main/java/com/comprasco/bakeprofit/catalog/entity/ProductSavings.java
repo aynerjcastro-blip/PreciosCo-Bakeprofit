@@ -4,7 +4,10 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import org.hibernate.annotations.Immutable;
 
-/** Vista product_savings (solo lectura). Ahorro = (máx - mín) / máx entre tiendas activas. */
+/**
+ * Vista product_savings (solo lectura, scripts/2026-11-ht13-ahorro.sql). Ahorro = (máx - mín) / máx
+ * de los precios vigentes en tiendas activas; 0 con un solo precio o sin precio (DP-39).
+ */
 @Entity
 @Immutable
 @Table(name = "product_savings")
@@ -31,9 +34,3 @@ public class ProductSavings {
     public BigDecimal getMaxPrice() { return maxPrice; }
     public BigDecimal getSavingsPct() { return savingsPct; }
 }
-
-/* ---- AGREGAR en la entidad Product ----
-@OneToOne(fetch = FetchType.LAZY)
-@JoinColumn(name = "id", referencedColumnName = "product_id", insertable = false, updatable = false)
-private ProductSavings savings;
-*/

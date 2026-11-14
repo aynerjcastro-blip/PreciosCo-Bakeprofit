@@ -16,6 +16,8 @@ import com.comprasco.bakeprofit.price.util.PriceRange;
  * @param words      palabras del nombre; el producto debe contenerlas todas, en
  *                   cualquier orden
  * @param categoryId categoría hoja, o null
+ * @param sectionId  sección (categoría raíz, el dominio de las tiendas), o null; deja los
+ *                   productos con precio en al menos una tienda activa de ese dominio (DP-26)
  * @param storeIds   tiendas seleccionadas, sin repetir; vacío significa todas
  *                   las activas
  * @param priceRange rango del precio vigente; {@link PriceRange#UNBOUNDED} si

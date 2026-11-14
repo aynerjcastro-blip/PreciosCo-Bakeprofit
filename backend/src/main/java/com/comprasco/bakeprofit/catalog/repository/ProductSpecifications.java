@@ -58,6 +58,9 @@ public final class ProductSpecifications {
         if (criteria.categoryId() != null) {
             conditions.add(inCategory(criteria.categoryId()));
         }
+        if (criteria.sectionId() != null) {
+            conditions.add(inSection(criteria.sectionId()));
+        }
         if (criteria.filtersByPrice()) {
             conditions.add(hasCurrentPriceWithin(criteria.storeIds(), criteria.priceRange()));
         }
@@ -150,19 +153,22 @@ public final class ProductSpecifications {
         return cb.lower(cb.function(UNACCENT_FUNCTION, String.class, text));
     }
 
-
+    /**
+     * El producto tiene precio en al menos una tienda activa de la sección (DP-26). No hace falta
+     * buscar el vigente: si el par producto-tienda tiene alguna fila, tiene un periodo vigente.
+     * La sección es una categoría raíz y las tiendas apuntan a su dominio con store.category.
+     * Es independiente del filtro de tiendas y del rango: cada uno exige su propia condición.
+     */
     public static Specification<Product> inSection(Long sectionId) {
-    if (sectionId == null) return null; // Specification.where(null) no filtra
-    return (root, query, cb) -> {
-        Subquery<Long> sq = query.subquery(Long.class);
-        Root<Price> price = sq.from(Price.class);
-        Join<Price, Store> store = price.join("store");
-        sq.select(price.<Long>get("id")).where(
-            cb.equal(price.get("product"), root),
-            cb.isTrue(store.get("active")),
-            cb.equal(store.get("category").get("id"), sectionId));
-        return cb.exists(sq); // DP-26: precio en al menos una tienda activa del dominio
-    };
-}
-
+        return (product, query, cb) -> {
+            Subquery<Long> priceInSection = query.subquery(Long.class);
+            Root<Price> price = priceInSection.from(Price.class);
+            Join<Price, Store> store = price.join(STORE);
+            priceInSection.select(price.get(ID)).where(
+                    cb.equal(price.get(PRODUCT), product),
+                    cb.isTrue(store.get(ACTIVE)),
+                    cb.equal(store.get(CATEGORY).get(ID), sectionId));
+            return cb.exists(priceInSection);
+        };
+    }
 }

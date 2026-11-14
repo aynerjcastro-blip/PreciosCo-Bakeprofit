@@ -19,8 +19,12 @@ import org.springframework.data.web.PagedModel;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.comprasco.bakeprofit.catalog.dto.BestSavingsGroup;
 import com.comprasco.bakeprofit.catalog.dto.ProductResponse;
 import com.comprasco.bakeprofit.catalog.dto.ProductSearchCriteria;
+import com.comprasco.bakeprofit.catalog.dto.ProductSort;
+import com.comprasco.bakeprofit.catalog.exception.CategoryNotFoundException;
+import com.comprasco.bakeprofit.catalog.exception.InvalidSearchFilterException;
 import com.comprasco.bakeprofit.catalog.service.ProductService;
 import com.comprasco.bakeprofit.store.exception.StoreNotFoundException;
 
@@ -29,7 +33,8 @@ import com.comprasco.bakeprofit.store.exception.StoreNotFoundException;
  * se resuelven en SQL, así que una prueba con Mockito no las prueba.
  *
  * <p>
- * Necesita la base de pruebas con scripts/2026-11-scrum140-busqueda-sin-tildes.sql aplicado.
+ * Necesita la base de pruebas con scripts/2026-11-scrum140-busqueda-sin-tildes.sql y
+ * scripts/2026-11-ht13-ahorro.sql (vista product_savings, HT-13) aplicados.
  * Corre como las demás pruebas de integración (ver BrandConcurrencyIntegrationTest):
  * </p>
  *
@@ -70,6 +75,7 @@ class ProductSearchIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     private String suffix;
+    private Long rootCategoryId;
     private Long leafCategoryId;
     private Long storeA;
     private Long storeB;
@@ -93,7 +99,7 @@ class ProductSearchIntegrationTest {
     @BeforeEach
     void createCatalog() {
         suffix = UUID.randomUUID().toString().replace("-", "");
-        Long rootCategoryId = insertId(INSERT_CATEGORY, "Dominio IT " + suffix, null);
+        rootCategoryId = insertId(INSERT_CATEGORY, "Dominio IT " + suffix, null);
         leafCategoryId = insertId(INSERT_CATEGORY, "Granos IT " + suffix, rootCategoryId);
         storeA = insertId(INSERT_STORE, "Tienda A " + suffix, true, rootCategoryId);
         storeB = insertId(INSERT_STORE, "Tienda B " + suffix, true, rootCategoryId);
@@ -173,14 +179,14 @@ class ProductSearchIntegrationTest {
         ProductSearchCriteria criteria = ProductSearchCriteria.of(
                 "arroz", leafCategoryId, List.of(storeA), null, new BigDecimal("6000"));
 
-        assertThat(idsOf(productService.search(criteria, null, 0, PAGE_SIZE))).containsExactly(arroz);
+        assertThat(idsOf(productService.search(criteria, ProductSort.NAME, 0, PAGE_SIZE))).containsExactly(arroz);
     }
 
     @Test
     void unaTiendaInactivaEnElFiltroResponde404() {
         ProductSearchCriteria criteria = ProductSearchCriteria.of(null, leafCategoryId, List.of(inactiveStore), null, null);
 
-        assertThatThrownBy(() -> productService.search(criteria, null, 0, PAGE_SIZE))
+        assertThatThrownBy(() -> productService.search(criteria, ProductSort.NAME, 0, PAGE_SIZE))
                 .isInstanceOf(StoreNotFoundException.class);
     }
 
@@ -188,8 +194,8 @@ class ProductSearchIntegrationTest {
     void lasPaginasEstanCompletasYElTotalEsExactoConFiltroDeNombre() {
         ProductSearchCriteria criteria = ProductSearchCriteria.of("a " + suffix, leafCategoryId, List.of(), null, null);
 
-        PagedModel<ProductResponse> first = productService.search(criteria, null, 0, 2);
-        PagedModel<ProductResponse> second = productService.search(criteria, null, 1, 2);
+        PagedModel<ProductResponse> first = productService.search(criteria, ProductSort.NAME, 0, 2);
+        PagedModel<ProductResponse> second = productService.search(criteria, ProductSort.NAME, 1, 2);
 
         // "a" aparece en Arroz Blanco, Azúcar, Café Molido, Lenteja y Sal: los cinco
         assertThat(first.getMetadata().totalElements()).isEqualTo(5);
@@ -198,13 +204,118 @@ class ProductSearchIntegrationTest {
         assertThat(idsOf(second)).containsExactly(cafe, lenteja);
     }
 
+    // ===================== HT-13: sección y orden por mayor ahorro =====================
+
+    @Test
+    void ordenaPorMayorAhorroYLosDeUnSoloPrecioOSinPrecioVanAlFinal() {
+        // Leche 4800/6000 = 20 %; Pan 5000/5200 = 3,8 %; Café 3000/6000 = 50 %
+        Long leche = product("Leche", true);
+        Long pan = product("Pan", true);
+        price(leche, storeA, "4800", TODAY);
+        price(leche, storeB, "6000", TODAY);
+        price(pan, storeA, "5000", TODAY);
+        price(pan, storeB, "5200", TODAY);
+
+        // Ahorro 0 desempata por nombre: Arroz y Lenteja (un precio), Azúcar y Sal (sin precio activo)
+        assertThat(idsOf(bySavings(List.of(), 0, PAGE_SIZE)))
+                .containsExactly(cafe, leche, pan, arroz, azucar, lenteja, sal);
+    }
+
+    @Test
+    void unaTiendaInactivaNoEntraEnElCalculoDelAhorro() {
+        // Con la inactiva sería 5000/10000 = 50 %; sin ella tiene un solo precio y ahorro 0
+        Long aceite = product("Aceite", true);
+        price(aceite, storeA, "5000", TODAY);
+        price(aceite, inactiveStore, "10000", TODAY);
+
+        assertThat(savingsOf(aceite)).isEqualByComparingTo("0");
+        assertThat(idsOf(bySavings(List.of(), 0, PAGE_SIZE))).containsExactly(cafe, aceite, arroz, azucar, lenteja, sal);
+    }
+
+    @Test
+    void conTiendasFiltradasElAhorroSeCalculaConTodasLasActivas() {
+        // Solo la tienda A tiene precio de Café en el filtro, pero su ahorro (50 %) usa también la B
+        assertThat(idsOf(bySavings(List.of(storeA), 0, PAGE_SIZE))).containsExactly(cafe, arroz, lenteja);
+    }
+
+    @Test
+    void elOrdenPorAhorroSeMantieneEntrePaginas() {
+        List<Long> all = idsOf(bySavings(List.of(), 0, PAGE_SIZE));
+        List<Long> first = idsOf(bySavings(List.of(), 0, 3));
+        List<Long> second = idsOf(bySavings(List.of(), 1, 3));
+
+        assertThat(first).containsExactlyElementsOf(all.subList(0, 3));
+        assertThat(second).containsExactlyElementsOf(all.subList(3, all.size()));
+    }
+
+    @Test
+    void laSeccionDejaLosProductosConPrecioEnUnaTiendaActivaDeSuDominio() {
+        ProductSearchCriteria criteria = ProductSearchCriteria.of(null, leafCategoryId, rootCategoryId, List.of(), null, null);
+
+        // Azúcar solo tiene precio en la tienda inactiva y Sal no tiene precio: no entran
+        assertThat(idsOf(productService.search(criteria, ProductSort.SAVINGS, 0, PAGE_SIZE)))
+                .containsExactly(cafe, arroz, lenteja);
+    }
+
+    @Test
+    void unaSeccionSinTiendasRespondeVacioSinError() {
+        Long otherRoot = insertId(INSERT_CATEGORY, "Otro dominio IT " + suffix, null);
+        ProductSearchCriteria criteria = ProductSearchCriteria.of(null, leafCategoryId, otherRoot, List.of(), null, null);
+
+        assertThat(productService.search(criteria, ProductSort.SAVINGS, 0, PAGE_SIZE).getContent()).isEmpty();
+    }
+
+    @Test
+    void unaSeccionInexistenteOQueNoEsRaizResponde404() {
+        ProductSearchCriteria missing = ProductSearchCriteria.of(null, null, Long.MAX_VALUE, List.of(), null, null);
+        ProductSearchCriteria leaf = ProductSearchCriteria.of(null, null, leafCategoryId, List.of(), null, null);
+
+        assertThatThrownBy(() -> productService.search(missing, ProductSort.SAVINGS, 0, PAGE_SIZE))
+                .isInstanceOf(CategoryNotFoundException.class);
+        assertThatThrownBy(() -> productService.search(leaf, ProductSort.SAVINGS, 0, PAGE_SIZE))
+                .isInstanceOf(CategoryNotFoundException.class);
+        assertThatThrownBy(() -> productService.bestSavings(Long.MAX_VALUE, 5))
+                .isInstanceOf(CategoryNotFoundException.class);
+    }
+
+    @Test
+    void sinFiltrosCadaSubcategoriaMuestraComoMaximoNPorAhorro() {
+        List<BestSavingsGroup> groups = productService.bestSavings(rootCategoryId, 2);
+
+        assertThat(groups).hasSize(1);
+        assertThat(groups.get(0).categoryId()).isEqualTo(leafCategoryId);
+        assertThat(groups.get(0).sectionId()).isEqualTo(rootCategoryId);
+        // Café (50 %) y luego el primero por nombre de ahorro 0; Azúcar y Sal no tienen precio activo
+        assertThat(groups.get(0).products()).extracting(item -> item.id()).containsExactly(cafe, arroz);
+        assertThat(productService.bestSavings(rootCategoryId, 5).get(0).products())
+                .extracting(item -> item.id()).containsExactly(cafe, arroz, lenteja);
+    }
+
+    @Test
+    void unLimiteFueraDeRangoResponde400() {
+        assertThatThrownBy(() -> productService.bestSavings(rootCategoryId, 0))
+                .isInstanceOf(InvalidSearchFilterException.class);
+        assertThatThrownBy(() -> productService.bestSavings(rootCategoryId, ProductService.MAX_BEST_SAVINGS_LIMIT + 1))
+                .isInstanceOf(InvalidSearchFilterException.class);
+    }
+
+    private PagedModel<ProductResponse> bySavings(List<Long> storeIds, int page, int size) {
+        return productService.search(
+                ProductSearchCriteria.of(null, leafCategoryId, storeIds, null, null), ProductSort.SAVINGS, page, size);
+    }
+
+    private BigDecimal savingsOf(Long productId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT savings_pct FROM product_savings WHERE product_id = ?", BigDecimal.class, productId);
+    }
+
     private PagedModel<ProductResponse> inCategory(List<Long> storeIds, BigDecimal min, BigDecimal max) {
         return productService.search(
-                ProductSearchCriteria.of(null, leafCategoryId, storeIds, min, max), null, 0, PAGE_SIZE);
+                ProductSearchCriteria.of(null, leafCategoryId, storeIds, min, max), ProductSort.NAME, 0, PAGE_SIZE);
     }
 
     private PagedModel<ProductResponse> byName(String name) {
-        return productService.search(ProductSearchCriteria.of(name, null, List.of(), null, null), null, 0, PAGE_SIZE);
+        return productService.search(ProductSearchCriteria.of(name, null, List.of(), null, null), ProductSort.NAME, 0, PAGE_SIZE);
     }
 
     private static List<Long> idsOf(PagedModel<ProductResponse> page) {

@@ -203,7 +203,7 @@ Como visitante, quiero filtrar los resultados por tienda y por rango de precio, 
 - Cada filtro se resuelve en el backend, no con una manipulación visual del cliente.
 - Combinado con nombre y categoría (HU-06a), el resultado cumple todos los filtros a la vez.
 - Una tienda inexistente o inactiva responde 404; un precio negativo o un mínimo mayor que el máximo responde 400; una búsqueda sin resultados responde vacío, sin error (DP-35).
-- Los resultados se muestran por páginas, ordenados por nombre (DP-36), y los filtros de tienda, precio y página quedan en la dirección de la búsqueda.
+- Los resultados se muestran por páginas, ordenados por mayor ahorro (DP-36, DP-39), y los filtros de tienda, precio y página quedan en la dirección de la búsqueda.
 - Sin tienda ni rango, la búsqueda se comporta como en HU-06a, incluidos los productos sin precio.
 
 **HU-07 · Comparar precios por tienda** — RF07, RF10, RF12 · OB-01, OB-02, OB-03 · M
@@ -856,6 +856,7 @@ Treinta y ocho decisiones siguen abiertas; cada una tiene un valor provisional c
 | DP-32 | ¿Qué fecha se muestra junto a un precio? | La última vez que la fuente lo confirmó (last_seen_at) | RF10, RN-01 |
 | DP-33 | ¿Qué cumple la “fuente” que exige RN-01? | La tienda del precio, que siempre existe; la página del producto en la tienda (RF57) es evidencia adicional cuando se registró. prices.source guarda el nombre del producto tal como lo publica la tienda, para rastrear de qué oferta salió. Se revisa al llegar EP-08 | RN-01, RF51, RF57 || DP-34 | ¿Qué precio cuenta en el filtro por rango? | El vigente: el más reciente de cada par producto-tienda, nunca uno anterior, y solo en tiendas activas; con tiendas seleccionadas, solo el de esas tiendas; límites inclusivos | RF06, HU-06b |
 | DP-35 | Códigos de la búsqueda | 200 también sin resultados; 400 por un precio negativo o un mínimo mayor que el máximo; 404 por una categoría inexistente o una tienda inexistente o inactiva | RF06, RNF08 |
-| DP-36 | Tamaño y orden de las páginas de la búsqueda | 20 resultados por defecto y 50 como máximo, ordenados por nombre y luego por id; el usuario no elige el orden | RF05, RF06 |
+| DP-36 | Tamaño y orden de las páginas de la búsqueda | 20 resultados por defecto y 50 como máximo, ordenados por mayor ahorro (DP-39) y luego por nombre e id; el usuario no elige el orden. Hasta HT-13 el orden era por nombre | RF05, RF06 |
 | DP-37 | Tiendas inactivas en el comparador y en Seguidos | No se muestran ni cuentan para el precio más bajo, igual que en la búsqueda | RF07, RF08, RF26 |
 | DP-38 | Precio que la tienda dejó de confirmar | Sigue contando como vigente (riesgo aceptado); se resuelve en HU-36 con una ventana según la fecha de la última confirmación | RF07, RF08, RF10 |
+| DP-39 | ¿Cómo se ordena la búsqueda por ahorro? | Ahorro = (precio vigente máximo − mínimo) / máximo entre todas las tiendas activas, en porcentaje, aunque se filtre por algunas; con un solo precio o sin precio es 0 y el producto va al final. Con filtros: lista paginada por ahorro, desempate por nombre e id. Sin filtros: los 5 mejores de cada subcategoría (N provisional), agrupados por sección, en /best-savings | RF05, RF06, RF09, RF11 |
