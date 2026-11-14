@@ -1,18 +1,34 @@
 /* ============================================================
-   LAYOUT PRINCIPAL (2 Columnas)
+   LOGIN Y REGISTRO
+   Mismo lenguaje que el buscador y el header: fondo cálido que se funde con --bg-main,
+   bordes finos, aros de foco con --focus-ring-color. Solo tokens del sistema de diseño
+   (tokens.css), así que funciona igual en claro y oscuro.
    ============================================================ */
+
+/* ---------- Marco de la página ---------- */
+.auth-shell {
+    display: flex;
+    align-items: center;
+    min-height: 70vh;
+    /* Un tono cálido arriba que se calcula sobre --bg-main: en oscuro es un tinte oscuro, no un blanco */
+    background: linear-gradient(180deg,
+            color-mix(in srgb, var(--color-primary) 9%, var(--bg-main)) 0,
+            var(--bg-main) 640px);
+}
+
 .auth-page {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 40px;
-    max-width: 1100px;
-    margin: 60px auto;
-    padding: 0 24px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 480px);
+    gap: 56px;
     align-items: center;
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 56px 24px;
 }
 
 /* ============================================================
-   COLUMNA IZQUIERDA: HERO Y PROPUESTA DE VALOR
+   COLUMNA IZQUIERDA: PROPUESTA DE VALOR
    ============================================================ */
 .auth-hero {
     display: flex;
@@ -21,9 +37,11 @@
 }
 
 .auth-hero__title {
-    font-size: clamp(2.5rem, 4vw, 3.5rem);
-    font-weight: 900;
-    line-height: 1.1;
+    font-family: var(--font-heading);
+    font-size: clamp(2.2rem, 4vw, 3.4rem);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.01em;
     color: var(--color-dark);
 }
 
@@ -34,33 +52,38 @@
 .auth-hero__subtitle {
     font-size: 1.1rem;
     color: var(--text-muted);
-    margin-bottom: 10px;
+    margin-bottom: 4px;
 }
 
 .auth-hero__features {
-    list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 24px;
-    margin-bottom: 30px;
+    gap: 12px;
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
 }
 
 .auth-hero__features li {
     display: flex;
-    gap: 16px;
     align-items: flex-start;
+    gap: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--bg-surface) 70%, transparent);
 }
 
 .feature-icon {
     display: grid;
     place-items: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--color-primary-soft);
-    color: var(--color-primary);
-    font-size: 1.2rem;
     flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-primary) 16%, var(--bg-surface));
+    /* --color-star-stroke es el naranja oscuro en claro y el naranja de marca en oscuro: contraste en ambos */
+    color: var(--color-star-stroke);
 }
 
 .auth-hero__features strong {
@@ -70,49 +93,53 @@
 }
 
 .auth-hero__features p {
+    margin: 4px 0 0;
     font-size: 0.9rem;
     color: var(--text-muted);
-    margin: 4px 0 0 0;
 }
 
 /* ============================================================
-   TARJETA DINÁMICA DE AHORRO EN VIVO
+   TARJETA DE AHORRO EN VIVO (SavingsCard usa estas clases)
    ============================================================ */
 .savings-card {
     position: relative;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 20px;
-    box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
     gap: 16px;
-    text-decoration: none;
-    color: inherit;
-    transition: transform 0.2s, box-shadow 0.2s;
     max-width: 450px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-card);
+    color: inherit;
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .savings-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15);
+}
+
+.savings-card:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 3px;
 }
 
 .savings-card__badge {
     position: absolute;
     top: -15px;
     right: 20px;
-    background: #10B981;
-    /* Verde positivo */
-    color: white;
     padding: 8px 16px;
     border-radius: var(--radius-md);
+    background: var(--color-secondary);
+    /* Texto oscuro: el blanco sobre este verde no llega a contraste AA */
+    color: #0F172A;
     font-weight: 800;
-    text-align: center;
     line-height: 1.2;
+    text-align: center;
     transform: rotate(3deg);
-    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 4px 10px color-mix(in srgb, var(--color-secondary) 35%, transparent);
 }
 
 .savings-card__product {
@@ -130,8 +157,8 @@
 .savings-card__img-placeholder {
     width: 60px;
     height: 60px;
-    background: var(--border-color);
     border-radius: var(--radius-sm);
+    background: var(--border-color);
 }
 
 .savings-card__name {
@@ -144,9 +171,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: var(--bg-main);
     padding: 12px 16px;
     border-radius: var(--radius-sm);
+    background: var(--bg-main);
 }
 
 .savings-card__price-box {
@@ -157,7 +184,7 @@
 .savings-card__price--best {
     font-size: 1.4rem;
     font-weight: 800;
-    color: var(--color-primary);
+    color: var(--color-star-stroke);
 }
 
 .savings-card__price--worst {
@@ -185,18 +212,12 @@
     justify-self: center;
 }
 
-.auth-form-wrapper--centered {
-    grid-column: 1 / -1;
-    /* Centra el form de login si no hay hero */
-    margin: 0 auto;
-}
-
 .auth-form {
-    background: var(--bg-surface);
-    padding: 40px 32px;
-    border-radius: var(--radius-lg);
-    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
+    padding: 36px 32px;
     border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-card);
 }
 
 .auth-form__header {
@@ -204,17 +225,19 @@
 }
 
 .auth-form__header h2 {
+    font-family: var(--font-heading);
     font-size: 1.6rem;
     font-weight: 800;
     color: var(--color-dark);
 }
 
 .auth-form__header p {
-    color: var(--text-muted);
-    font-size: 0.95rem;
     margin-top: 4px;
+    font-size: 0.95rem;
+    color: var(--text-muted);
 }
 
+/* ---------- Campos ---------- */
 .auth-form__field {
     display: flex;
     flex-direction: column;
@@ -237,89 +260,157 @@
 .input-icon {
     position: absolute;
     left: 14px;
+    display: flex;
     color: var(--text-muted);
-    font-size: 1.1rem;
     pointer-events: none;
 }
 
-.auth-form input[type="text"],
-.auth-form input[type="email"],
-.auth-form input[type="password"] {
+.auth-form__input {
     width: 100%;
     padding: 14px 16px 14px 44px;
     border: 1.5px solid var(--border-color);
     border-radius: var(--radius-sm);
     background: var(--bg-main);
+    color: var(--text-primary);
+    font: inherit;
     font-size: 1rem;
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
 }
 
-.auth-form input:focus {
+.auth-form__input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
+.auth-form__input:focus {
     border-color: var(--color-primary);
-    background: #FFF;
-    box-shadow: 0 0 0 3px var(--color-primary-soft);
+    background: var(--bg-surface);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+/* Evita el fondo amarillo del autocompletado del navegador */
+.auth-form__input:-webkit-autofill {
+    -webkit-text-fill-color: var(--text-primary);
+    box-shadow: 0 0 0 1000px var(--bg-main) inset;
+}
+
+/* Deja sitio al botón de mostrar contraseña */
+.input-with-icon--password .auth-form__input {
+    padding-right: 52px;
 }
 
 .password-toggle {
     position: absolute;
-    right: 14px;
-    background: none;
+    right: 6px;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
     border: none;
+    border-radius: 50%;
+    background: none;
+    color: var(--text-muted);
     cursor: pointer;
-    font-size: 1.1rem;
-    opacity: 0.6;
+    transition: color 0.2s, background-color 0.2s;
 }
 
 .password-toggle:hover {
-    opacity: 1;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+}
+
+.password-toggle:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 1px;
 }
 
 .auth-form__hint {
-    font-size: 0.75rem;
+    font-size: 0.78rem;
     color: var(--text-muted);
 }
 
+.auth-form__forgot {
+    margin-top: 2px;
+    text-align: right;
+    font-size: 0.85rem;
+}
+
+/* Enlaces: texto del color base con subrayado de marca (el naranja solo sobre blanco no cumple contraste) */
+.auth-form__forgot a,
+.auth-form__terms a,
+.auth-form__switch a {
+    color: var(--text-primary);
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-color: var(--color-primary);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+    border-radius: 2px;
+}
+
+.auth-form__forgot a:hover,
+.auth-form__terms a:hover,
+.auth-form__switch a:hover {
+    color: var(--color-star-stroke);
+}
+
+.auth-form__forgot a:focus-visible,
+.auth-form__terms a:focus-visible,
+.auth-form__switch a:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+/* ---------- Términos (registro) ---------- */
 .auth-form__terms {
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    margin: 24px 0;
+    margin: 4px 0 20px;
 }
 
 .auth-form__terms input {
-    margin-top: 4px;
+    flex-shrink: 0;
     width: 18px;
     height: 18px;
+    margin-top: 2px;
     accent-color: var(--color-primary);
     cursor: pointer;
 }
 
 .auth-form__terms label {
     font-size: 0.85rem;
+    line-height: 1.45;
     color: var(--text-muted);
-    line-height: 1.4;
 }
 
-.auth-form__terms a {
-    color: var(--color-primary);
-    font-weight: 600;
-    text-decoration: underline;
+/* ---------- Errores y botón principal ---------- */
+.auth-form__error {
+    margin: 0 0 16px;
+    padding: 10px 12px;
+    border: 1px solid var(--alert-error-border);
+    border-radius: var(--radius-sm);
+    background: var(--alert-error-bg);
+    color: var(--badge-reportado-text);
+    font-size: 0.88rem;
+    line-height: 1.4;
 }
 
 .auth-form__submit {
     width: 100%;
-    background: var(--color-primary);
-    /* Naranja del mockup */
-    color: #FFF;
+    padding: 15px;
     border: none;
-    padding: 16px;
     border-radius: var(--radius-sm);
-    font-size: 1.05rem;
+    background: var(--color-primary);
+    /* Texto oscuro sobre el naranja: igual que la pestaña activa del buscador */
+    color: #0F172A;
+    font: inherit;
+    font-size: 1.02rem;
     font-weight: 800;
     cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
-    box-shadow: 0 8px 15px rgba(255, 159, 28, 0.2);
+    box-shadow: 0 8px 18px -6px color-mix(in srgb, var(--color-primary) 60%, transparent);
+    transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
 }
 
 .auth-form__submit:hover:not(:disabled) {
@@ -327,84 +418,25 @@
     transform: translateY(-1px);
 }
 
-.auth-form__error {
-    color: #DC2626;
-    background: #FEE2E2;
-    padding: 10px;
-    border-radius: var(--radius-sm);
-    font-size: 0.85rem;
-    margin-bottom: 20px;
-    text-align: center;
+.auth-form__submit:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 3px;
 }
 
-.auth-form__switch {
-    text-align: center;
-    margin-top: 24px;
-    font-size: 0.95rem;
-    color: var(--text-muted);
+.auth-form__submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
 }
 
-.auth-form__switch a {
-    color: var(--color-primary);
-    font-weight: 700;
-}
-
-.auth-form__trust {
-    margin-top: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
-@media (max-width: 900px) {
-    .auth-page {
-        grid-template-columns: 1fr;
-        gap: 60px;
-        margin: 40px auto;
-    }
-
-    .auth-hero {
-        text-align: center;
-        align-items: center;
-    }
-
-    .auth-hero__features li {
-        text-align: left;
-    }
-}
-
-/* ============================================================
-   ESTILOS ESPECIFICOS PARA EL LOGIN
-   ============================================================ */
-
-/* Enlace "Olvidaste tu contraseña" alineado a la derecha */
-.auth-form__forgot {
-    text-align: right;
-    margin-top: 8px;
-    font-size: 0.85rem;
-}
-
-.auth-form__forgot a {
-    color: var(--color-primary);
-    font-weight: 600;
-}
-
-.auth-form__forgot a:hover {
-    text-decoration: underline;
-}
-
-
-
-/* Separador "o continúa con" */
+/* ---------- Login: Google y pie ---------- */
 .auth-divider {
     display: flex;
     align-items: center;
-    text-align: center;
-    margin: 24px 0;
+    margin: 22px 0;
     color: var(--text-muted);
     font-size: 0.9rem;
+    text-align: center;
 }
 
 .auth-divider::before,
@@ -415,37 +447,75 @@
 }
 
 .auth-divider span {
-    padding: 0 10px;
+    padding: 0 12px;
 }
 
-/* Boton de Google Adaptable */
-.auth-google-btn {
+.auth-form__google {
+    display: flex;
+    justify-content: center;
+}
+
+.auth-form__google + .auth-form__error {
+    margin-top: 16px;
+}
+
+.auth-form__switch {
+    margin-top: 24px;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.auth-form__trust {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    width: 100%;
-    padding: 14px;
-    background: transparent;
-    /* Se adapta al fondo */
-    border: 1.5px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    font-size: 1rem;
+    gap: 6px;
+    margin-top: 12px;
+    font-size: 0.8rem;
     font-weight: 600;
-    color: var(--text-primary);
-    /* Texto inteligente (negro en luz, blanco en sombra) */
-    cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
 }
 
-.auth-google-btn:hover {
-    background: var(--bg-main);
-    /* Efecto hover sutil */
-    border-color: var(--color-primary);
+/* ============================================================
+   RESPONSIVE
+   En pantallas angostas el formulario va primero: es a lo que viene la persona.
+   ============================================================ */
+@media (max-width: 900px) {
+    .auth-page {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 40px;
+        padding: 32px 16px 48px;
+    }
+
+    .auth-form-wrapper {
+        order: -1;
+    }
+
+    .auth-hero {
+        align-items: center;
+        text-align: center;
+    }
+
+    .auth-hero__features li {
+        text-align: left;
+    }
 }
 
-/* Ajuste del icono del escudo en el Footer */
-.auth-form__trust svg {
-    vertical-align: text-bottom;
-    margin-right: 4px;
+@media (max-width: 480px) {
+    .auth-form {
+        padding: 28px 20px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .savings-card,
+    .auth-form__submit,
+    .auth-form__input {
+        transition: none;
+    }
+
+    .savings-card:hover,
+    .auth-form__submit:hover:not(:disabled) {
+        transform: none;
+    }
 }

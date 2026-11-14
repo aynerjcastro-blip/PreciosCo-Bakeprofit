@@ -1,107 +1,224 @@
-/**
-/**Contenedor principal de la página de perfil. 
- ** Se limita el ancho máximo para que en pantallas de escritorio no se estire demasiado y sea difícil de leer. */
+/* ============================================================
+   MI PERFIL
+   Solo tokens del sistema de diseño (tokens.css): claro y oscuro.
+   ============================================================ */
+
+.page {
+    display: flex;
+    justify-content: center;
+    min-height: 70vh;
+    padding: 48px 16px 64px;
+    background: linear-gradient(180deg,
+            color-mix(in srgb, var(--color-primary) 9%, var(--bg-main)) 0,
+            var(--bg-main) 640px);
+}
+
+/* Se limita el ancho para que en escritorio no se estire y sea difícil de leer */
 .profileContainer {
+    width: 100%;
     max-width: 650px;
-    margin: 3rem auto;
-    padding: 2.5rem;
-    background-color: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-    border: 1px solid #eaeaea;
+    height: fit-content;
+    padding: 36px 32px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-card);
 }
 
 .title {
-    font-size: 1.75rem;
-    color: #1a1a1a;
-    margin-bottom: 2rem;
-    font-weight: 700;
-    text-align: left;
-    border-bottom: 2px solid #f0f0f0;
-    padding-bottom: 0.75rem;
+    margin-bottom: 24px;
+    font-family: var(--font-heading);
+    font-size: clamp(1.6rem, 3vw, 2rem);
+    font-weight: 800;
+    line-height: 1.15;
+    color: var(--color-dark);
 }
 
+/* ---------- Resumen de la cuenta ---------- */
+.summary {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-main);
+}
+
+.avatar {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: #0F172A;
+    font-family: var(--font-heading);
+    font-size: 1.3rem;
+    font-weight: 800;
+}
+
+.identity {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.name {
+    overflow: hidden;
+    font-size: 1.05rem;
+    color: var(--text-primary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.email {
+    overflow: hidden;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.role {
+    flex-shrink: 0;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--badge-pendiente-bg);
+    color: var(--badge-pendiente-text);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
+
+/* ---------- Formulario ---------- */
 .formContainer {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 20px;
 }
 
 .inputGroup {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 6px;
 }
 
 .inputGroup label {
-    font-weight: 600;
-    color: #4a4a4a;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-dark);
 }
 
-/* Input con bordes sutiles y enfoque en color naranja institucional */
 .inputField {
-    padding: 0.85rem 1rem;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
+    width: 100%;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-main);
+    color: var(--text-primary);
+    font: inherit;
     font-size: 1rem;
-    color: #1f2937;
-    background-color: #f9fafb;
-    transition: all 0.2s ease;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+.inputField::placeholder {
+    color: var(--text-muted);
+    opacity: 0.8;
 }
 
 .inputField:focus {
-    outline: none;
-    border-color: #ff9900; /* Naranja institucional de PreciosCo */
-    background-color: #ffffff;
-    box-shadow: 0 0 0 3px rgba(255, 153, 0, 0.15);
+    border-color: var(--color-primary);
+    background: var(--bg-surface);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
-/* Botón principal usando el color naranja característico de PreciosCo */
+.inputField:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .submitButton {
-    padding: 0.85rem;
-    background-color: #ff9900;
-    color: #ffffff;
-    font-weight: 600;
+    padding: 15px;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
+    background: var(--color-primary);
+    /* Texto oscuro sobre el naranja: igual que la pestaña activa del buscador */
+    color: #0F172A;
+    font: inherit;
+    font-size: 1.02rem;
+    font-weight: 800;
     cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 0.2s ease, transform 0.1s ease;
-    margin-top: 0.5rem;
+    box-shadow: 0 8px 18px -6px color-mix(in srgb, var(--color-primary) 60%, transparent);
+    transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
 }
 
 .submitButton:hover:not(:disabled) {
-    background-color: #e68a00; /* Tono naranja más oscuro para el hover */
+    background: var(--color-primary-hover);
+    transform: translateY(-1px);
 }
 
 .submitButton:active:not(:disabled) {
     transform: scale(0.98);
 }
 
-.submitButton:disabled {
-    background-color: #e5e7eb;
-    color: #9ca3af;
-    cursor: not-allowed;
-    opacity: 0.8;
+.submitButton:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 3px;
 }
 
+/* Deshabilitado = sin cambios que guardar: se ve apagado, no roto */
+.submitButton:disabled {
+    background: var(--border-color);
+    color: var(--text-muted);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+/* ---------- Mensajes (el nombre de la clase llega de feedback.type) ---------- */
 .feedbackMsg {
-    padding: 1rem;
-    border-radius: 8px;
+    padding: 12px 14px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
     font-size: 0.95rem;
+    font-weight: 600;
     text-align: center;
-    font-weight: 500;
 }
 
 .success {
-    background-color: #ecfdf5;
-    color: #065f46;
-    border: 1px solid #a7f3d0;
+    border-color: var(--alert-success-border);
+    background: var(--alert-success-bg);
+    color: var(--badge-resuelto-text);
 }
 
 .error {
-    background-color: #fef2f2;
-    color: #991b1b;
-    border: 1px solid #fecaca;
+    border-color: var(--alert-error-border);
+    background: var(--alert-error-bg);
+    color: var(--badge-reportado-text);
+}
+
+@media (max-width: 480px) {
+    .profileContainer {
+        padding: 28px 20px;
+    }
+
+    .summary {
+        flex-wrap: wrap;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .inputField,
+    .submitButton {
+        transition: none;
+    }
+
+    .submitButton:hover:not(:disabled),
+    .submitButton:active:not(:disabled) {
+        transform: none;
+    }
 }
