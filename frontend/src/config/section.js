@@ -9,24 +9,28 @@ export const SECTIONS = [
         rootName: 'Supermercado',
         title: 'Supermercados',
         description: 'Granos, aceites, lácteos, bebidas y aseo del hogar.',
+        notice: null,
     },
     {
-        slug: 'drogueria',
+        slug: 'droguerias',
         rootName: 'Droguería',
         title: 'Droguerías',
         description: 'Productos de droguería de venta libre.',
+        notice: 'La información es orientativa y no sustituye a un profesional de la salud.',
     },
     {
         slug: 'cuidado-facial',
         rootName: 'Cuidado facial',
         title: 'Cuidado facial',
         description: 'Productos para el cuidado de la piel del rostro.',
+        notice: 'La información es orientativa y no sustituye a un profesional de la salud.',
     },
     {
         slug: 'repuestos',
         rootName: 'Repuestos',
         title: 'Repuestos',
         description: 'Repuestos para vehículos y motos, comparados por su referencia.',
+        notice: 'Comparamos por referencia del fabricante. No verificamos la compatibilidad con un vehículo o moto.',
     },
 ];
 

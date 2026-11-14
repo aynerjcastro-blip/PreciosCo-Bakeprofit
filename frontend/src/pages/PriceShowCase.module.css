@@ -1,0 +1,227 @@
+.card {
+    background: var(--h-surface, #fff);
+    border: 1px solid var(--h-border, #e2e7ff);
+    border-radius: 1.5rem;
+    padding: 1.25rem;
+    box-shadow: 0 12px 40px rgb(19 27 46 / .08);
+}
+
+.tabs {
+    display: flex;
+    gap: .5rem;
+    overflow-x: auto;
+    padding-bottom: .75rem;
+}
+
+.tab {
+    flex: none;
+    max-width: 14rem;
+    padding: .5rem 1rem;
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+    font-size: .85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: 1px solid var(--h-border, #e2e7ff);
+    background: var(--h-surface-2, #f2f3ff);
+    color: var(--h-muted, #5b6478);
+}
+
+.tabActive {
+    background: var(--h-primary, #a33900);
+    border-color: var(--h-primary, #a33900);
+    color: var(--h-on-primary, #fff);
+}
+
+.head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: .75rem 1.5rem;
+    margin: .5rem 0 1rem;
+}
+
+.name {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--h-text, #131b2e);
+}
+
+.meta {
+    margin: .15rem 0 0;
+    font-size: .85rem;
+    color: var(--h-muted, #5b6478);
+}
+
+.saving {
+    margin: 0;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    font-size: .75rem;
+    color: var(--h-muted, #5b6478);
+}
+
+.saving strong {
+    font-size: 1.5rem;
+    color: var(--h-good, #006948);
+}
+
+.rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.4fr) auto 2rem;
+    align-items: center;
+    gap: .75rem;
+    padding: .6rem .75rem;
+    border-radius: 1rem;
+    background: var(--h-surface-2, #f2f3ff);
+    border: 1px solid transparent;
+}
+
+.rowBest {
+    border-color: var(--h-good, #006948);
+    background: var(--h-good-bg, #e6f7ef);
+}
+
+.store {
+    min-width: 0;
+}
+
+.storeName {
+    margin: 0;
+    font-weight: 700;
+    font-size: .9rem;
+    color: var(--h-text, #131b2e);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .4rem;
+}
+
+.date {
+    margin: 0;
+    font-size: .72rem;
+    color: var(--h-muted, #5b6478);
+}
+
+.badge {
+    padding: .1rem .5rem;
+    border-radius: 999px;
+    font-size: .68rem;
+    font-weight: 700;
+    background: var(--h-good, #006948);
+    color: #fff;
+}
+
+.track {
+    height: .6rem;
+    border-radius: 999px;
+    background: var(--h-border, #e2e7ff);
+    overflow: hidden;
+}
+
+.bar {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--h-primary, #a33900);
+    opacity: .55;
+}
+
+.rowBest .bar {
+    background: var(--h-good, #006948);
+    opacity: 1;
+}
+
+.price {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+}
+
+.price strong {
+    font-size: 1.05rem;
+    color: var(--h-text, #131b2e);
+}
+
+.price span {
+    font-size: .72rem;
+    color: var(--h-muted, #5b6478);
+}
+
+.external,
+.externalSlot {
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.external {
+    border-radius: 50%;
+    color: var(--h-muted, #5b6478);
+}
+
+.external:hover,
+.external:focus-visible {
+    background: var(--h-surface, #fff);
+    color: var(--h-primary, #a33900);
+}
+
+.foot {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: .5rem 1rem;
+    margin-top: 1rem;
+    font-size: .78rem;
+    color: var(--h-muted, #5b6478);
+}
+
+.foot p {
+    margin: 0;
+}
+
+.more {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--h-primary, #a33900);
+}
+
+.more:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 40rem) {
+
+    /* En celular la barra pasa a una segunda línea para que el precio no quede apretado */
+    .row {
+        grid-template-columns: auto minmax(0, 1fr) auto 2rem;
+    }
+
+    .track {
+        grid-column: 1 / -1;
+        order: 5;
+    }
+
+    .saving {
+        text-align: left;
+    }
+}

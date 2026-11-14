@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
-import { useSections } from '../../hooks/useSections';
-import styles from './SectionsBlock.module.css';
+import { useSections } from '@/hooks/useSection';
+import styles from '@/components/sectionsBlock/SectionBlock.module.css';
 
 // Intl formatea según el idioma: 45000 -> "45.000" con es-CO
 const numberFormat = new Intl.NumberFormat('es-CO');

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getLandingStats } from '../api/landing';
-import { SECTIONS, sectionKey } from '../config/sections';
+import { getLandingStats } from '@/api/landing';
+import { SECTIONS, sectionKey } from '@/config/section';
 
 /*
  * Caché de módulo: la variable vive mientras la pestaña esté abierta, fuera de cualquier
