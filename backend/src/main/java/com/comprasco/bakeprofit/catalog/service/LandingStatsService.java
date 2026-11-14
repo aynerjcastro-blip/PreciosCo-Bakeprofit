@@ -4,8 +4,11 @@ import com.comprasco.bakeprofit.catalog.dto.LandingStatsResponse;
 import com.comprasco.bakeprofit.catalog.dto.LandingStatsResponse.SectionStats;
 import com.comprasco.bakeprofit.catalog.exception.LandingStatsRepository;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
+
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LandingStatsService {
 
     private final LandingStatsRepository repository;
+    private final Clock clock;
 
     /**
      * Crea el servicio con el repositorio encargado de ejecutar las
@@ -31,8 +35,9 @@ public class LandingStatsService {
      *
      * @param repository repositorio de estadísticas de la landing
      */
-    public LandingStatsService(LandingStatsRepository repository) {
+    public LandingStatsService(LandingStatsRepository repository, Clock clock) {
         this.repository = repository;
+        this.clock = clock;
     }
 
     /**
@@ -60,10 +65,14 @@ public class LandingStatsService {
         LocalDateTime lastUpdate = repository.findLastUpdate()
                 .orElse(null);
 
+        Instant lastUpdateInstant = lastUpdate == null
+                ? null
+                : lastUpdate.atZone(clock.getZone()).toInstant();
+
         return new LandingStatsResponse(
                 repository.countProductsWithPrice(),
                 repository.countActiveStores(),
-                lastUpdate,
+                lastUpdateInstant,
                 sections);
     }
 }

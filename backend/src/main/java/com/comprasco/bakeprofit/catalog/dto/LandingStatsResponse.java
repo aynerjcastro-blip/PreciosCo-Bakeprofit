@@ -1,6 +1,6 @@
 package com.comprasco.bakeprofit.catalog.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -22,7 +22,7 @@ import java.util.List;
 public record LandingStatsResponse(
         long totalProducts,
         long totalStores,
-        LocalDateTime lastUpdate,
+        Instant lastUpdate,
         List<SectionStats> sections) {
 
     /**
