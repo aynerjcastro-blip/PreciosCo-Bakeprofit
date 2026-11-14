@@ -10,7 +10,9 @@ import com.comprasco.bakeprofit.catalog.dto.ProductSort;
 import com.comprasco.bakeprofit.catalog.entity.Brand;
 import com.comprasco.bakeprofit.catalog.entity.Category;
 import com.comprasco.bakeprofit.catalog.entity.Product;
+import com.comprasco.bakeprofit.catalog.exception.CategoryNotFoundException;
 import com.comprasco.bakeprofit.catalog.exception.InvalidCategoryHierarchyException;
+import com.comprasco.bakeprofit.catalog.exception.InvalidSearchFilterException;
 import com.comprasco.bakeprofit.catalog.exception.InvalidProductIdentityException;
 import com.comprasco.bakeprofit.catalog.exception.ProductAlreadyExistsException;
 import com.comprasco.bakeprofit.catalog.exception.ProductNotFoundException;
@@ -31,10 +33,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PagedModel;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -74,6 +74,14 @@ public class ProductService {
      * opiniones).
      */
     public static final int MAX_PAGE_SIZE = 50;
+
+    /** Productos por subcategoría en /best-savings: por defecto y máximo (DP-39). */
+    public static final int DEFAULT_BEST_SAVINGS_LIMIT = 5;
+    public static final int MAX_BEST_SAVINGS_LIMIT = 20;
+
+    private static final Sort BY_NAME = Sort.by(Sort.Order.asc("name"), Sort.Order.asc("id"));
+    private static final Sort BY_SAVINGS = Sort.by(
+            Sort.Order.desc("savings.savingsPct"), Sort.Order.asc("name"), Sort.Order.asc("id"));
 
 
     private final ProductRepository productRepository;
@@ -132,38 +140,28 @@ public class ProductService {
      * está completa y el total es exacto.
      *
      * <p>
-     * Orden: categoría inexistente (404) -> tienda inexistente o inactiva (404) ->
-     * consulta.
-     * El rango ya llega validado en los filtros (400). El cliente no elige el
-     * orden: por
-     * nombre y, si empatan, por id, para que las páginas no repitan ni salten
-     * productos.
+     * Orden: sección inexistente o que no es raíz (404) -> categoría inexistente (404)
+     * -> tienda inexistente o inactiva (404) -> consulta. El rango ya llega validado
+     * en los filtros (400).
+     *
+     * <p>
+     * Sin {@code sort} ordena por mayor ahorro (DP-39); el usuario no lo elige (DP-36).
+     * El ahorro siempre se calcula con todas las tiendas activas, aunque se filtre por
+     * algunas. Los empates van por nombre y luego por id, para que las páginas no
+     * repitan ni salten productos.
+     * </p>
      * </p>
      */
     public PagedModel<ProductResponse> search(ProductSearchCriteria criteria, ProductSort sort, int page, int size) {
-
-        // Validación de Sección (categoría raíz)
         if (criteria.sectionId() != null) {
-            // categoryService.findById ya debe manejar su propio 404 si el ID no existe
-            Category section = categoryService.findById(criteria.sectionId());
-            if (section.getParent() != null) {
-                // Usamos ResponseStatusException de Spring para el 404
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "La categoría " + criteria.sectionId() + " no es una sección raíz.");
-            }
+            requireSection(criteria.sectionId());
         }
-
-        // Validaciones existentes
         if (criteria.categoryId() != null) {
             categoryService.findById(criteria.categoryId());
         }
         storeService.requireActive(criteria.storeIds());
 
-        // Ordenamiento dinámico de la HT-13
-        Sort order = (sort == ProductSort.NAME)
-                ? Sort.by("name", "id")
-                : Sort.by(Sort.Order.desc("savings.savingsPct"), Sort.Order.asc("name"), Sort.Order.asc("id"));
-
+        Sort order = (sort == ProductSort.NAME) ? BY_NAME : BY_SAVINGS;
         Pageable pageable = PageRequest.of(
                 Math.max(page, 0),
                 Math.min(Math.max(size, 1), MAX_PAGE_SIZE),
@@ -442,18 +440,37 @@ public class ProductService {
         return matcher.find() ? Optional.of(matcher.group(1)) : Optional.empty();
     }
 
+    /**
+     * Los mejores ahorros de cada subcategoría, agrupados por sección y subcategoría: lo que
+     * muestra la búsqueda sin filtros (DP-39). Orden: límite fuera de rango (400) -> sección
+     * inexistente o que no es raíz (404) -> consulta. Sin resultados responde una lista vacía.
+     */
     public List<BestSavingsGroup> bestSavings(Long sectionId, int limit) {
-        if (limit < 1 || limit > 20)
-            throw new IllegalArgumentException("limit debe estar entre 1 y 20"); // -> 400
-        // validar sección igual que arriba
-        Map<Long, BestSavingsGroup> groups = new LinkedHashMap<>();
-        for (var r : bestSavingsRepository.findTopBySubcategory(sectionId, limit)) {
-            groups.computeIfAbsent(r.getCategoryId(), k -> new BestSavingsGroup(
-                    r.getSectionId(), r.getSectionName(), r.getCategoryId(), r.getCategoryName(), new ArrayList<>()))
-                    .products().add(new BestSavingsItem(r.getId(), r.getName(),
-                            r.getMinPrice(), r.getMaxPrice(), r.getSavingsPct(), r.getStoreCount()));
+        if (limit < 1 || limit > MAX_BEST_SAVINGS_LIMIT) {
+            throw new InvalidSearchFilterException(
+                    "El límite debe estar entre 1 y " + MAX_BEST_SAVINGS_LIMIT + "; llegó " + limit + ".");
         }
-        return new ArrayList<>(groups.values());
+        if (sectionId != null) {
+            requireSection(sectionId);
+        }
+        Map<Long, BestSavingsGroup> groups = new LinkedHashMap<>();
+        for (BestSavingsRepository.Row row : bestSavingsRepository.findTopBySubcategory(sectionId, limit)) {
+            groups.computeIfAbsent(row.getCategoryId(), id -> new BestSavingsGroup(
+                    row.getSectionId(), row.getSectionName(), row.getCategoryId(), row.getCategoryName(),
+                    new ArrayList<>()))
+                    .products().add(new BestSavingsItem(row.getId(), row.getName(),
+                            row.getMinPrice(), row.getMaxPrice(), row.getSavingsPct(), row.getStoreCount()));
+        }
+        return List.copyOf(groups.values());
+    }
+
+    // Una sección es una categoría raíz; una inexistente o una subcategoría responden 404 (DP-35)
+    private void requireSection(Long sectionId) {
+        Category section = categoryService.findById(sectionId);
+        if (section.getParent() != null) {
+            throw new CategoryNotFoundException(
+                    "No existe la sección con id " + sectionId + ": es una subcategoría, no una categoría raíz.");
+        }
     }
 
 }

@@ -9,6 +9,15 @@ import org.springframework.data.repository.query.Param;
 
 import com.comprasco.bakeprofit.catalog.entity.Product;
 
+/**
+ * Los mejores ahorros por subcategoría para la vista sin filtros (HT-13). Es SQL nativo porque
+ * necesita ROW_NUMBER por subcategoría, que JPQL no tiene.
+ *
+ * <p>
+ * Entra todo producto activo con precio en al menos una tienda activa (DP-26): con ahorro 0
+ * (un solo precio) completa la subcategoría al final, sin desaparecer. Empates: nombre e id.
+ * </p>
+ */
 public interface BestSavingsRepository extends Repository<Product, Long> {
 
     interface Row {
@@ -32,7 +41,7 @@ public interface BestSavingsRepository extends Repository<Product, Long> {
           JOIN categories c ON c.id = p.category_id
           JOIN categories r ON r.id = c.parent_id
           JOIN product_savings s ON s.product_id = p.id
-          WHERE p.active AND s.store_count > 1
+          WHERE p.active AND s.store_count >= 1
             AND (CAST(:sectionId AS bigint) IS NULL OR r.id = :sectionId)
         ) t WHERE t.rn <= :limit
         ORDER BY t.sectionName, t.categoryName, t.rn
