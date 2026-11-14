@@ -13,13 +13,13 @@ export default function AuthHero({ isLogin }) {
                 {isLogin ? (
                     <>Vuelve a encontrar <br /><span className={styles['auth-hero__highlight']}>los mejores precios</span></>
                 ) : (
-                    <>Compara mejor.<br /><span className={styles['auth-hero__highlight']}>Ahorra mas.</span></>
+                    <>Compara mejor.<br /><span className={styles['auth-hero__highlight']}>Ahorra más.</span></>
                 )}
             </h1>
 
             <p className={styles['auth-hero__subtitle']}>
                 {isLogin
-                    ? 'Inicia sesion para continuar comparando y ahorrar.'
+                    ? 'Inicia sesión para continuar comparando y ahorrar.'
                     : 'Encuentra las mejores ofertas y recibe alertas cuando bajen de precio.'}
             </p>
 
@@ -32,7 +32,7 @@ export default function AuthHero({ isLogin }) {
                             </div>
                             <div>
                                 <strong>Tus productos favoritos</strong>
-                                <p>Ten siempre a mano lo que mas te interesa.</p>
+                                <p>Ten siempre a mano lo que más te interesa.</p>
                             </div>
                         </li>
                         <li>
@@ -50,7 +50,7 @@ export default function AuthHero({ isLogin }) {
                             </div>
                             <div>
                                 <strong>Tus comparaciones guardadas</strong>
-                                <p>Accede a tus historiales y continua donde quedaste.</p>
+                                <p>Accede a tus historiales y continúa donde quedaste.</p>
                             </div>
                         </li>
                     </>
@@ -80,7 +80,7 @@ export default function AuthHero({ isLogin }) {
                             </div>
                             <div>
                                 <strong>Compara tiendas en un solo lugar</strong>
-                                <p>Ahorra tiempo y encuentra siempre la mejor opcion.</p>
+                                <p>Ahorra tiempo y encuentra siempre la mejor opción.</p>
                             </div>
                         </li>
                     </>
