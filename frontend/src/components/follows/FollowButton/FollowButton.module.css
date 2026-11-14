@@ -1,6 +1,8 @@
 /* ============================================================
    BOTÓN SEGUIR (encabezado del comparador)
    Solo tokens del sistema de diseño. El encabezado del comparador va centrado.
+   "Seguir" es la acción principal (naranja con texto oscuro); "Siguiendo" queda como
+   píldora con borde, igual que las acciones secundarias de las tarjetas.
    ============================================================ */
 .follow {
     display: flex;
@@ -14,17 +16,17 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 10px 26px;
-    border: 1.5px solid var(--color-dark);
+    padding: 10px 28px;
+    border: 1.5px solid var(--color-primary);
     border-radius: 999px;
-    background: var(--color-dark);
-    color: var(--bg-surface);
+    background: var(--color-primary);
+    color: #0F172A;
     font-family: var(--font-body);
     font-size: 1rem;
-    font-weight: 700;
+    font-weight: 800;
     text-decoration: none;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    transition: background-color 0.15s, border-color 0.15s;
 }
 
 .follow-button:hover:not(:disabled) {
@@ -37,7 +39,7 @@
     cursor: not-allowed;
 }
 
-/* Ya lo sigue: píldora con borde ámbar, igual que las acciones de las tarjetas de precio */
+/* Ya lo sigue: píldora con borde ámbar */
 .follow-button--following {
     background: var(--bg-surface);
     border-color: var(--color-primary);
@@ -62,7 +64,8 @@
 
 .follow__notice {
     padding: 6px 14px;
-    border-left: 4px solid var(--alert-success-border);
+    border: 1px solid var(--alert-success-border);
+    border-left-width: 4px;
     border-radius: var(--radius-sm);
     background: var(--alert-success-bg);
     color: var(--text-primary);
@@ -83,4 +86,10 @@
     font-weight: 700;
     text-decoration: underline;
     cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .follow-button {
+        transition: none;
+    }
 }
