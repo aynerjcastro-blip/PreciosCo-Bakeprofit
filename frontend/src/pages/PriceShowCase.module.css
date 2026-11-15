@@ -1,79 +1,121 @@
-.card {
-    background: var(--h-surface, #fff);
-    border: 1px solid var(--h-border, #e2e7ff);
-    border-radius: 1.5rem;
-    padding: 1.25rem;
-    box-shadow: 0 12px 40px rgb(19 27 46 / .08);
+.layout {
+    display: grid;
+    gap: 2.5rem;
+    align-items: center;
+}
+
+@media (min-width: 62rem) {
+    .layout {
+        grid-template-columns: .9fr 1.4fr;
+    }
+}
+
+.heading {
+    margin: 0 0 1rem;
+    font-size: clamp(2.25rem, 5vw, 3.5rem);
+    line-height: 1.05;
+    letter-spacing: -.035em;
+    font-weight: 800;
+    color: var(--h-text);
+}
+
+.text {
+    margin: 0 0 1.5rem;
+    color: var(--h-muted);
+}
+
+.text strong {
+    color: var(--h-text);
 }
 
 .tabs {
     display: flex;
+    flex-wrap: wrap;
     gap: .5rem;
-    overflow-x: auto;
-    padding-bottom: .75rem;
+    padding: .35rem;
+    border-radius: 1.25rem;
+    background: var(--h-surface-2);
+    width: fit-content;
+    max-width: 100%;
 }
 
 .tab {
-    flex: none;
-    max-width: 14rem;
+    max-width: 13rem;
     padding: .5rem 1rem;
+    border: 0;
     border-radius: 999px;
     cursor: pointer;
     font: inherit;
     font-size: .85rem;
-    font-weight: 600;
+    font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    border: 1px solid var(--h-border, #e2e7ff);
-    background: var(--h-surface-2, #f2f3ff);
-    color: var(--h-muted, #5b6478);
+    background: transparent;
+    color: var(--h-muted);
+}
+
+.tab:hover {
+    color: var(--h-text);
 }
 
 .tabActive {
-    background: var(--h-primary, #a33900);
-    border-color: var(--h-primary, #a33900);
-    color: var(--h-on-primary, #fff);
+    background: var(--h-primary);
+    color: var(--h-on-primary);
 }
 
-.head {
+.tabActive:hover {
+    color: var(--h-on-primary);
+}
+
+.note {
+    margin: 1rem 0 0;
+    font-size: .78rem;
+    color: var(--h-muted);
+}
+
+.card {
+    display: grid;
+    border-radius: 2rem;
+    overflow: hidden;
+    background: var(--h-surface-2);
+    border: 1px solid var(--h-border);
+}
+
+@media (min-width: 40rem) {
+    .card {
+        grid-template-columns: 14rem 1fr;
+    }
+}
+
+.photo {
+    min-height: 14rem;
+    background: #fff;
+}
+
+.panel {
+    padding: 1.5rem;
     display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: .75rem 1.5rem;
-    margin: .5rem 0 1rem;
+    flex-direction: column;
+    gap: .35rem;
 }
 
 .name {
     margin: 0;
-    font-size: 1.25rem;
-    color: var(--h-text, #131b2e);
+    font-size: 1.35rem;
+    letter-spacing: -.01em;
+    color: var(--h-text);
 }
 
 .meta {
-    margin: .15rem 0 0;
+    margin: 0 0 .75rem;
     font-size: .85rem;
-    color: var(--h-muted, #5b6478);
-}
-
-.saving {
-    margin: 0;
-    text-align: right;
-    display: flex;
-    flex-direction: column;
-    font-size: .75rem;
-    color: var(--h-muted, #5b6478);
-}
-
-.saving strong {
-    font-size: 1.5rem;
-    color: var(--h-good, #006948);
+    color: var(--h-muted);
 }
 
 .rows {
     list-style: none;
-    margin: 0;
+    margin: 0 0 1rem;
     padding: 0;
     display: flex;
     flex-direction: column;
@@ -82,18 +124,18 @@
 
 .row {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.4fr) auto 2rem;
+    grid-template-columns: auto minmax(0, 1fr) auto 2rem;
     align-items: center;
     gap: .75rem;
     padding: .6rem .75rem;
     border-radius: 1rem;
-    background: var(--h-surface-2, #f2f3ff);
+    background: var(--h-surface);
     border: 1px solid transparent;
 }
 
 .rowBest {
-    border-color: var(--h-good, #006948);
-    background: var(--h-good-bg, #e6f7ef);
+    background: var(--h-good-bg);
+    border-color: var(--h-good);
 }
 
 .store {
@@ -103,62 +145,24 @@
 .storeName {
     margin: 0;
     font-weight: 700;
-    font-size: .9rem;
-    color: var(--h-text, #131b2e);
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: .4rem;
+    font-size: .92rem;
+    color: var(--h-text);
 }
 
 .date {
     margin: 0;
     font-size: .72rem;
-    color: var(--h-muted, #5b6478);
+    color: var(--h-muted);
 }
 
-.badge {
-    padding: .1rem .5rem;
-    border-radius: 999px;
-    font-size: .68rem;
+.rowBest .date {
+    color: var(--h-good);
     font-weight: 700;
-    background: var(--h-good, #006948);
-    color: #fff;
-}
-
-.track {
-    height: .6rem;
-    border-radius: 999px;
-    background: var(--h-border, #e2e7ff);
-    overflow: hidden;
-}
-
-.bar {
-    height: 100%;
-    border-radius: 999px;
-    background: var(--h-primary, #a33900);
-    opacity: .55;
-}
-
-.rowBest .bar {
-    background: var(--h-good, #006948);
-    opacity: 1;
 }
 
 .price {
-    text-align: right;
-    display: flex;
-    flex-direction: column;
-}
-
-.price strong {
-    font-size: 1.05rem;
-    color: var(--h-text, #131b2e);
-}
-
-.price span {
-    font-size: .72rem;
-    color: var(--h-muted, #5b6478);
+    font-size: 1.15rem;
+    color: var(--h-text);
 }
 
 .external,
@@ -172,56 +176,29 @@
 
 .external {
     border-radius: 50%;
-    color: var(--h-muted, #5b6478);
+    color: var(--h-muted);
 }
 
 .external:hover,
 .external:focus-visible {
-    background: var(--h-surface, #fff);
-    color: var(--h-primary, #a33900);
+    background: var(--h-surface-2);
+    color: var(--h-primary);
 }
 
-.foot {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: .5rem 1rem;
-    margin-top: 1rem;
-    font-size: .78rem;
-    color: var(--h-muted, #5b6478);
-}
-
-.foot p {
-    margin: 0;
-}
-
-.more {
+.button {
     display: inline-flex;
     align-items: center;
-    gap: .35rem;
-    font-weight: 700;
+    justify-content: center;
+    gap: .5rem;
+    padding: .85rem 1.25rem;
+    border-radius: 999px;
     text-decoration: none;
-    color: var(--h-primary, #a33900);
+    font-weight: 700;
+    background: var(--h-inverse-bg);
+    color: var(--h-inverse-text);
 }
 
-.more:hover {
-    text-decoration: underline;
-}
-
-@media (max-width: 40rem) {
-
-    /* En celular la barra pasa a una segunda línea para que el precio no quede apretado */
-    .row {
-        grid-template-columns: auto minmax(0, 1fr) auto 2rem;
-    }
-
-    .track {
-        grid-column: 1 / -1;
-        order: 5;
-    }
-
-    .saving {
-        text-align: left;
-    }
+.button:hover,
+.button:focus-visible {
+    filter: brightness(1.15);
 }

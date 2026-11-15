@@ -15,6 +15,7 @@ const LOGOS = [
     { match: 'exito', src: '/assets/stores/exito.png' },
     { match: 'jumbo', src: '/assets/stores/jumbo.png' },
     { match: 'olimpica', src: '/assets/stores/olimpica.png' },
+    { match:'larebaja' , src: '/assets/stores/larebaja.png'}
 ];
 
 function normalize(text) {

@@ -10,10 +10,11 @@ import {
 import { Link, useSearchParams } from 'react-router-dom';
 import { searchProducts } from '../api/products';
 import { findActiveStores } from '../api/stores';
-import StoreFilter from '../components/search/StoreFilter/StoreFilter.jsx';
-import PriceRangeFilter from '../components/search/PriceRangeFilter/PriceRangeFilter.jsx';
-import SearchPagination from '../components/search/SearchPagination/SearchPagination.jsx';
+import StoreFilter from '@/components/search/StoreFilter/StoreFilter';
+import PriceRangeFilter from '@/components/search/PriceRangeFilter/PriceRangeFilter';
+import SearchPagination from '@/components/search/SearchPagination/SearchPagination';
 import { useSectionBySlug } from '@/hooks/useSectionsBySlug';
+import StoreLogo from './StoreLogo';
 
 // TODO: la carga de categorías de abajo debería pasar a la capa api/ (como products.js y stores.js)
 // y usar la URL base central de api/http.js, en lugar de repetir esta constante.
@@ -186,9 +187,7 @@ function OfferRow({ offer, cheapestValue, compare, entering }) {
             isCheapest ? styles['offer--best'] : '',
             entering ? styles['offer--enter'] : '',
         ].join(' ')}>
-            <span className={styles.offer__avatar} aria-hidden="true">
-                {offer.storeName.charAt(0).toUpperCase()}
-            </span>
+            <StoreLogo name={offer.storeName} />
 
             <div className={styles.offer__store}>
                 <p className={styles.offer__name}>

@@ -1,26 +1,23 @@
 /**
- * @description Componente principal de navegación superior para PreciosCo. 
- * Gestiona el menú responsivo, la barra de búsqueda global, la alternancia de tema 
- * y el menú de estado/perfil del usuario autenticado.
+ * @description Componente principal de navegación superior para PreciosCo.
+ * Una sola fila: logo, menú de secciones en píldora (centro) y acciones (tema, avisos, usuario).
+ * Gestiona el menú responsivo, la alternancia de tema y el menú de estado/perfil del usuario.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../context/useAuth';
+import { useAuth } from '@/context/useAuth';
 import { usePresence } from '@/hooks/usePresence';
 import NotificationBell from "@/components/follows/NotificationBell/NotificationBell";
+import { SECTIONS } from '@/config/section';
 import ThemeToggle from './ThemeToogle';
 
 // Importación del módulo de CSS para garantizar el encapsulamiento de estilos
 import styles from './Header.module.css';
 
-// Sectores de la navegación inferior; "sector" es el valor del parámetro ?sector= de /buscar
-const NAV_ITEMS = [
-    { sector: 'supermercados', label: 'Supermercados' },
-    { sector: 'droguerias', label: 'Droguerías' },
-    { sector: 'cuidado-facial', label: 'Cuidado facial' },
-    { sector: 'repuestos', label: 'Repuestos' },
-];
+// Las secciones del menú salen de config/sections.js, la misma fuente de las tarjetas de la
+// portada y de las páginas /secciones/:slug: un slug nuevo o renombrado se cambia en UN lugar.
+const NAV_ITEMS = SECTIONS.map((section) => ({ slug: section.slug, label: section.title }));
 
 // Duración de la animación de salida del menú de usuario (debe coincidir con Header.module.css)
 const PANEL_EXIT_MS = 140;
@@ -80,7 +77,6 @@ export default function Header() {
     // Estados locales para el control de la interfaz (UI)
     const [menuOpen, setMenuOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
-    const [query, setQuery] = useState('');
 
     // Referencia al DOM para detectar interacciones fuera del menú desplegable del usuario
     const userMenuRef = useRef(null);
@@ -91,14 +87,22 @@ export default function Header() {
     // Permisos derivados: solo los usuarios estándar pueden interactuar con seguimientos
     const canFollow = isAuthenticated && user?.role === 'USER';
 
-    // Condición de renderizado: oculta el buscador del header en las vistas '/' y '/buscar'
-    // para evitar redundancia visual con los buscadores principales de esas páginas.
-    const showSearch = location.pathname !== '/' && location.pathname !== '/buscar' && location.pathname !== '/login' && location.pathname !== '/register';
+    // El atajo de búsqueda se oculta donde ya hay un buscador principal (inicio, /buscar) o
+    // donde estorba (login y registro).
+    // DECISIÓN: el buscador de texto del header se reemplazó por este atajo a /buscar. Con el menú
+    // de secciones centrado en la misma fila, el campo de texto no cabe sin volver a abrir una
+    // segunda fila.
+    const showSearchLink = !['/', '/buscar', '/login', '/register'].includes(location.pathname);
+
+    // Sección marcada en el menú: la página de la sección (/secciones/:slug) o /buscar?sector=
+    const params = new URLSearchParams(location.search);
+    const activeSlug = location.pathname === '/buscar'
+        ? params.get('sector')
+        : location.pathname.startsWith('/secciones/')
+            ? location.pathname.split('/')[2]
+            : null;
 
     // Derivación segura de datos del usuario para la interfaz
-    // Sector marcado en la navegación: solo cuando /buscar trae ?sector= en la dirección
-    const activeSector = location.pathname === '/buscar' ? new URLSearchParams(location.search).get('sector') : null;
-
     const firstName = user?.name?.split(' ')[0];
     const initial = user?.name?.charAt(0).toUpperCase();
 
@@ -138,18 +142,6 @@ export default function Header() {
     };
 
     /**
-     * Intercepta el envío del formulario de búsqueda, formatea la consulta 
-     * y redirige dinámicamente a la ruta de resultados.
-     * @param {React.FormEvent} e - Evento de envío del formulario.
-     */
-    const handleSearch = (e) => {
-        e.preventDefault();
-        const term = query.trim();
-        closeMenus();
-        navigate(term ? `/buscar?q=${encodeURIComponent(term)}` : '/buscar');
-    };
-
-    /**
      * Finaliza la sesión del usuario actual y lo redirige a la página principal.
      */
     const handleLogout = () => {
@@ -161,41 +153,58 @@ export default function Header() {
     return (
         <header className={styles['site-header']}>
             <div className={styles['site-header__inner']}>
-                {/* Botón Hamburguesa (Móvil) */}
-                <button
-                    className={`${styles['icon-button']} ${styles['site-header__menu']} ${menuOpen ? styles['site-header__menu--open'] : ''}`}
-                    type="button"
-                    aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
-                    aria-expanded={menuOpen}
-                    onClick={() => setMenuOpen(!menuOpen)}
+                {/* Izquierda: hamburguesa (solo móvil) y logotipo */}
+                <div className={styles['site-header__brand']}>
+                    <button
+                        className={`${styles['icon-button']} ${styles['site-header__menu']} ${menuOpen ? styles['site-header__menu--open'] : ''}`}
+                        type="button"
+                        aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
+                        aria-expanded={menuOpen}
+                        aria-controls="menu-secciones"
+                        onClick={() => setMenuOpen(!menuOpen)}
+                    >
+                        <MenuIcon />
+                    </button>
+
+                    <Link to="/" className={styles['site-header__title']} aria-label="PreciosCo, ir al inicio">
+                        <span className={styles['logo-text']}>Precios</span>
+                        <img src="/assets/images/co-badge.png" alt="" className={styles['logo-co']} />
+                    </Link>
+                </div>
+
+                {/* Centro: menú de secciones en píldora. En móvil se vuelve un desplegable bajo el header. */}
+                <nav
+                    id="menu-secciones"
+                    className={`${styles['site-nav']} ${menuOpen ? styles['site-nav--open'] : ''}`}
+                    aria-label="Secciones"
                 >
-                    <MenuIcon />
-                </button>
+                    <ul className={styles['site-nav__list']}>
+                        {NAV_ITEMS.map((item) => {
+                            const active = activeSlug === item.slug;
+                            return (
+                                <li key={item.slug}>
+                                    <Link
+                                        to={`/secciones/${item.slug}`}
+                                        className={`${styles['site-nav__link']} ${active ? styles['site-nav__link--active'] : ''}`}
+                                        aria-current={active ? 'page' : undefined}
+                                        onClick={closeMenus}
+                                    >
+                                        {item.label}
+                                    </Link>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </nav>
 
-                {/* Logotipo de la plataforma */}
-                <Link to="/" className={styles['site-header__title']} aria-label="PreciosCo, ir al inicio">
-                    <span className={styles['logo-text']}>Precios</span>
-                    <img src="/assets/images/co-badge.png" alt="" className={styles['logo-co']} />
-                </Link>
-
-                {/* Buscador Condicional */}
-                {showSearch && (
-                    <form className={styles['header-search']} onSubmit={handleSearch} role="search">
-                        <input
-                            type="search"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            placeholder="Buscar productos, marcas y mas..."
-                            aria-label="Buscar productos"
-                        />
-                        <button type="submit" aria-label="Buscar">
-                            <SearchIcon />
-                        </button>
-                    </form>
-                )}
-
-                {/* Acciones de Cabecera (Tema, Notificaciones, Menú de Usuario) */}
+                {/* Derecha: acciones (búsqueda, tema, notificaciones, usuario) */}
                 <div className={styles['header-actions']}>
+                    {showSearchLink && (
+                        <Link to="/buscar" className={styles['icon-button']} aria-label="Buscar productos" onClick={closeMenus}>
+                            <SearchIcon />
+                        </Link>
+                    )}
+
                     <ThemeToggle />
 
                     {/* Campana de avisos: exclusiva para roles con permiso (USER) */}
@@ -251,7 +260,6 @@ export default function Header() {
                                             </div>
                                         </div>
 
-                                        {/* NUEVO: Enlace a Mi Perfil */}
                                         <div className={styles['user-menu__divider']}></div>
                                         <Link to="/perfil" className={styles['user-menu__item']} role="menuitem" onClick={closeMenus}>
                                             Mi Perfil
@@ -286,27 +294,6 @@ export default function Header() {
                     </div>
                 </div>
             </div>
-
-            {/* Navegación por sectores comerciales (Se colapsa en móvil) */}
-            <nav className={`${styles['site-nav']} ${menuOpen ? styles['site-nav--open'] : ''}`} aria-label="Principal">
-                <ul className={styles['site-nav__list']}>
-                    {NAV_ITEMS.map((item) => {
-                        const active = activeSector === item.sector;
-                        return (
-                            <li key={item.sector}>
-                                <Link
-                                    to={`/buscar?sector=${item.sector}`}
-                                    className={`${styles['site-nav__link']} ${active ? styles['site-nav__link--active'] : ''}`}
-                                    aria-current={active ? 'page' : undefined}
-                                    onClick={closeMenus}
-                                >
-                                    {item.label}
-                                </Link>
-                            </li>
-                        );
-                    })}
-                </ul>
-            </nav>
         </header>
     );
 }
