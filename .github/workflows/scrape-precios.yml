@@ -1,6 +1,9 @@
 name: Scraping de precios
 
 on:
+  # Temporal, solo para probar desde esta rama (corre AMBOS scrapers contra la base real):
+  # push:
+  #   branches: ["feature/scrapper-droguerías"]
   # schedule:
   #   # 10:00 UTC = 5:00 am en Colombia (UTC-5). Activar cuando el equipo lo decida.
   #   - cron: "0 10 * * *"
@@ -28,15 +31,14 @@ concurrency:
 jobs:
   scrape:
     name: Scraper de ${{ matrix.dominio }}
-    # Con "dominios" = todos (o en la corrida programada, sin inputs) corren los dos.
-    if: ${{ (inputs.dominios || 'todos') == 'todos' || inputs.dominios == matrix.dominio }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false      # la falla de un scraper no cancela a los demás
       max-parallel: 1       # uno detrás de otro, en el orden de la matriz
       matrix:
-        dominio: [supermercados, droguerias]
+        # Con "dominios" = todos (o sin inputs: push, cron) corren los dos, en este orden.
+        dominio: ${{ fromJSON(inputs.dominios == 'supermercados' && '["supermercados"]' || inputs.dominios == 'droguerias' && '["droguerias"]' || '["supermercados","droguerias"]') }}
 
     steps:
       - name: Clonar repositorio
