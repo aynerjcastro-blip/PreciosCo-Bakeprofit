@@ -1,5 +1,10 @@
--- HT-13: ahorro por producto (vista). Probar primero en la base de pruebas.
--- SUPUESTOS A AJUSTAR: prices(product_id, store_id, value, registration_date, id), stores(id, active), products(id)
+-- HT-13 (SCRUM-309) · Ahorro por producto: vista product_savings que ordena la búsqueda y /best-savings.
+-- Ahorro = (máximo - mínimo) / máximo de los precios vigentes en tiendas activas (DP-34, DP-37, DP-39).
+-- Con un solo precio o sin precio el ahorro es 0: el producto no desaparece, va al final.
+-- ORDEN OBLIGATORIO: correr este script ANTES de levantar un backend con HT-13. Con
+-- spring.jpa.hibernate.ddl-auto=validate, un backend sin la vista no arranca (entidad ProductSavings).
+-- 1) base de pruebas -> la consulta del final da false, false; 2) avisar al equipo; 3) base compartida.
+-- CREATE OR REPLACE y REVOKE se pueden repetir. Reversión: 2026-11-ht13-ahorro-reversion.sql
 BEGIN;
 
 CREATE OR REPLACE VIEW public.product_savings

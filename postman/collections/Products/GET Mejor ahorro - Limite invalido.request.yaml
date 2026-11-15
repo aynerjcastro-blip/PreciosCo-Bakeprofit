@@ -1,0 +1,16 @@
+$kind: http-request
+name: GET Mejor ahorro - Limite invalido
+description: "HT-13. limit va de 1 a 20. Esperado: 400 con un mensaje que explica el rango."
+url: http://localhost:8080/api/products/best-savings?limit=0
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code es 400", function () {
+          pm.response.to.have.status(400);
+      });
+      pm.test("El mensaje explica el rango del límite", function () {
+          pm.expect(pm.response.json().message).to.include("entre 1 y 20");
+      });
+    language: text/javascript
+order: 3007

@@ -9,6 +9,7 @@ import AuthPage from './pages/AuthPage';
 import ForgotPassword from '@/components/password/ForgotPassword';
 import ResetPassword from '@/components/password/ResetPassword';
 import Profile from '@/components/profile/Profile';
+import SectionPresentation from './pages/SectionPresentation';
 import { AuthProvider } from '@/context/AuthContext';
 export default function App() {
   return (
@@ -25,10 +26,11 @@ export default function App() {
             <Route path="/register" element={<AuthPage type="register" />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/secciones/:slug" element={<SectionPresentation />} />
 
             {/* Rutas Protegidas (Requieren Login) */}
             <Route element={<ProtectedRoute />}>
-              <Route path="seguidos"element={<Followed />}/>
+              <Route path="seguidos" element={<Followed />} />
               <Route path="perfil" element={<Profile />} />
             </Route>
           </Route>
