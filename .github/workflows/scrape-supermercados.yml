@@ -46,3 +46,15 @@ jobs:
           DB_SSLMODE: require
           SOLO_TIENDAS: ${{ github.event.inputs.tiendas || 'd1,jumbo,olimpica' }}
         run: python scraper_supermercados.py
+
+      - name: Correr scraper de droguerías (La Rebaja)
+        working-directory: scrapers/supermercados
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_SSLMODE: require
+          SOLO_TIENDAS: ${{ inputs.solo_tiendas }}
+        run: python droguerias/scraper_droguerias.py
