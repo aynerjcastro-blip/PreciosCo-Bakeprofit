@@ -3,11 +3,14 @@ package com.comprasco.bakeprofit.catalog.controller;
 import com.comprasco.bakeprofit.catalog.dto.LandingStatsResponse;
 import com.comprasco.bakeprofit.catalog.service.LandingStatsService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name="Landing page")
 @RequestMapping("/api/landing")
 public class LandingController {
 
