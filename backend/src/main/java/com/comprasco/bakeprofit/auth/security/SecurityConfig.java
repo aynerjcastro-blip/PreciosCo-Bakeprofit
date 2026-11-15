@@ -25,7 +25,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  * </p>
  */
 @Configuration
-@EnableMethodSecurity 
+@EnableMethodSecurity
 public class SecurityConfig {
 
         private final JwtAuthFilter jwtAuthFilter;
@@ -47,7 +47,8 @@ public class SecurityConfig {
                 String[] catalog = {
                                 "/api/categories/**",
                                 "/api/stores/**",
-                                "/api/products/**"
+                                "/api/products/**",
+                                "/api/landing/**"
                 };
 
                 http
@@ -72,9 +73,9 @@ public class SecurityConfig {
                                                                                                         .getRequestURI()));
                                                 }))
                                 .authorizeHttpRequests(auth -> auth
-                                                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                                                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**",
-                                                                "/swagger-ui.html").permitAll()
+                                                                "/swagger-ui.html")
+                                                .permitAll()
                                                 .requestMatchers("/api/auth/**").permitAll()
                                                 .requestMatchers(HttpMethod.GET, catalog).permitAll()
                                                 .requestMatchers(HttpMethod.GET, "/api/prices/compare").permitAll()

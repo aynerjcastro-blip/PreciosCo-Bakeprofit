@@ -10,16 +10,29 @@ import {
 import { Link, useSearchParams } from 'react-router-dom';
 import { searchProducts } from '../api/products';
 import { findActiveStores } from '../api/stores';
-import StoreFilter from '../components/search/StoreFilter/StoreFilter.jsx';
-import PriceRangeFilter from '../components/search/PriceRangeFilter/PriceRangeFilter.jsx';
-import SearchPagination from '../components/search/SearchPagination/SearchPagination.jsx';
+import StoreFilter from '@/components/search/StoreFilter/StoreFilter';
+import PriceRangeFilter from '@/components/search/PriceRangeFilter/PriceRangeFilter';
+import SearchPagination from '@/components/search/SearchPagination/SearchPagination';
+import { useSectionBySlug } from '@/hooks/useSectionsBySlug';
+import StoreLogo from './StoreLogo';
 
+// TODO: la carga de categorías de abajo debería pasar a la capa api/ (como products.js y stores.js)
+// y usar la URL base central de api/http.js, en lugar de repetir esta constante.
 const API_BASE = 'http://localhost:8080/api';
 
 /**
- * Configuracion estatica de los sectores.
- * Se define fuera del componente para evitar recrear el arreglo en cada render.
- * El campo 'available' controla si el sector hace peticiones o muestra la pantalla "Llega pronto".
+ * Sectores que muestran las pestañas. Se define fuera del componente para no recrear el
+ * arreglo en cada render.
+ *
+ * IMPORTANTE: el `id` de cada sector es un slug que también existe en config/sections.js, y es
+ * el mismo que viaja en la URL (?sector=supermercados). Si un slug cambia en un archivo y no
+ * en el otro, useSectionBySlug no encuentra la sección y el sector queda como "llega pronto".
+ * Aquí viven solo los datos de presentación (ícono, textos); el id numérico de la sección en
+ * la base de datos NO se escribe aquí: se obtiene del backend con useSectionBySlug.
+ *
+ * `available` es una guarda optimista: evita pedir datos de un sector que sabemos que no existe
+ * todavía. La verdad la decide el backend (ver `sectionUnavailable` más abajo): si una sección
+ * marcada como disponible llega sin productos, también se trata como "llega pronto".
  */
 const SECTORS = [
     {
@@ -80,9 +93,11 @@ function setOrDelete(params, key, value) {
 
 /**
  * Recupera el estado de busqueda anterior de la sesion del navegador.
- * Por que: Mejora la experiencia del usuario al mantener sus filtros 
+ * Por que: Mejora la experiencia del usuario al mantener sus filtros
  * si navega a otra pagina (como el comparador) y luego regresa.
  * Se usa try/catch porque algunos navegadores bloquean sessionStorage en modo incognito.
+ * Ojo: lo guardado puede estar desactualizado (por ejemplo, un sector que ya no existe),
+ * por eso el componente nunca lo da por válido sin comprobarlo (ver `knownSectorId`).
  */
 function loadSaved() {
     try {
@@ -98,6 +113,8 @@ const formatCop = (value) => `$${Number(value).toLocaleString('es-CO')}`;
  * Ahorro posible de un producto: lo que se paga de más en la tienda más cara frente a la más barata.
  * Los campos minPrice y maxPrice los entrega el backend (HT-16: contrato del buscador); si no
  * vienen, el producto se muestra sin precio y no hay ahorro que calcular.
+ * Es la diferencia absoluta en pesos; el backend ordena por el porcentaje (DP-39), así que lo
+ * que se muestra aquí y el orden de la lista no siempre coinciden en cuál producto ahorra "más".
  */
 function savingOf(product) {
     if (product.minPrice == null || product.maxPrice == null) return 0;
@@ -170,9 +187,7 @@ function OfferRow({ offer, cheapestValue, compare, entering }) {
             isCheapest ? styles['offer--best'] : '',
             entering ? styles['offer--enter'] : '',
         ].join(' ')}>
-            <span className={styles.offer__avatar} aria-hidden="true">
-                {offer.storeName.charAt(0).toUpperCase()}
-            </span>
+            <StoreLogo name={offer.storeName} />
 
             <div className={styles.offer__store}>
                 <p className={styles.offer__name}>
@@ -353,8 +368,11 @@ export default function Search() {
     const saved = loadSaved();
     const [searchParams, setSearchParams] = useSearchParams();
 
+    // =========================================================================
     // 1. FUENTES DE VERDAD EXTERNAS (URL)
-    // Extraemos parametros de la URL para habilitar navegacion directa (ej. links desde el Header).
+    // =========================================================================
+    // Extraemos parametros de la URL para habilitar navegacion directa (ej. links desde el Header
+    // o el boton "Buscar y comparar" de la pagina de una seccion, que abre /buscar?sector=<slug>).
     const urlQuery = searchParams.get('q');
     const urlSector = searchParams.get('sector');
 
@@ -365,11 +383,38 @@ export default function Search() {
     const maxPrice = searchParams.get(PARAM_MAX_PRICE) ?? '';
     const pageNumber = parsePage(searchParams.get(PARAM_PAGE));
 
+    // =========================================================================
     // 2. ESTADOS LOCALES
+    // =========================================================================
     // Inicializacion inteligente: La prioridad es 1. URL, 2. Sesion guardada, 3. Valor por defecto.
     // Por que: Garantiza que un link externo siempre sobreescriba una busqueda vieja guardada.
     const [searchTerm, setSearchTerm] = useState(urlQuery ?? saved.searchTerm ?? '');
     const [selectedSectorId, setSelectedSectorId] = useState(urlSector ?? saved.selectedSectorId ?? null);
+
+    // -------------------------------------------------------------------------
+    // Sector -> sección real de la base de datos (HT-15 + contrato de HT-13)
+    // -------------------------------------------------------------------------
+    // El backend filtra por `sectionId` (id numérico de la categoría raíz), pero la interfaz
+    // trabaja con slugs ("supermercados"). useSectionBySlug traduce uno al otro con los datos
+    // reales del backend, así que ningún id numérico está escrito a mano en este archivo.
+    //
+    // `selectedSector` sale de SECTORS, así que es null si el slug no existe. Un slug desconocido
+    // puede venir de un enlace viejo, de ?sector=xyz o de lo guardado en sessionStorage.
+    // `knownSectorId` es el sector solo si es válido: de ahí en adelante, un sector inexistente
+    // se trata como si no hubiera sector (no filtra, no consulta y no bloquea la búsqueda).
+    const selectedSector = SECTORS.find((s) => s.id === selectedSectorId) || null;
+    const knownSectorId = selectedSector ? selectedSectorId : null;
+
+    const { status: sectionsStatus, section } = useSectionBySlug(knownSectorId);
+    const sectionId = section?.id ?? null;
+
+    // Mientras llegan las secciones todavía no conocemos el id. Buscar en ese momento mostraría
+    // primero resultados SIN filtrar de sección y luego los cambiaría de golpe (condición de
+    // carrera visual), así que la búsqueda espera: `waitingSection`.
+    const waitingSection = knownSectorId !== null && sectionsStatus === 'loading';
+    // Si fallan las secciones no se busca sin filtro: la pestaña dice "Supermercados" y los
+    // resultados serían de todo el catálogo. Es preferible un error claro a datos engañosos.
+    const sectionFailed = knownSectorId !== null && sectionsStatus === 'error';
 
     const [categories, setCategories] = useState([]);
     const [selectedCategoryId, setSelectedCategoryId] = useState(saved.selectedCategoryId ?? null);
@@ -391,9 +436,14 @@ export default function Search() {
     // =========================================================================
     // SINCRONIZACION CON LA URL
     // =========================================================================
-    // Por que: Si el usuario usa los botones "Atras" o "Adelante" del navegador, 
-    // la URL cambiara, pero el componente no se recargara. Este efecto detecta esos 
-    // cambios y actualiza el estado local para que la UI refleje la URL.
+    // Por que: Si el usuario usa los botones "Atras" o "Adelante" del navegador,
+    // la URL cambiara, pero el componente no se recargara. Estos bloques detectan esos
+    // cambios y actualizan el estado local para que la UI refleje la URL.
+    //
+    // Se hace durante el render (comparando con el valor anterior) y no en un useEffect:
+    // es el patrón que React documenta para ajustar estado cuando cambia una prop o la URL.
+    // Evita un render intermedio con datos viejos y cumple la regla de lint que prohíbe llamar
+    // a setState de forma síncrona dentro de un efecto.
     const [prevUrlQuery, setPrevUrlQuery] = useState(urlQuery);
     const [prevUrlSector, setPrevUrlSector] = useState(urlSector);
 
@@ -443,25 +493,38 @@ export default function Search() {
     // =========================================================================
     // VARIABLES DERIVADAS
     // =========================================================================
-    // Por que: Se calculan en cada render en lugar de usar estados adicionales 
+    // Por que: Se calculan en cada render en lugar de usar estados adicionales
     // para evitar problemas de sincronizacion ("React anti-pattern: derived state").
-    const selectedSector = SECTORS.find((s) => s.id === selectedSectorId) || null;
     const hasTerm = searchTerm.trim() !== '';
     const hasPriceFilter = storeKey !== '' || minPrice !== '' || maxPrice !== '';
-    const hasFilter = selectedCategoryId !== null || selectedSectorId !== null || showAll || hasPriceFilter;
+    // Se usa knownSectorId (no selectedSectorId): un sector invalido no cuenta como filtro.
+    const hasFilter = selectedCategoryId !== null || knownSectorId !== null || showAll || hasPriceFilter;
 
     // isIdle: Evita hacer peticiones a la API cuando el usuario no ha pedido nada.
     const isIdle = !hasTerm && !hasFilter;
-    // isSoon: Intercepta sectores en desarrollo para no enviar peticiones basura al backend.
-    const isSoon = !isIdle && selectedSector !== null && !selectedSector.available;
 
-    const status = isIdle ? 'idle' : isSoon ? 'soon' : fetchStatus;
+    // Ademas de la marca fija `available` de SECTORS, el sector queda "pronto" si el backend dice
+    // que su categoria raiz no existe o no tiene productos con precio. Solo se evalua con las
+    // secciones ya cargadas: mientras cargan, `section` es undefined y todo parecería inexistente.
+    const sectionUnavailable = sectionsStatus === 'ready' && (!section || !section.available);
+    // isSoon: Intercepta sectores en desarrollo para no enviar peticiones basura al backend.
+    const isSoon = !isIdle && selectedSector !== null && (!selectedSector.available || sectionUnavailable);
+
+    // Estado que ve el usuario. El ORDEN de esta cadena es una prioridad: gana la primera
+    // condición que se cumple. `fetchStatus` empieza en 'idle', así que sin la rama de
+    // `waitingSection` se vería un instante "Empieza tu búsqueda" al entrar por un enlace con
+    // sector, antes de que lleguen las secciones.
+    const status = isIdle ? 'idle'
+        : isSoon ? 'soon'
+            : sectionFailed ? 'error'
+                : waitingSection ? 'loading'
+                    : fetchStatus;
     const products = isIdle || isSoon ? [] : fetchedProducts;
 
     // =========================================================================
     // PERSISTENCIA DE SESION
     // =========================================================================
-    // Por que: Guarda silenciosamente los filtros activos. Si el usuario hace clic 
+    // Por que: Guarda silenciosamente los filtros activos. Si el usuario hace clic
     // en un producto y luego decide volver atras, la pagina estara exactamente como la dejo.
     useEffect(() => {
         sessionStorage.setItem(
@@ -505,11 +568,13 @@ export default function Search() {
     // MOTOR DE BUSQUEDA (DEBOUNCE + ABORT CONTROLLER)
     // =========================================================================
     useEffect(() => {
-        if (isIdle || isSoon) return;
+        // No se consulta si no hay nada que buscar, si el sector es "pronto", si fallaron las
+        // secciones o si todavia no se conoce el id de la seccion (ver `waitingSection`).
+        if (isIdle || isSoon || sectionFailed || waitingSection) return;
 
-        // Por que AbortController: Si el usuario escribe "caf" y luego "cafe" rapidamente, 
-        // habra 2 peticiones en vuelo. Si "caf" responde mas lento que "cafe", los 
-        // resultados en pantalla seran incorrectos (Condicion de carrera). 
+        // Por que AbortController: Si el usuario escribe "caf" y luego "cafe" rapidamente,
+        // habra 2 peticiones en vuelo. Si "caf" responde mas lento que "cafe", los
+        // resultados en pantalla seran incorrectos (Condicion de carrera).
         // AbortController cancela peticiones antiguas instantaneamente.
         const controller = new AbortController();
 
@@ -522,6 +587,9 @@ export default function Search() {
                 const result = await searchProducts(
                     {
                         name: hasTerm ? searchTerm.trim() : undefined,
+                        // Contrato de HT-13: id de la categoria raiz. null = sin filtro de seccion.
+                        // El backend lo combina con el resto: se deben cumplir todos los filtros.
+                        sectionId,
                         categoryId: selectedCategoryId,
                         storeIds,
                         minPrice,
@@ -551,7 +619,7 @@ export default function Search() {
             }
         };
 
-        // Por que Debounce (400ms): Evita que se dispare una llamada a la base de datos 
+        // Por que Debounce (400ms): Evita que se dispare una llamada a la base de datos
         // por cada letra que el usuario teclea, reduciendo enormemente los costos del servidor.
         const debounceTimer = setTimeout(fetchProducts, 400);
 
@@ -561,7 +629,10 @@ export default function Search() {
             clearTimeout(debounceTimer);
             controller.abort();
         };
-    }, [isIdle, isSoon, hasTerm, searchTerm, selectedCategoryId, storeKey, minPrice, maxPrice, pageNumber]);
+        // Todo valor que el efecto lee debe estar aqui: si faltara `sectionId`, al cambiar de
+        // pestaña se seguiria buscando con la seccion anterior (valor "viejo" de una render previa).
+    }, [isIdle, isSoon, sectionFailed, waitingSection, sectionId, hasTerm, searchTerm,
+        selectedCategoryId, storeKey, minPrice, maxPrice, pageNumber]);
 
     // =========================================================================
     // MANEJADORES DE UI
@@ -573,6 +644,8 @@ export default function Search() {
         backToFirstPage();
     }
 
+    // Ojo: las pestañas cambian el estado local pero NO escriben ?sector= en la URL. Por eso un
+    // enlace copiado despues de cambiar de pestaña apunta al sector con el que se entro a la pagina.
     function toggleSector(id) {
         setShowAll(false);
         setSelectedSectorId((current) => (current === id ? null : id));
@@ -630,7 +703,8 @@ export default function Search() {
         });
     }
 
-    const noFilters = selectedCategoryId === null && selectedSectorId === null;
+    // "Todas" en el filtro de categoria: marcada cuando no hay categoria ni sector VALIDO elegido
+    const noFilters = selectedCategoryId === null && knownSectorId === null;
 
     return (
         <main className={styles['search-page']}>
