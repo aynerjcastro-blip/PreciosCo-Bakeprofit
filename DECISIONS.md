@@ -97,14 +97,14 @@ verificado. Este análisis no es asesoría legal.
 
 - Plataforma: aplicación propia (Angular).
 - robots.txt: páginas `/producto/…` y sitemaps **permitidos**; prohíbe `/buscar*`, `/busqueda*`, cuenta y pago; bloquea por nombre a "Scrapy 2.7.1/2.8.0".
-- EAN: **no** (el `gtin` del JSON-LD es el id interno de la URL).
-- Datos útiles: JSON-LD con nombre, marca y precio.
+- EAN: **sí**, en el estado de la página (`barcode`); el `gtin` del JSON-LD es el id interno de la URL (corregido el 14-nov, ver "Scrapers de droguería").
+- Datos útiles: nombre, marca, precio e imagen en el estado de Angular que trae el HTML; JSON-LD con nombre, marca y precio.
 
 **Farmanorte** (droguería · riesgo medio)
 
 - Plataforma: **VTEX**.
 - robots.txt: **API (`/api/`) y búsquedas `map=ft` PROHIBIDAS**; permitidos páginas de producto `/…/p` y sitemap.
-- EAN: **no** (vacío; marca "Generica").
+- EAN: **sí**, en el campo `mpn` del JSON-LD; el `gtin` es el código interno de la tienda. Marca: solo "Generica" (corregido el 14-nov, ver "Scrapers de droguería").
 - Datos útiles: presentación en el nombre ("\* 10 TAB") y `Cantidad de unidades`.
 
 **Cruz Verde** (droguería · riesgo **alto**, ver términos)
@@ -132,7 +132,7 @@ verificado. Este análisis no es asesoría legal.
 **Farmatodo - Cuidado facial** (cuidado facial · riesgo medio)
 
 - Igual que Farmatodo - Droguería en plataforma, robots.txt y datos útiles.
-- EAN: **no**.
+- EAN: igual que Farmatodo - Droguería (`barcode`); sin probar en esta tienda.
 
 **Ánimus Lab** (cuidado facial, marca propia · riesgo medio)
 
@@ -150,8 +150,8 @@ verificado. Este análisis no es asesoría legal.
 
 ### Hallazgos que cambian el diseño
 
-1. **El EAN solo está en La Rebaja y Cutis.** ADR-01 (emparejar por EAN) no alcanza a Farmanorte, Farmatodo, Ánimus Lab ni
-   Botanikalia. Hace falta emparejar por marca normalizada + nombre o principio activo + contenido neto (ADR-03), o la vista de
+1. **El EAN solo está en La Rebaja y Cutis.** *(Corregido el 14-nov: Farmatodo y Farmanorte también lo traen en la página del
+   producto; ver "Scrapers de droguería".)* ADR-01 (emparejar por EAN) no alcanza a Ánimus Lab ni Botanikalia. Hace falta emparejar por marca normalizada + nombre o principio activo + contenido neto (ADR-03), o la vista de
    equivalentes de ADR-04. En droguería, los productos genéricos del catálogo ya se definen sin marca ("Acetaminofén 500 mg").
 2. **Los kits de La Rebaja comparten el EAN de la unidad con otro precio**: el blíster x10 cuesta $2.600 y el kit de caja x100
    ($18.820) trae el mismo EAN. Hay que excluir los listados con `Kit = Refkit`.
@@ -167,8 +167,8 @@ verificado. Este análisis no es asesoría legal.
 6. **Descargo de precios**: Cruz Verde declara que no responde por los precios que se muestren en otros sitios o buscadores;
    La Rebaja y La Economía se reservan cambiarlos en cualquier momento. El comparador debe mostrar la fecha de captura del precio
    (`prices.registration_date`) y el enlace a la tienda (`prices.product_url`), sin presentarlos como precio garantizado.
-7. **Farmanorte**: su robots.txt prohíbe la API. Respetarlo implica usar solo sitemap y HTML, y aun así no trae EAN ni marca real:
-   aporta poco. Tampoco sirve para cuidado facial en la API consultada (0 resultados de niacinamida y retinol). Decisión del equipo:
+7. **Farmanorte**: su robots.txt prohíbe la API. Respetarlo implica usar solo sitemap y HTML, y aun así no trae marca real:
+   aporta poco. *(Corregido el 14-nov: el EAN sí está, en `mpn`.)* Tampoco sirve para cuidado facial en la API consultada (0 resultados de niacinamida y retinol). Decisión del equipo:
    segunda ola solo por HTML, o excluirla.
 8. **Farmatodo**: no usar las APIs ni las claves que aparecen en el código de la página (Algolia, `api-transactional`): no están
    documentadas para terceros. La ruta limpia es `sitemap-products.xml` + página de producto (JSON-LD), con ritmo bajo. Que bloquee
@@ -272,7 +272,23 @@ verificado. Este análisis no es asesoría legal.
 
 1. Autorización escrita de Ánimus Lab; decidir si se solicita también a Cruz Verde o se excluye.
 2. Cambiar el `UA` de `verificar_tiendas.py` por el User-Agent real del scraper, con contacto del proyecto.
-3. Decisión del equipo sobre Farmanorte (solo HTML o excluir) y sobre ADR-04.
+3. Decisión del equipo sobre ADR-04. La parte de Farmanorte (solo HTML o excluir) quedó resuelta en el scraper: entra por HTML, con URL curada (ver "Scrapers de droguería").
+
+## Scrapers de droguería (EP-04, 14-nov-2026)
+
+Estado: implementado en `feature/scrapper-droguerías`, pendiente de fusionar. Lo siguiente completa y corrige "Selección de tiendas de droguería y cuidado facial".
+
+- **Qué tiendas y cómo**: Drogas La Rebaja por la API de VTEX (búsqueda por término, como los supermercados). Farmatodo - Droguería y Farmanorte por la página de producto, con **una URL curada por `scrape_target`** (`scrape_targets.target_url`), porque sus robots.txt prohíben la búsqueda. Una tienda sin `scrape_targets` activos no se consulta. La columna `target_url` la agrega `scripts/2026-11-droguerias-categorias-tiendas.sql`; si cuidado facial ya la usa, la reversión no debe borrarla.
+- **El EAN sí llega de Farmatodo y Farmanorte** (corrige los hallazgos 1 y 7): Farmatodo lo trae en `barcode` del estado de la página (`barcodeList` son ids internos); Farmanorte, en `mpn` del JSON-LD (su `gtin` es un código interno). Verificado con una página de producto de cada tienda. Farmanorte sigue sin marca real: "Generica" se guarda como sin marca, para no crear una marca falsa. Para que haya comparación (HU-28), la URL debe ser del **mismo producto y el mismo tamaño** que ya trae La Rebaja: el procesador empareja por EAN y rechaza la oferta si el tamaño difiere.
+- **Venta libre (`EXCLUIR_FORMULA`)**: constante en `scraper_droguerias.py`. `True` (valor actual) deja solo medicamentos de venta libre; `False` incluye los de fórmula. La leen La Rebaja (`Producto OTC`) y Farmatodo. **Farmanorte no marca la fórmula médica**: allí el único filtro es la lista curada de URLs, y quien la arme no debe incluir medicamentos de fórmula. Con respuestas guardadas de La Rebaja, `True` dio 275 ofertas y `False`, 455.
+- **Kits**: los listados marcados como kit en La Rebaja se descartan (comparten el EAN de la unidad con otro precio, hallazgo 2).
+- **Precio de Farmatodo**: se usa `fullPrice`, no `offerPrice` (en la página probada era un precio "Exclusivo 1ra compra"). Si Valledupar no aparece entre las ciudades del producto, no se guarda y se avisa; no se cae al precio nacional (misma regla que los supermercados). **Sin confirmar**: que el código `VUP` sea Valledupar (la página lista a Valledupar con su teléfono, pero ninguna tabla de la tienda lo confirma).
+- **Limitaciones aceptadas**: la página de Farmatodo trae solo los ids de las tiendas con stock, no su ciudad, así que un producto se guarda si hay stock en alguna tienda del país. El precio de Farmanorte es el predeterminado, sin ciudad; verificarlo contra la web con ubicación en Valledupar antes de mostrarlo como precio de Valledupar (DP-38).
+- **robots.txt y ritmo**: antes de cada página se consulta el robots.txt de la tienda, con soporte de `*` y `$` (el analizador de Python no entiende `*` dentro de una ruta, y Farmatodo prohíbe `/producto/*/review`). Pausa por defecto de 5 s entre páginas; si el robots.txt declara `Crawl-delay`, se usa ese valor. Una página que cambió de estructura da error visible; un 404 queda como producto retirado. **Pendiente**: las pruebas se hicieron con robots.txt reconstruidos desde este archivo, no con los reales; el primer log real de cada tienda lo confirma.
+- **Tamaño**: un lector de presentaciones (`comun/presentacion.py`) interpreta tabletas, ml y g desde el nombre. Si el nombre trae dos tamaños distintos, la oferta queda sin tamaño en vez de adivinar, y el procesador la rechaza ("no trae el contenido neto").
+- **Procesador sin cambios**: no tiene reglas propias de droguería (`existing-brands-only-domains` e `identity-pending-domains` solo contienen Repuestos). Una oferta sin EAN o sin tamaño se rechaza con motivo; una marca nueva de droguería se crea desde el campo de marca de la tienda, como en supermercado. **Pendiente**: ninguna prueba del backend usa una tienda de droguería; falta una prueba de integración de `processOffers` con ofertas de La Rebaja y Farmatodo del mismo EAN. Si Farmatodo llega antes que La Rebaja con un producto nuevo, el producto toma el nombre de Farmatodo.
+- **Workflow**: `scrape-precios.yml` reemplaza a `scrape-supermercados.yml`. Una matriz `[supermercados, droguerias]` corre un scraper tras otro en jobs separados (`fail-fast: false`: si falla uno, el otro corre igual). Entradas manuales: `dominios` (todos, supermercados o droguerias), `tiendas_supermercados` (vacío = `d1,jumbo,olimpica`, Éxito sigue en pausa) y `tiendas_droguerias` (vacío = todas las que tengan objetivos activos). El `cron` sigue comentado hasta que el equipo decida. El botón "Run workflow" solo aparece si el archivo está en la rama por defecto (`main`); mientras tanto se prueba con un `push:` temporal en la rama.
+- **Antes de encender las tiendas**: las tres siguen con `stores.active = false` y sus objetivos inactivos hasta cargar y probar las URLs (`SOLO_TIENDAS=farmatodo`, luego `farmanorte`, con un solo objetivo activo). Una corrida sin objetivos activos termina en 0 sin haber probado nada.
 
 ## Búsqueda de productos (HU-06a, HU-06b)
 
