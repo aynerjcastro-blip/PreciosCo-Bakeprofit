@@ -65,7 +65,7 @@ export default function ResetPassword() {
                         <h1 className={styles.title}>Enlace no válido</h1>
                         <p className={styles.subtitle}>El enlace de recuperación es inválido o ya venció.</p>
                     </header>
-                    <Link to="/recuperar" className={styles.submit}>Solicitar un nuevo enlace</Link>
+                    <Link to="/forgot-password" className={styles.submit}>Solicitar un nuevo enlace</Link>
                     <Link to="/login" className={styles.backLink}>Volver al inicio de sesión</Link>
                 </div>
             </div>
