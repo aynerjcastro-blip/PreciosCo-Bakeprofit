@@ -1,0 +1,99 @@
+/* Cambia los var(--x, valor) por los nombres de tu tokens.css */
+.page {
+    max-width: 48rem;
+    margin: 0 auto;
+    padding: 3rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.title {
+    margin: 0;
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    color: var(--color-text, #131b2e);
+}
+
+.description {
+    margin: 0;
+    font-size: 1.125rem;
+    color: var(--color-text-muted, #5b6478);
+}
+
+.stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 2rem;
+    margin: .5rem 0;
+    padding: 1rem 1.25rem;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: .75rem;
+    background: var(--color-surface, #fff);
+}
+
+.stats dt {
+    font-size: .8rem;
+    color: var(--color-text-muted, #5b6478);
+}
+
+.stats dd {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text, #131b2e);
+}
+
+.button {
+    display: inline-block;
+    padding: .75rem 1.5rem;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: none;
+    background: var(--color-primary, #a33900);
+    color: var(--color-on-primary, #fff);
+}
+
+.button:hover,
+.button:focus-visible {
+    filter: brightness(1.1);
+}
+
+.soon {
+    margin: 0;
+    padding: .5rem 1rem;
+    border-radius: .5rem;
+    background: var(--color-surface-muted, #eef0f7);
+    color: var(--color-text-muted, #5b6478);
+}
+
+.notice {
+    margin: .5rem 0 0;
+    font-size: .8rem;
+    color: var(--color-text-muted, #5b6478);
+}
+
+.skeleton {
+    width: 100%;
+    min-height: 14rem;
+    border-radius: .75rem;
+    background: var(--color-surface-muted, #eef0f7);
+    animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    50% {
+        opacity: .5;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton {
+        animation: none;
+    }
+}

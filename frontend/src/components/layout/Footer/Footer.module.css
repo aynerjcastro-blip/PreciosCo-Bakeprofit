@@ -3,12 +3,20 @@
    ============================================================ */
 
 .site-footer {
-    background-color: var(--bg-surface);
-    border-top: 1px solid var(--border-color);
-    color: var(--text-primary);
+    background-color: #ffffff;
+    border-top: 1px solid #e3e6f2;
+    color: #121626;
     padding: 60px 24px 20px;
     font-family: var(--font-body);
-    margin-top: 60px;
+    margin-top: 0;
+    padding-top: 80px;
+}
+
+:global([data-theme='dark']) .site-footer,
+:global(.dark) .site-footer {
+    background-color: #0e1014;
+    border-top-color: #2b303c;
+    color: #f2f4f9;
 }
 
 .site-footer__container {
