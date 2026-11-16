@@ -6,20 +6,14 @@
    se pisaban entre sí (por ejemplo, el botón "Ingresa" del panel perdía su estilo).
    ============================================================ */
 .site-header {
-    --header-bg: #ffffff;
     position: sticky;
     top: 0;
     z-index: 100;
+    /* Un poco translúcido: el contenido se intuye al pasar por debajo */
     background: color-mix(in srgb, var(--header-bg) 92%, transparent);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid #e3e6f2;
-}
-
-:global([data-theme='dark']) .site-header,
-:global(.dark) .site-header {
-    --header-bg: #0e1014;
-    border-bottom-color: #2b303c;
+    border-bottom: 1px solid var(--header-border);
 }
 
 /* Al saltar a un ancla (#como-funciona) el título no queda tapado por el header fijo */
@@ -259,7 +253,7 @@ html {
     border-radius: 50%;
     background: var(--color-primary);
     /* texto oscuro sobre el naranja, que es el mismo en claro y oscuro */
-    color: #0F172A;
+    color: var(--color-on-primary);
     font-weight: 800;
 }
 
@@ -363,7 +357,7 @@ html {
     border-radius: var(--radius-sm);
     background: var(--color-primary);
     /* texto oscuro sobre el naranja, que es el mismo en claro y oscuro */
-    color: #0F172A;
+    color: var(--color-on-primary);
     font-weight: 700;
     text-align: center;
     text-decoration: none;

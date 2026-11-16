@@ -27,9 +27,11 @@
     box-shadow: var(--shadow-card);
 }
 
+
 /* ============================================================
    PANEL INFORMATIVO (izquierda)
    ============================================================ */
+
 .auth-hero {
     position: relative;
     display: flex;
@@ -37,12 +39,35 @@
     justify-content: center;
     gap: 32px;
     padding: 48px 40px;
-    color: #fff;
-    /* Una sola familia azul: luz azul clara arriba a la derecha sobre un degradado azul noche.
-       Sin ámbar: el naranja sobre azul se enturbia en marrón. */
+    color: var(--color-dark);
+    /* Aurora en las dos esquinas de arriba, con las MISMAS luces y posiciones del fondo de la
+       página (body::before en base.css; colores --glow-1 y --glow-2 en tokens.css) */
     background:
-        radial-gradient(90% 70% at 100% 0%, rgb(70 110 220 / 0.22), transparent 60%),
-        linear-gradient(165deg, #0a0f1d 0%, #101a33 55%, #16244a 100%);
+        radial-gradient(70% 45% at 12% -5%, var(--glow-1), transparent 70%),
+        radial-gradient(65% 40% at 92% 5%, var(--hero-glow-b), transparent 70%),
+        linear-gradient(165deg, var(--hero-from) 0%, var(--hero-to) 100%);
+
+    /* Paleta del panel en tema claro: marfil cálido */
+    --hero-from: #FFE6C4;
+    --hero-to: #FFEFD9;
+    /* Luz derecha: en claro, el azul del fondo a la mitad (más fuerte se enturbia sobre el marfil) */
+    --hero-glow-b: color-mix(in srgb, var(--glow-2) 50%, transparent);
+}
+
+/* Tema oscuro: azul noche, cercano al fondo. Son dos reglas porque el tema puede venir del botón
+   del header (data-theme) o del sistema operativo; las dos deben quedar idénticas. */
+:root[data-theme="dark"] .auth-hero {
+    --hero-from: #161D33;
+    --hero-to: #1B2745;
+    --hero-glow-b: var(--glow-2);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .auth-hero {
+        --hero-from: #161D33;
+        --hero-to: #1B2745;
+        --hero-glow-b: var(--glow-2);
+    }
 }
 
 .auth-brand {
@@ -63,7 +88,7 @@
     font-family: var(--font-display);
     font-weight: 800;
     font-size: 1.6rem;
-    color: #fff;
+    color: var(--color-dark);
 }
 
 .auth-brand__co {
@@ -103,12 +128,12 @@
     font-weight: 800;
     line-height: 1.1;
     letter-spacing: -0.02em;
-    color: #fff;
+    color: var(--color-dark);
 }
 
 .hero-subtitle {
     margin: 0;
-    color: rgb(255 255 255 / 0.74);
+    color: var(--text-muted);
 }
 
 .hero-features {
@@ -145,7 +170,7 @@
 .hero-features p {
     margin: 2px 0 0;
     font-size: 0.88rem;
-    color: rgb(255 255 255 / 0.74);
+    color: var(--text-muted);
 }
 
 /* ============================================================
