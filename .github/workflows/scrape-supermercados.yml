@@ -13,7 +13,7 @@ on:
 
 concurrency:
   group: scraper-supermercados
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   scrape:
