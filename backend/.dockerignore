@@ -1,0 +1,17 @@
+# Archivos de compilación que no deben copiarse a la imagen
+target/
+
+# Archivos de IDE
+.idea/
+.vscode/
+*.iml
+
+# Git y archivos sensibles
+.git/
+.gitignore
+.env
+.env.*
+!.env.example
+
+# Documentación local
+HELP.md
