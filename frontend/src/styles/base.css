@@ -49,3 +49,15 @@ a {
     text-decoration: none;
     color: inherit;
 }
+
+/* Footer siempre al fondo: si la página es corta, el contenido ocupa el espacio sobrante */
+#root {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.layout-content {
+    flex: 1 0 auto;
+}
