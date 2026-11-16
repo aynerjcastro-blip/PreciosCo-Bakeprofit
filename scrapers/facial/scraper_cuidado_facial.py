@@ -155,9 +155,12 @@ def _descripcion(p):
 
 def extraer_tamano(p):
     """(net_content, unit_base, detalle).
-    detalle dice de dónde salió el tamaño (nombre, titulo, sku, spec, url, descripcion) o por qué no hay:
-    pack (kit o '2 x 30 ml'), ambiguo (dos tamaños en el nombre), conflicto (las fuentes no coinciden)
-    o sin_dato. Nunca se adivina: ante duda, NULL."""
+    detalle dice de dónde salió el tamaño (nombre, titulo, sku, spec, url, descripcion, mayoria) o por qué
+    no hay: pack (kit o '2 x 30 ml'), ambiguo (dos tamaños en el nombre), conflicto (las fuentes no
+    coinciden y ninguna tiene mayoría) o sin_dato.
+    Si el nombre no trae tamaño se consultan otras fuentes; cada TIPO de fuente (titulo, sku, spec, url)
+    vota una sola vez por valor, y gana el valor con más fuentes distintas. Un empate deja NULL.
+    Nunca se adivina: ante duda, NULL."""
     item = (p.get("items") or [{}])[0]
     nombre = p.get("productName") or ""
     s = _tamanos_en(nombre)
@@ -169,7 +172,7 @@ def extraer_tamano(p):
     if len(s) > 1:
         return None, None, "ambiguo"
 
-    # El nombre no trae tamaño: se prueban otras fuentes y deben coincidir entre sí
+    # El nombre no trae tamaño: se prueban otras fuentes
     fuentes = []
     titulo = p.get("productTitle") or ""
     if titulo and titulo != nombre:
@@ -187,12 +190,21 @@ def extraer_tamano(p):
             return None, None, "pack"
         if len(s) == 1:
             candidatos.append((fuente, next(iter(s))))
-    distintos = {c for _, c in candidatos}
-    if len(distintos) == 1:
-        base, valor = next(iter(distintos))
-        return valor, base, candidatos[0][0]
-    if len(distintos) > 1:
-        return None, None, "conflicto: " + " vs ".join(f"{v:g} {b}({f})" for f, (b, v) in candidatos)
+    if candidatos:
+        votos = OrderedDict()                    # (unidad, cantidad) -> tipos de fuente distintos
+        for fuente, c in candidatos:
+            tipos = votos.setdefault(c, [])
+            if fuente not in tipos:
+                tipos.append(fuente)
+        orden = sorted(votos.items(), key=lambda kv: len(kv[1]), reverse=True)
+        if len(orden) == 1:
+            (base, valor), tipos = orden[0]
+            return valor, base, tipos[0]
+        if len(orden[0][1]) > len(orden[1][1]):
+            (base, valor), tipos = orden[0]
+            return valor, base, "mayoria: " + "+".join(tipos)
+        return None, None, "conflicto: " + " vs ".join(
+            f"{v:g} {b}({'+'.join(tipos)})" for (b, v), tipos in orden)
 
     # Último recurso: la descripción, solo con una etiqueta de contenido delante
     d = set()
@@ -223,8 +235,10 @@ def cumple_terminos(nombre, termino):
 
 
 # Palabras que delatan productos de otra categoría cuando se busca sin fq. Solo se aplican si el
-# término buscado no las contiene.
-EXCLUIR = ("capilar", "cabello", "pestana", "ceja", "shampoo", "champu", "acondicionador")
+# término buscado no las contiene. ("suplemento" y "pluscolageno": suplementos orales que entran por
+# 'vitamina c'; no se usa "colageno" a secas porque hay cremas faciales con colágeno.)
+EXCLUIR = ("capilar", "cabello", "pestana", "ceja", "shampoo", "champu", "acondicionador",
+           "suplemento", "pluscolageno")
 # Por categoría del target: un sérum con protección solar se clasifica como protector solar
 # (entra por los targets de la categoría de solares), no como sérum.
 EXCLUIR_POR_CATEGORIA = {
