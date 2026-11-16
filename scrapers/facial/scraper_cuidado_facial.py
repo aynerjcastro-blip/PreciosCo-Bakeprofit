@@ -19,6 +19,7 @@ Uso:
 Código de salida 1 si una tienda no inserta ninguna oferta en toda la corrida
 (alerta de cero resultados, ver DECISIONS.md) o si no hay targets activos.
 """
+import csv
 import os
 import re
 import sys
@@ -147,6 +148,22 @@ def cumple_terminos(nombre, termino):
         if not ok:
             return False
     return True
+
+
+# Palabras que delatan productos de otra categoría cuando se busca sin fq. Solo se aplican si el
+# término buscado no las contiene.
+EXCLUIR = ("capilar", "cabello", "pestana", "ceja", "shampoo", "champu", "acondicionador")
+# Por categoría del target: un sérum con protección solar se clasifica como protector solar
+# (entra por los targets de la categoría de solares), no como sérum.
+EXCLUIR_POR_CATEGORIA = {
+    "Sérums faciales": ("solar", "spf", "fps"),
+}
+
+
+def excluido(nombre, termino, categoria=""):
+    n, t = normalizar(nombre), normalizar(termino)
+    palabras = EXCLUIR + EXCLUIR_POR_CATEGORIA.get(categoria, ())
+    return any(re.search(r"\b" + x, n) and x not in t for x in palabras)
 
 
 # ─────────────────────────── Cliente HTTP por tienda ───────────────────────────
@@ -295,8 +312,11 @@ def conectar():
 def leer_targets(conn, tiendas):
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
         cur.execute(
-            """SELECT t.id, t.store_id, s.name AS store_name, t.search_term, t.store_category_fq
-               FROM scrape_targets t JOIN stores s ON s.id = t.store_id
+            """SELECT t.id, t.store_id, s.name AS store_name, t.search_term, t.store_category_fq,
+                      c.name AS category_name
+               FROM scrape_targets t
+               JOIN stores s ON s.id = t.store_id
+               JOIN categories c ON c.id = t.category_id
                WHERE t.active = true AND lower(s.name) = ANY(%s)
                ORDER BY t.store_id, t.id""",
             (list(tiendas),),
@@ -314,6 +334,15 @@ def insertar(conn, filas):
     with conn.cursor() as cur:
         psycopg2.extras.execute_values(cur, SQL_INSERT, filas, page_size=200)
     conn.commit()
+
+
+# ─────────────────────────── Registro de descartes ───────────────────────────
+DESCARTADOS = []   # (tienda, término, motivo, nombre, IsAvailable, Stock, AvailableQuantity)
+
+
+def _oferta(p):
+    item = (p.get("items") or [{}])[0]
+    return ((item.get("sellers") or [{}])[0]).get("commertialOffer") or {}
 
 
 # ─────────────────────────── Flujo principal ───────────────────────────
@@ -336,12 +365,23 @@ def procesar_target(conn, cli, t):
             continue
         vistos.add(clave)
         st["encontrados"] += 1
-        if fq is None and not cumple_terminos(p.get("productName"), t["search_term"]):
-            st["filtrados"] += 1
-            continue
+        if fq is None:
+            motivo_f = None
+            if not cumple_terminos(p.get("productName"), t["search_term"]):
+                motivo_f = "sin_match"
+            elif excluido(p.get("productName"), t["search_term"], t["category_name"]):
+                motivo_f = "excluido"
+            if motivo_f:
+                st["filtrados"] += 1
+                DESCARTADOS.append((t["store_name"], t["search_term"], motivo_f,
+                                    p.get("productName"), "", "", ""))
+                continue
         d, motivo = parsear(p)
         if motivo == "no_disponible":
             st["no_disp"] += 1
+            o = _oferta(p)
+            DESCARTADOS.append((t["store_name"], t["search_term"], "no_disponible", p.get("productName"),
+                                o.get("IsAvailable"), o.get("Stock"), o.get("AvailableQuantity")))
             continue
         if motivo:
             st["sin_precio"] += 1
@@ -407,6 +447,12 @@ def main():
             resumen[(tienda, t["search_term"])] = st
     finally:
         conn.close()
+
+    with open("descartados.csv", "w", newline="", encoding="utf-8-sig") as fh:
+        w = csv.writer(fh)
+        w.writerow(["tienda", "termino", "motivo", "nombre", "IsAvailable", "Stock", "AvailableQuantity"])
+        w.writerows(DESCARTADOS)
+    print(f"\nDescartes guardados en descartados.csv ({len(DESCARTADOS)} filas)")
 
     # ── Resumen ──
     print(f"\n{'═' * 100}\nRESUMEN\n{'═' * 100}")
