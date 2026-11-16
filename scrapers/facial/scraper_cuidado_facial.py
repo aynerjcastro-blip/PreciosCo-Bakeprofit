@@ -11,6 +11,9 @@ Variables de entorno:
     SOLO_TIENDAS          opcional, p. ej. "cutis,medipiel" (por defecto las tres)
     MAX_PAGINAS           opcional, páginas de 50 productos por target (por defecto 4)
     SCRAPER_USER_AGENT    opcional, User-Agent que identifica al proyecto
+    MOSTRAR_DESCARTES     opcional, "1" imprime los descartes de cada target en el log (por defecto
+                          "1" en GitHub Actions y "0" en local); "0" lo apaga
+    DESCARTADOS_PATH      opcional, dónde se guarda el CSV de descartes (por defecto descartados.csv)
 
 Uso:
     pip install -r requirements.txt
@@ -345,6 +348,36 @@ def _oferta(p):
     return ((item.get("sellers") or [{}])[0]).get("commertialOffer") or {}
 
 
+def _mostrar_descartes():
+    por_defecto = "1" if os.getenv("GITHUB_ACTIONS") else "0"
+    return os.getenv("MOSTRAR_DESCARTES", por_defecto) == "1"
+
+
+def imprimir_descartes(tienda, termino, filas):
+    """Imprime los descartes de UN target apenas termina, en un grupo plegable de GitHub Actions
+    (en local se imprime como bloque simple). Así se ven a medida que el scraper avanza."""
+    if not filas or not _mostrar_descartes():
+        return
+    en_actions = bool(os.getenv("GITHUB_ACTIONS"))
+    titulo = f"Descartes · {tienda} · {termino} ({len(filas)})"
+    print(f"::group::{titulo}" if en_actions else f"   {titulo}")
+    for _, _, motivo, nombre, disp, stock, cant in filas:
+        extra = (f" [IsAvailable={disp} Stock={stock} AvailableQuantity={cant}]"
+                 if motivo == "no_disponible" else "")
+        print(f"{motivo:<13} | {(nombre or '')[:110]}{extra}")
+    if en_actions:
+        print("::endgroup::")
+
+
+def guardar_descartados():
+    ruta = os.path.abspath(os.getenv("DESCARTADOS_PATH", "descartados.csv"))
+    with open(ruta, "w", newline="", encoding="utf-8-sig") as fh:
+        w = csv.writer(fh)
+        w.writerow(["tienda", "termino", "motivo", "nombre", "IsAvailable", "Stock", "AvailableQuantity"])
+        w.writerows(DESCARTADOS)
+    print(f"\nDescartes: {len(DESCARTADOS)} filas guardadas en {ruta}")
+
+
 # ─────────────────────────── Flujo principal ───────────────────────────
 def procesar_target(conn, cli, t):
     st = dict(encontrados=0, filtrados=0, excluidos=0, no_disp=0, sin_precio=0, insertados=0, sin_tamano=0, error="")
@@ -385,6 +418,8 @@ def procesar_target(conn, cli, t):
             continue
         if motivo:
             st["sin_precio"] += 1
+            DESCARTADOS.append((t["store_name"], t["search_term"], "sin_precio",
+                                p.get("productName"), "", "", ""))
             continue
         if d["net_content"] is None:
             st["sin_tamano"] += 1
@@ -413,12 +448,7 @@ def linea_resultado(st, segundos):
     return txt
 
 
-def main():
-    # Sin esto, en GitHub Actions (salida no interactiva) Python acumula el texto y lo suelta al final
-    try:
-        sys.stdout.reconfigure(line_buffering=True)
-    except AttributeError:
-        pass
+def _correr():
     pedidas = [x.strip().lower() for x in os.getenv("SOLO_TIENDAS", ",".join(TIENDAS)).split(",") if x.strip()]
     tiendas = [x for x in pedidas if x in TIENDAS]
     if not tiendas:
@@ -453,6 +483,7 @@ def main():
             print(f"→ [{n}/{len(targets)}] {tienda} · {t['search_term']}"
                   + ("" if t["store_category_fq"] else "  (sin fq: filtro por palabras)"))
             inicio = time.time()
+            antes = len(DESCARTADOS)
             try:
                 st = procesar_target(conn, clientes[clave], t)
             except TiendaBloqueada as e:
@@ -460,16 +491,11 @@ def main():
                 omitidas.add(clave)
                 st = dict(error=f"bloqueada: {e}")
             print(linea_resultado(st, time.time() - inicio))
+            imprimir_descartes(tienda, t["search_term"], DESCARTADOS[antes:])
             totales[tienda] += st.get("insertados", 0)
             resumen[(tienda, t["search_term"])] = st
     finally:
         conn.close()
-
-    with open("descartados.csv", "w", newline="", encoding="utf-8-sig") as fh:
-        w = csv.writer(fh)
-        w.writerow(["tienda", "termino", "motivo", "nombre", "IsAvailable", "Stock", "AvailableQuantity"])
-        w.writerows(DESCARTADOS)
-    print(f"\nDescartes guardados en descartados.csv ({len(DESCARTADOS)} filas)")
 
     # ── Resumen ──
     print(f"\n{'═' * 100}\nRESUMEN\n{'═' * 100}")
@@ -491,6 +517,19 @@ def main():
         print(f"\n⛔ Alerta de cero resultados: {', '.join(vacias)} no insertó ninguna oferta.")
         return 1
     return 0
+
+
+def main():
+    # Sin esto, en GitHub Actions (salida no interactiva) Python acumula el texto y lo suelta al final
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except AttributeError:
+        pass
+    try:
+        return _correr()
+    finally:
+        # El CSV se guarda siempre, incluso si la corrida falla a medias
+        guardar_descartados()
 
 
 if __name__ == "__main__":

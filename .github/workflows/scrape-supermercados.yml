@@ -19,6 +19,9 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      # Que cada print salga al log apenas ocurre, no de golpe al final
+      PYTHONUNBUFFERED: "1"
 
     steps:
       - name: Clonar repositorio
@@ -53,12 +56,15 @@ jobs:
           SOLO_TIENDAS: ${{ github.event.inputs.tiendas || 'd1,jumbo,olimpica' }}
         run: python scraper_supermercados.py
 
+      # !cancelled(): si un scraper termina con código 1 (alerta de cero resultados), los
+      # siguientes igual corren. Sin esto Actions los saltaría.
       - name: Correr scraper de droguerías
-        if: |
+        if: >-
+          ${{ !cancelled() && (
           contains(github.event.inputs.tiendas, 'la rebaja') ||
           contains(github.event.inputs.tiendas, 'farmatodo') ||
           contains(github.event.inputs.tiendas, 'farmanorte') ||
-          github.event.inputs.tiendas == ''
+          github.event.inputs.tiendas == '') }}
         working-directory: scrapers/droguerias
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
@@ -71,11 +77,12 @@ jobs:
         run: python scraper_droguerias.py
 
       - name: Correr scraper de cuidado facial
-        if: |
+        if: >-
+          ${{ !cancelled() && (
           contains(github.event.inputs.tiendas, 'cutis') ||
           contains(github.event.inputs.tiendas, 'medipiel') ||
           contains(github.event.inputs.tiendas, 'bellapiel') ||
-          github.event.inputs.tiendas == ''
+          github.event.inputs.tiendas == '') }}
         working-directory: scrapers/facial
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
@@ -85,6 +92,8 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_SSLMODE: require
           SOLO_TIENDAS: ${{ github.event.inputs.tiendas || 'cutis,medipiel,bellapiel' }}
+          MOSTRAR_DESCARTES: "1"
+          DESCARTADOS_PATH: descartados_facial.csv
         run: python scraper_cuidado_facial.py
 
       - name: Subir descartados
@@ -92,6 +101,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: descartados
-          path: "**/descartados*.csv"
+          path: scrapers/facial/descartados_facial.csv
           if-no-files-found: warn
           retention-days: 7
