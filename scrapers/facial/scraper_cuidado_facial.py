@@ -347,7 +347,7 @@ def _oferta(p):
 
 # ─────────────────────────── Flujo principal ───────────────────────────
 def procesar_target(conn, cli, t):
-    st = dict(encontrados=0, filtrados=0, no_disp=0, sin_precio=0, insertados=0, sin_tamano=0, error="")
+    st = dict(encontrados=0, filtrados=0, excluidos=0, no_disp=0, sin_precio=0, insertados=0, sin_tamano=0, error="")
     fq = (t["store_category_fq"] or "").strip() or None
     try:
         productos = cli.descargar(t["search_term"], fq)
@@ -372,7 +372,7 @@ def procesar_target(conn, cli, t):
             elif excluido(p.get("productName"), t["search_term"], t["category_name"]):
                 motivo_f = "excluido"
             if motivo_f:
-                st["filtrados"] += 1
+                st["excluidos" if motivo_f == "excluido" else "filtrados"] += 1
                 DESCARTADOS.append((t["store_name"], t["search_term"], motivo_f,
                                     p.get("productName"), "", "", ""))
                 continue
@@ -402,7 +402,23 @@ def procesar_target(conn, cli, t):
     return st
 
 
+def linea_resultado(st, segundos):
+    if st.get("error") and "encontrados" not in st:
+        return f"   ✖ {st['error']}"
+    txt = (f"   ✔ {st['encontrados']} hallados · {st['filtrados']} sin match · {st['excluidos']} excluidos · "
+           f"{st['no_disp']} no disponibles · {st['sin_precio']} sin precio · "
+           f"{st['insertados']} insertados · {st['sin_tamano']} sin tamaño  ({segundos:.0f}s)")
+    if st.get("error"):
+        txt = f"   ✖ {st['error']}\n" + txt
+    return txt
+
+
 def main():
+    # Sin esto, en GitHub Actions (salida no interactiva) Python acumula el texto y lo suelta al final
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except AttributeError:
+        pass
     pedidas = [x.strip().lower() for x in os.getenv("SOLO_TIENDAS", ",".join(TIENDAS)).split(",") if x.strip()]
     tiendas = [x for x in pedidas if x in TIENDAS]
     if not tiendas:
@@ -421,7 +437,7 @@ def main():
         totales = {}                     # tienda -> ofertas insertadas
         clientes, omitidas = {}, set()
 
-        for t in targets:
+        for n, t in enumerate(targets, 1):
             tienda = t["store_name"]
             clave = tienda.lower()
             totales.setdefault(tienda, 0)
@@ -434,15 +450,16 @@ def main():
                     omitidas.add(clave)
                     resumen[(tienda, t["search_term"])] = dict(error="Crawl-delay inviable")
                     continue
-            print(f"→ {tienda} · {t['search_term']}" + ("" if t["store_category_fq"] else "  (sin fq: filtro por palabras)"))
+            print(f"→ [{n}/{len(targets)}] {tienda} · {t['search_term']}"
+                  + ("" if t["store_category_fq"] else "  (sin fq: filtro por palabras)"))
+            inicio = time.time()
             try:
                 st = procesar_target(conn, clientes[clave], t)
             except TiendaBloqueada as e:
                 print(f"  ⛔ {tienda} cortada: {e}")
                 omitidas.add(clave)
                 st = dict(error=f"bloqueada: {e}")
-            if st.get("error"):
-                print(f"  ✖ {st['error']}")
+            print(linea_resultado(st, time.time() - inicio))
             totales[tienda] += st.get("insertados", 0)
             resumen[(tienda, t["search_term"])] = st
     finally:
@@ -456,14 +473,14 @@ def main():
 
     # ── Resumen ──
     print(f"\n{'═' * 100}\nRESUMEN\n{'═' * 100}")
-    print(f"{'Tienda':<10} {'Término':<22} {'Hallados':>8} {'Sin match':>9} {'No disp.':>8} "
+    print(f"{'Tienda':<10} {'Término':<22} {'Hallados':>8} {'Sin match':>9} {'Excluidos':>9} {'No disp.':>8} "
           f"{'Sin precio':>10} {'Insertados':>10} {'Sin tamaño':>10}")
     for (tienda, termino), s in resumen.items():
         if s.get("error") and "insertados" not in s:
             print(f"{tienda:<10} {termino:<22} {s['error']}")
             continue
         extra = f"  ⚠ {s['error']}" if s.get("error") else ""
-        print(f"{tienda:<10} {termino:<22} {s['encontrados']:>8} {s['filtrados']:>9} {s['no_disp']:>8} "
+        print(f"{tienda:<10} {termino:<22} {s['encontrados']:>8} {s['filtrados']:>9} {s['excluidos']:>9} {s['no_disp']:>8} "
               f"{s['sin_precio']:>10} {s['insertados']:>10} {s['sin_tamano']:>10}{extra}")
     print("\nOfertas insertadas por tienda:")
     for tienda, n in totales.items():
