@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/useAuth';
+import ChangePasswordForm from '@/components/profile/ChangePasswordForm';
 import styles from '@/components/profile/Profile.module.css';
 
 // Etiqueta legible del rol que guarda el backend
@@ -121,6 +122,8 @@ export default function Profile() {
                         </div>
                     )}
                 </form>
+
+                <ChangePasswordForm />
             </div>
         </div>
     );

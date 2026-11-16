@@ -5,6 +5,7 @@ import com.comprasco.bakeprofit.auth.exception.ForbiddenActionException;
 import com.comprasco.bakeprofit.auth.exception.InactiveParentException;
 import com.comprasco.bakeprofit.auth.exception.InactiveUserException;
 import com.comprasco.bakeprofit.auth.exception.InvalidCredentialsException;
+import com.comprasco.bakeprofit.auth.exception.InvalidPasswordChangeException;
 import com.comprasco.bakeprofit.auth.exception.UserNotFoundException;
 import com.comprasco.bakeprofit.catalog.exception.CategoryAlreadyExistsException;
 import com.comprasco.bakeprofit.catalog.exception.CategoryNotFoundException;
@@ -518,5 +519,30 @@ public class GlobalExceptionHandler {
                 body.put("message", "Acceso denegado: Se requieren permisos de administrador.");
 
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+        }
+
+                /**
+         * Maneja un cambio de contraseña no válido: la actual no coincide o la
+         * nueva es igual a la actual. Se responde 400 y no 401 para que el
+         * frontend no lo confunda con una sesión vencida.
+         *
+         * @param ex      excepcion de cambio de contraseña no valido
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 400 Bad Request
+         */
+        @ExceptionHandler(InvalidPasswordChangeException.class)
+        public ResponseEntity<ErrorResponse> handleInvalidPasswordChange(
+                        InvalidPasswordChangeException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_REQUEST.value())
+                                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
 }
