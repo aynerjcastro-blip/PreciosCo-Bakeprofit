@@ -1,5 +1,7 @@
 package com.comprasco.bakeprofit.auth.service;
 
+import com.comprasco.bakeprofit.auth.dto.ChangePasswordRequest;
+import com.comprasco.bakeprofit.auth.exception.InvalidPasswordChangeException;
 import com.comprasco.bakeprofit.auth.dto.AuthResponse;
 import com.comprasco.bakeprofit.auth.dto.ForgotPasswordRequest;
 import com.comprasco.bakeprofit.auth.dto.GoogleLoginRequest;
@@ -337,5 +339,35 @@ public class UserService {
         user.setName(request.name());
         userRepository.save(user);
         return getProfile(userId);
+    }
+        /**
+     * Cambia la contraseña del usuario autenticado.
+     * <p>
+     * Exige la contraseña actual: así, quien tenga un token robado o una sesión
+     * abierta en un equipo ajeno no puede apropiarse de la cuenta.
+     * Las cuentas de Google no entran aquí: su contraseña es un valor aleatorio
+     * que nadie conoce, por eso no pueden aportar la actual.
+     *
+     * @param userId  usuario autenticado (viene del token, nunca del cuerpo)
+     * @param request contraseña actual y contraseña nueva
+     * @throws ForbiddenActionException         si la cuenta es de Google (403)
+     * @throws InvalidPasswordChangeException   si la actual no coincide o la nueva es igual (400)
+     */
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        User user = findById(userId);
+
+        if (user.getAuthProvider() != AuthProvider.LOCAL) {
+            throw new ForbiddenActionException("Las cuentas creadas con Google no tienen contraseña propia.");
+        }
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw new InvalidPasswordChangeException("La contraseña actual es incorrecta");
+        }
+        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+            throw new InvalidPasswordChangeException("La nueva contraseña debe ser distinta de la actual");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
     }
 }

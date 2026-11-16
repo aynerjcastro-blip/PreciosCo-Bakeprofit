@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.comprasco.bakeprofit.auth.dto.ProfileResponse;
+import com.comprasco.bakeprofit.auth.dto.ChangePasswordRequest;
 import com.comprasco.bakeprofit.auth.dto.UpdateDisplayNameRequest;
 import com.comprasco.bakeprofit.auth.entity.User;
 import com.comprasco.bakeprofit.auth.security.CurrentUser;
@@ -58,5 +59,22 @@ public class UserController {
             @Valid @RequestBody UpdateDisplayNameRequest request,
             @CurrentUser User user) {
         return ResponseEntity.ok(userService.updateDisplayName(user.getId(), request));
+    }
+        /**
+     * Cambia la contraseña del usuario autenticado.
+     * <p>
+     * Vive bajo {@code /api/users/me} y no bajo {@code /api/auth}: esta última
+     * es pública y aquí hace falta saber quién es el usuario por su token.
+     *
+     * @param request contraseña actual y nueva (validadas: obligatorias, nueva de 8 a 72 caracteres)
+     * @param user    usuario resuelto desde el token JWT
+     * @return 204 sin cuerpo; 400 si la actual no coincide; 403 si la cuenta es de Google
+     */
+    @PutMapping("/password")
+    public ResponseEntity<Void> changeMyPassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            @CurrentUser User user) {
+        userService.changePassword(user.getId(), request);
+        return ResponseEntity.noContent().build();
     }
 }
