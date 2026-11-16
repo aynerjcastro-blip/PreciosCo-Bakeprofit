@@ -11,8 +11,6 @@
     --h-border: var(--color-border, #e2e7ff);
     --h-text: var(--color-text, #131b2e);
     --h-muted: var(--color-text-muted, #5b6478);
-    --h-primary: var(--color-primary, #a33900);
-    --h-primary-strong: var(--color-primary-strong, #cc4900);
     --h-on-primary: var(--color-on-primary, #ffffff);
     --h-accent: var(--color-accent, #fea619);
     --h-good: var(--color-success, #006948);
@@ -561,8 +559,8 @@
     --h-border: #e3e6f2;
     --h-text: #121626;
     --h-muted: #5a6275;
-    --h-primary: #c2410c;
-    --h-primary-strong: #ea580c;
+    --h-primary: #fb923c;
+    --h-primary-strong: #f97316;
     --h-on-primary: #ffffff;
     --h-good: #0a7a4f;
     --h-good-bg: #e4f6ed;
@@ -1081,7 +1079,7 @@
     border-radius: 2rem;
     text-align: center;
     color: #fff;
-    background: linear-gradient(135deg, #c2410c, #ea580c);
+    background: linear-gradient(135deg, #fb923c, #f97316);
 }
 
 .cta h2 {
@@ -1115,7 +1113,7 @@
 
 .ctaPrimary {
     background: #fff;
-    color: #c2410c;
+    color: #f97316;
 }
 
 .ctaSecondary {

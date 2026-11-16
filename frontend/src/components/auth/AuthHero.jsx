@@ -1,92 +1,136 @@
-import SavingsCard from '../savings/SavingsCard';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { findActiveStores } from '@/api/stores';
 import styles from '../../pages/AuthPage.module.css';
 
-/**
- * Columna izquierda estática de la pantalla de autenticación.
- * ¿Por qué? Extraer el "Hero" evita que todo el bloque de texto y SVGs se vuelva a renderizar
- * en cascada cada vez que el usuario escribe un carácter en el formulario de la derecha.
+/*
+ * Panel informativo (izquierda). Solo promete funciones que existen hoy; las tiendas que nombra
+ * salen de las tiendas activas de la base de datos, no de una lista escrita a mano.
  */
-export default function AuthHero({ isLogin }) {
+
+// Intl.ListFormat arma "D1, Éxito, Jumbo y Olímpica" con la gramática del idioma
+const listFormat = new Intl.ListFormat('es', { style: 'long', type: 'conjunction' });
+
+function Svg({ children }) {
     return (
-        <div className={styles['auth-hero']}>
-            <h1 className={styles['auth-hero__title']}>
-                {isLogin ? (
-                    <>Vuelve a encontrar <br /><span className={styles['auth-hero__highlight']}>los mejores precios</span></>
-                ) : (
-                    <>Compara mejor.<br /><span className={styles['auth-hero__highlight']}>Ahorra más.</span></>
-                )}
-            </h1>
+        <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {children}
+        </svg>
+    );
+}
 
-            <p className={styles['auth-hero__subtitle']}>
-                {isLogin
-                    ? 'Inicia sesión para continuar comparando y ahorrar.'
-                    : 'Encuentra las mejores ofertas y recibe alertas cuando bajen de precio.'}
-            </p>
+const ICONS = {
+    store: (
+        <Svg>
+            <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" />
+            <path d="M4 7v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7" />
+            <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
+            <path d="M2 7h20" />
+        </Svg>
+    ),
+    bell: (
+        <Svg>
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+        </Svg>
+    ),
+    calendar: (
+        <Svg>
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <path d="M16 2v4M8 2v4M3 10h18" />
+            <path d="m9 16 2 2 4-4" />
+        </Svg>
+    ),
+    star: (
+        <Svg>
+            <path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z" />
+        </Svg>
+    ),
+};
 
-            <ul className={styles['auth-hero__features']}>
-                {isLogin ? (
-                    <>
-                        <li>
-                            <div className={styles['feature-icon']}>
-                                <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
-                            </div>
-                            <div>
-                                <strong>Tus productos favoritos</strong>
-                                <p>Ten siempre a mano lo que más te interesa.</p>
-                            </div>
-                        </li>
-                        <li>
-                            <div className={styles['feature-icon']}>
-                                <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-                            </div>
-                            <div>
-                                <strong>Tus alertas de precio</strong>
-                                <p>Recibe notificaciones cuando bajen de precio.</p>
-                            </div>
-                        </li>
-                        <li>
-                            <div className={styles['feature-icon']}>
-                                <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>
-                            </div>
-                            <div>
-                                <strong>Tus comparaciones guardadas</strong>
-                                <p>Accede a tus historiales y continúa donde quedaste.</p>
-                            </div>
-                        </li>
-                    </>
-                ) : (
-                    <>
-                        <li>
-                            <div className={styles['feature-icon']}>
-                                <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" /></svg>
-                            </div>
-                            <div>
-                                <strong>Guarda tus productos favoritos</strong>
-                                <p>Ten todo lo que te interesa en un solo lugar.</p>
-                            </div>
-                        </li>
-                        <li>
-                            <div className={styles['feature-icon']}>
-                                <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-                            </div>
-                            <div>
-                                <strong>Recibe alertas de precio</strong>
-                                <p>Te avisamos cuando bajen de precio.</p>
-                            </div>
-                        </li>
-                        <li>
-                            <div className={styles['feature-icon']}>
-                                <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" /><path d="M4 7v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7" /><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M2 7h20" /></svg>
-                            </div>
-                            <div>
-                                <strong>Compara tiendas en un solo lugar</strong>
-                                <p>Ahorra tiempo y encuentra siempre la mejor opción.</p>
-                            </div>
-                        </li>
-                    </>
-                )}
-            </ul>
-            <SavingsCard searchTerm="Audifonos" />
-        </div>
+/** Nombres de las tiendas activas; si la petición falla se usa un texto general. */
+function useStoreNames() {
+    const [names, setNames] = useState([]);
+
+    useEffect(() => {
+        let cancelled = false; // evita actualizar el estado si la página ya se cerró
+        findActiveStores()
+            .then((stores) => {
+                if (!cancelled) setNames(stores.map((store) => store.name));
+            })
+            .catch(() => { /* sin nombres el panel sigue funcionando con el texto general */ });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    return names;
+}
+
+/**
+ * @param {{mode: 'login'|'register'}} props
+ *
+ * Los textos de los DOS modos están siempre en el DOM, apilados en la misma celda de una
+ * cuadrícula; solo el activo se ve (opacidad y desplazamiento). Así el cambio se anima con
+ * CSS y la tarjeta no cambia de altura. El inactivo queda con `visibility: hidden`: no se ve,
+ * no recibe foco y los lectores de pantalla lo ignoran.
+ */
+export default function AuthHero({ mode }) {
+    const storeNames = useStoreNames();
+    const stores = storeNames.length > 0
+        ? `${listFormat.format(storeNames)} en una sola búsqueda.`
+        : 'Todas las tiendas en una sola búsqueda.';
+
+    const copies = [
+        {
+            mode: 'login',
+            title: 'Vuelve a encontrar los mejores precios',
+            subtitle: 'Entra para seguir tus productos y revisar tus avisos.',
+            features: [
+                { icon: 'store', title: 'Varias tiendas a la vez', text: stores },
+                { icon: 'bell', title: 'Tus avisos de baja de precio', text: 'Mira qué cambió desde tu última visita.' },
+                { icon: 'star', title: 'Tus productos seguidos', text: 'Gestiona tus productos y tu precio objetivo en un solo lugar.' },
+            ],
+        },
+        {
+            mode: 'register',
+            title: 'Compara mejor. Ahorra más.',
+            subtitle: 'Crea tu cuenta para seguir productos y recibir avisos cuando bajen de precio.',
+            features: [
+                { icon: 'store', title: 'Varias tiendas a la vez', text: stores },
+                { icon: 'calendar', title: 'El precio, con su fecha', text: 'Cada precio muestra cuándo lo confirmó la tienda y te lleva a su página.' },
+                { icon: 'bell', title: 'Avisos cuando baja el precio', text: 'Sigue un producto y fija un precio objetivo.' },
+            ],
+        },
+    ];
+
+    return (
+        <aside className={styles['auth-hero']}>
+            <Link to="/" className={styles['auth-brand']} aria-label="PreciosCo, ir al inicio">
+                <span className={styles['auth-brand__text']}>Precios</span>
+                <img src="/assets/images/co-badge.png" alt="" className={styles['auth-brand__co']} />
+            </Link>
+
+            <div className={styles['hero-stack']}>
+                {copies.map((copy) => (
+                    <div key={copy.mode} className={styles['hero-copy']} data-active={mode === copy.mode}>
+                        <p className={styles['hero-title']}>{copy.title}</p>
+                        <p className={styles['hero-subtitle']}>{copy.subtitle}</p>
+                        <ul className={styles['hero-features']}>
+                            {copy.features.map((feature) => (
+                                <li key={feature.title}>
+                                    <span className={styles['hero-icon']}>{ICONS[feature.icon]}</span>
+                                    <div>
+                                        <strong>{feature.title}</strong>
+                                        <p>{feature.text}</p>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ))}
+            </div>
+        </aside>
     );
 }
