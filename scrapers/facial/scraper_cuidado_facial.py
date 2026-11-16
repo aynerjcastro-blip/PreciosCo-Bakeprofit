@@ -68,11 +68,12 @@ def normalizar(t):
 
 # unidad escrita -> (unidad base, factor)
 _U = {
-    "ml": ("ML", 1), "cc": ("ML", 1),
+    "ml": ("ML", 1), "cc": ("ML", 1), "mililitro": ("ML", 1), "mililitros": ("ML", 1),
     "l": ("ML", 1000), "lt": ("ML", 1000), "lts": ("ML", 1000),
     "litro": ("ML", 1000), "litros": ("ML", 1000),
     "g": ("G", 1), "gr": ("G", 1), "grs": ("G", 1), "gramo": ("G", 1), "gramos": ("G", 1),
     "kg": ("G", 1000), "kgs": ("G", 1000), "kilo": ("G", 1000), "kilos": ("G", 1000),
+    "kilogramo": ("G", 1000), "kilogramos": ("G", 1000),
 }
 _UNIDADES_RE = "|".join(sorted(_U, key=len, reverse=True))
 _NUM = r"\d+(?:[.,]\d+)*"
@@ -138,6 +139,12 @@ def _textos_especificaciones(p):
             if unidad_k and re.fullmatch(_NUM, v.strip()):
                 v = f"{v.strip()} {unidad_k.group(1)}"
             textos.append(v)
+    # Bellapiel guarda unidad y número por separado: ['Mililitros', '30', '30'] -> '30 mililitros'.
+    # Solo se une si hay una única unidad y un único número (si no, ambiguo y se deja NULL).
+    solas = {normalizar(t).strip() for t in textos if normalizar(t).strip() in _U}
+    numeros = {t.strip() for t in textos if re.fullmatch(_NUM, t.strip())}
+    if len(solas) == 1 and len(numeros) == 1:
+        textos.append(f"{next(iter(numeros))} {next(iter(solas))}")
     return textos
 
 
@@ -238,7 +245,7 @@ def cumple_terminos(nombre, termino):
 # término buscado no las contiene. ("suplemento" y "pluscolageno": suplementos orales que entran por
 # 'vitamina c'; no se usa "colageno" a secas porque hay cremas faciales con colágeno.)
 EXCLUIR = ("capilar", "cabello", "pestana", "ceja", "shampoo", "champu", "acondicionador",
-           "suplemento", "pluscolageno")
+           "suplemento", "pluscolageno", "solgar")
 # Por categoría del target: un sérum con protección solar se clasifica como protector solar
 # (entra por los targets de la categoría de solares), no como sérum.
 EXCLUIR_POR_CATEGORIA = {
@@ -250,6 +257,37 @@ def excluido(nombre, termino, categoria=""):
     n, t = normalizar(nombre), normalizar(termino)
     palabras = EXCLUIR + EXCLUIR_POR_CATEGORIA.get(categoria, ())
     return any(re.search(r"\b" + x, n) and x not in t for x in palabras)
+
+
+# Rescate por categoría (solo targets sin fq). Para estos términos el nombre casi nunca trae la palabra
+# buscada ('Cerave Water Gel...' no dice 'ceramidas'; 'Avène Hydrance Aqua Gel Hidratante' no dice 'facial'),
+# así que cumple_terminos descartaba productos válidos. Reglas calibradas con los descartes de la corrida
+# del 16-nov revisados a mano (149 de 157 recuperados, 1 de más). Cada término lleva su propia regla.
+_CER_IN = re.compile(r"cerave|ceramid|\bbarrier|barrera|xemose")
+_CER_OUT = re.compile(r"limpiad|espuma|protec|solar|stick|parche|\bkit\b|balsamo|aceite|corporal|\bpote\b"
+                      r"|intensiv|\d\s?oz\b")
+_HID_IN = re.compile(r"hidratante|humectante|moisturi[sz]er|hydrator|\bcrema\b|\bcream\b|emulgel|emulsion"
+                     r"|water gel|gel crema|\bfluido\b|sorbete|water jelly|\bgel\b|\bmoisture\b|\bcreme\b"
+                     r"|\bbaume\b|\bhydra\w*")
+_HID_OUT = re.compile(r"limpiad|cleanser|moussant|espuma|micelar|\bserum\b|suero|solar|fotoprotec|protector"
+                      r"|\bkit\b|\bset\b|\bpote\b|corporal|\bbody\b|contorno|\bojos\b|eye|labial|mascarilla"
+                      r"|\bmask\b|balm|balsamo|shampoo|champu|acondicionador|agua termal|\bmist\b|spray|tonico"
+                      r"|booster|intensiv|\bbano\b|exfoliante|aceite|capilar|cabello|manos|pies|jabon"
+                      r"|heliocare|bariesun|anthelios|photoderm")
+_TAM_NOMBRE = re.compile(r"(\d+(?:[.,]\d+)?)\s*(ml|gr|g)\b")
+
+
+def rescata(nombre, termino):
+    """True si el producto es de la categoría aunque el nombre no traiga las palabras del término.
+    Solo 'ceramidas' y 'hidratante facial' tienen regla; los demás términos siguen con cumple_terminos."""
+    n, t = normalizar(nombre), normalizar(termino).strip()
+    if t == "ceramidas":
+        return bool(_CER_IN.search(n)) and not _CER_OUT.search(n)
+    if t == "hidratante facial":
+        grandes = [float(a.replace(",", ".")) for a, _ in _TAM_NOMBRE.findall(n)]
+        # >= 150 ml/g suele ser corporal (lociones y potes de 250-473)
+        return bool(_HID_IN.search(n)) and not _HID_OUT.search(n) and max(grandes or [0]) < 150
+    return False
 
 
 # ─────────────────────────── Cliente HTTP por tienda ───────────────────────────
@@ -499,7 +537,7 @@ def guardar_sin_tamano():
 
 # ─────────────────────────── Flujo principal ───────────────────────────
 def procesar_target(conn, cli, t):
-    st = dict(encontrados=0, filtrados=0, excluidos=0, no_disp=0, sin_precio=0, insertados=0, sin_tamano=0, error="", por_detalle=Counter())
+    st = dict(encontrados=0, filtrados=0, excluidos=0, no_disp=0, sin_precio=0, insertados=0, sin_tamano=0, rescatados=0, error="", por_detalle=Counter())
     fq = (t["store_category_fq"] or "").strip() or None
     try:
         productos = cli.descargar(t["search_term"], fq)
@@ -520,8 +558,11 @@ def procesar_target(conn, cli, t):
         if fq is None:
             motivo_f = None
             if not cumple_terminos(p.get("productName"), t["search_term"]):
-                motivo_f = "sin_match"
-            elif excluido(p.get("productName"), t["search_term"], t["category_name"]):
+                if rescata(p.get("productName"), t["search_term"]):
+                    st["rescatados"] += 1
+                else:
+                    motivo_f = "sin_match"
+            if motivo_f is None and excluido(p.get("productName"), t["search_term"], t["category_name"]):
                 motivo_f = "excluido"
             if motivo_f:
                 st["excluidos" if motivo_f == "excluido" else "filtrados"] += 1
@@ -564,6 +605,8 @@ def linea_resultado(st, segundos):
     txt = (f"   ✔ {st['encontrados']} hallados · {st['filtrados']} sin match · {st['excluidos']} excluidos · "
            f"{st['no_disp']} no disponibles · {st['sin_precio']} sin precio · "
            f"{st['insertados']} insertados · {st['sin_tamano']} sin tamaño  ({segundos:.0f}s)")
+    if st.get("rescatados"):
+        txt += f"\n   · {st['rescatados']} rescatados por regla de categoría"
     pd = st.get("por_detalle")
     if pd:
         txt += "\n   · tamaño por: " + " · ".join(f"{k} {v}" for k, v in pd.most_common())
