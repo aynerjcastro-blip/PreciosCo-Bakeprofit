@@ -8,9 +8,6 @@
     justify-content: center;
     min-height: 70vh;
     padding: 48px 16px 64px;
-    background: linear-gradient(180deg,
-            color-mix(in srgb, var(--color-primary) 9%, var(--bg-main)) 0,
-            var(--bg-main) 640px);
 }
 
 /* Se limita el ancho para que en escritorio no se estire y sea difícil de leer */

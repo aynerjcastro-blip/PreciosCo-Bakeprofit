@@ -5,12 +5,8 @@
    Rejilla: 1 columna en móvil, 2 en tablet, 3 en escritorio.
    ============================================================ */
 
-/* Marco de la página: un tono cálido arriba que se calcula sobre --bg-main */
 .followed-shell {
     min-height: 70vh;
-    background: linear-gradient(180deg,
-            color-mix(in srgb, var(--color-primary) 9%, var(--bg-main)) 0,
-            var(--bg-main) 640px);
 }
 
 .followed {

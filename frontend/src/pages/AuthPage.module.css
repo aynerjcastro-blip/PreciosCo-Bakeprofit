@@ -13,10 +13,6 @@
     justify-content: center;
     min-height: 70vh;
     padding: 48px 16px;
-    /* Un tono cálido arriba que se calcula sobre --bg-main: en oscuro es un tinte oscuro, no un blanco */
-    background: linear-gradient(180deg,
-            color-mix(in srgb, var(--color-primary) 9%, var(--bg-main)) 0,
-            var(--bg-main) 640px);
 }
 
 .auth-card {
@@ -42,10 +38,11 @@
     gap: 32px;
     padding: 48px 40px;
     color: #fff;
-    /* Luz ámbar suave en la esquina inferior sobre un degradado azul noche */
+    /* Una sola familia azul: luz azul clara arriba a la derecha sobre un degradado azul noche.
+       Sin ámbar: el naranja sobre azul se enturbia en marrón. */
     background:
-        radial-gradient(120% 80% at 0% 100%, rgb(255 159 28 / 0.16), transparent 55%),
-        linear-gradient(165deg, #0a0f1d 0%, #101a33 60%, #16244a 100%);
+        radial-gradient(90% 70% at 100% 0%, rgb(70 110 220 / 0.22), transparent 60%),
+        linear-gradient(165deg, #0a0f1d 0%, #101a33 55%, #16244a 100%);
 }
 
 .auth-brand {

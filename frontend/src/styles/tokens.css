@@ -11,6 +11,9 @@
     --bg-main: #F8FAFC;
     --bg-surface: #FFFFFF;
 
+    /* Luces del fondo de la página (ver body::before en base.css) */
+    --glow-1: rgb(255 159 28 / 0.16);
+    --glow-2: rgb(80 120 255 / 0.12);
     /* Colores oscuros (header/footer/dark sections) */
     --color-dark: #0F172A;
     --color-dark-card: #1E293B;
@@ -102,6 +105,9 @@
         --bg-main: #121212;
         --bg-surface: #1E1E1E;
 
+        /* Luces del fondo de la página (ver body::before en base.css) */
+        --glow-1: rgb(70 110 230 / 0.26);
+        --glow-2: rgb(120 90 230 / 0.16);
         /* Ajuste de color oscuro a claro para mantener coherencia en secciones invertidas */
         --color-dark: #F8FAFC;
 
@@ -143,6 +149,9 @@
     --bg-main: #121212;
     --bg-surface: #1E1E1E;
 
+    /* Luces del fondo de la página (ver body::before en base.css) */
+    --glow-1: rgb(70 110 230 / 0.26);
+    --glow-2: rgb(120 90 230 / 0.16);
     /* Ajuste de color oscuro a claro para mantener coherencia en secciones invertidas */
     --color-dark: #F8FAFC;
 
