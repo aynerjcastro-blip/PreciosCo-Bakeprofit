@@ -14,6 +14,8 @@ Variables de entorno:
     MOSTRAR_DESCARTES     opcional, "1" imprime los descartes de cada target en el log (por defecto
                           "1" en GitHub Actions y "0" en local); "0" lo apaga
     DESCARTADOS_PATH      opcional, dónde se guarda el CSV de descartes (por defecto descartados.csv)
+    SIN_TAMANO_PATH       opcional, CSV con las ofertas insertadas sin net_content/unit_base y por qué
+                          (por defecto sin_tamano.csv)
 
 Uso:
     pip install -r requirements.txt
@@ -28,9 +30,9 @@ import re
 import sys
 import time
 import unicodedata
-from collections import OrderedDict
+from collections import Counter, OrderedDict
 from datetime import datetime
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlparse
 from urllib.robotparser import RobotFileParser
 
 import psycopg2
@@ -48,6 +50,7 @@ POR_PAGINA = 50                      # VTEX permite como máximo 50 por petició
 MAX_PAGINAS = int(os.getenv("MAX_PAGINAS", "4"))
 PAUSA = 1.5                          # segundos entre peticiones (mínimo; sube si hay Crawl-delay)
 MAX_PAUSA_ROBOTS = 60                # si el Crawl-delay supera esto, se omite la tienda
+UMBRAL_SIN_TAMANO = 30             # % de ofertas sin tamaño por tienda que dispara un aviso
 BLOQUEOS_MAX = 3                     # 403/429 seguidos antes de cortar la tienda
 TIMEOUT = 30
 OK = (200, 206)                      # VTEX responde 206 cuando se usa _from/_to
@@ -73,10 +76,14 @@ _U = {
 }
 _UNIDADES_RE = "|".join(sorted(_U, key=len, reverse=True))
 _NUM = r"\d+(?:[.,]\d+)*"
-_TAM = re.compile(r"(?<![\w.,])(" + _NUM + r")\s*(" + _UNIDADES_RE + r")(?![a-z])")
+# (?<=\bx): tolera "x40ml" (la x pegada al número), que antes se perdía
+_TAM = re.compile(r"(?:(?<![\w.,])|(?<=\bx))(" + _NUM + r")\s*(" + _UNIDADES_RE + r")(?![a-z])")
+# En la descripción solo se acepta un tamaño precedido por una etiqueta de contenido
+_DESC = re.compile(r"(?:contenido(?: neto)?|presentacion|tamano|volumen|peso(?: neto)?)(?: del producto)?"
+                   r"\s*[:\-]?\s*(" + _NUM + r")\s*(" + _UNIDADES_RE + r")(?![a-z])")
 # Packs, kits y combos: el tamaño es ambiguo (¿por unidad o total?) -> se deja NULL
 _PACK = re.compile(r"(?<![\w.,])(?:[2-9]|1[0-2])\s*x\s*\d|\b(?:kit|pack|combo|duo|set|estuche)\b")
-_CLAVES_SPEC = ("presentacion", "contenido", "tamano", "volumen", "peso", "cantidad")
+_CLAVES_SPEC = ("presentacion", "contenido", "tamano", "volumen", "peso", "cantidad", "capacidad", "neto")
 
 
 def _numero(t):
@@ -106,36 +113,98 @@ def _tamanos_en(texto):
     return hallados
 
 
+def _valores(v):
+    if isinstance(v, list):
+        return [str(x) for x in v if x not in (None, "")]
+    return [str(v)] if v not in (None, "") else []
+
+
 def _textos_especificaciones(p):
-    textos = []
-    claves = list(p.get("allSpecifications") or [])
+    """Valores de las especificaciones de producto y de las variaciones del SKU que hablan de tamaño.
+    Si el valor es solo un número y la clave trae la unidad (p. ej. 'Contenido (ml)': '50'), se une."""
+    item = (p.get("items") or [{}])[0]
+    claves = list(p.get("allSpecifications") or []) + list(item.get("variations") or [])
     claves.append("Tipo de presentación")
+    vistos, textos = set(), []
     for k in claves:
-        if any(c in normalizar(k) for c in _CLAVES_SPEC):
-            v = p.get(k)
-            if isinstance(v, list):
-                textos.extend(str(x) for x in v)
-            elif v:
-                textos.append(str(v))
+        if not isinstance(k, str) or k in vistos:
+            continue
+        vistos.add(k)
+        nk = normalizar(k)
+        if not any(c in nk for c in _CLAVES_SPEC):
+            continue
+        unidad_k = re.search(r"\b(ml|g|gr|kg|l|lt|cc)\b", nk)
+        for v in _valores(p.get(k)) + _valores(item.get(k)):
+            if unidad_k and re.fullmatch(_NUM, v.strip()):
+                v = f"{v.strip()} {unidad_k.group(1)}"
+            textos.append(v)
     return textos
 
 
+def _slug(p):
+    """'.../heliocare-360-gel-fps-50-tubo-x-50-ml-2505/p' -> 'heliocare 360 gel fps 50 tubo x 50 ml 2505'.
+    Muchas tiendas dejan el tamaño en la URL aunque el nombre ya no lo traiga."""
+    ruta = urlparse(p.get("link") or "").path.strip("/")
+    return ruta.split("/")[0].replace("-", " ") if ruta else ""
+
+
+def _descripcion(p):
+    t = " ".join(str(p.get(k) or "") for k in ("description", "metaTagDescription"))
+    return normalizar(re.sub(r"<[^>]+>", " ", t))
+
+
 def extraer_tamano(p):
-    """(net_content, unit_base) del nombre o, si no, de las especificaciones; (None, None) si no hay."""
-    en_nombre = _tamanos_en(p.get("productName") or "")
-    if en_nombre is None:                 # pack o kit
-        return None, None
-    if len(en_nombre) == 1:
-        base, valor = next(iter(en_nombre))
-        return valor, base
-    if len(en_nombre) > 1:                # varios tamaños distintos: ambiguo
-        return None, None
-    for texto in _textos_especificaciones(p):
+    """(net_content, unit_base, detalle).
+    detalle dice de dónde salió el tamaño (nombre, titulo, sku, spec, url, descripcion) o por qué no hay:
+    pack (kit o '2 x 30 ml'), ambiguo (dos tamaños en el nombre), conflicto (las fuentes no coinciden)
+    o sin_dato. Nunca se adivina: ante duda, NULL."""
+    item = (p.get("items") or [{}])[0]
+    nombre = p.get("productName") or ""
+    s = _tamanos_en(nombre)
+    if s is None:
+        return None, None, "pack"
+    if len(s) == 1:
+        base, valor = next(iter(s))
+        return valor, base, "nombre"
+    if len(s) > 1:
+        return None, None, "ambiguo"
+
+    # El nombre no trae tamaño: se prueban otras fuentes y deben coincidir entre sí
+    fuentes = []
+    titulo = p.get("productTitle") or ""
+    if titulo and titulo != nombre:
+        fuentes.append(("titulo", titulo))
+    for k in ("name", "nameComplete"):
+        v = item.get(k) or ""
+        if v and v != nombre:
+            fuentes.append(("sku", v))
+    fuentes += [("spec", t) for t in _textos_especificaciones(p)]
+    fuentes.append(("url", _slug(p)))
+    candidatos = []
+    for fuente, texto in fuentes:
         s = _tamanos_en(texto)
-        if s and len(s) == 1:
-            base, valor = next(iter(s))
-            return valor, base
-    return None, None
+        if s is None:
+            return None, None, "pack"
+        if len(s) == 1:
+            candidatos.append((fuente, next(iter(s))))
+    distintos = {c for _, c in candidatos}
+    if len(distintos) == 1:
+        base, valor = next(iter(distintos))
+        return valor, base, candidatos[0][0]
+    if len(distintos) > 1:
+        return None, None, "conflicto: " + " vs ".join(f"{v:g} {b}({f})" for f, (b, v) in candidatos)
+
+    # Último recurso: la descripción, solo con una etiqueta de contenido delante
+    d = set()
+    for m in _DESC.finditer(_descripcion(p)):
+        n = _numero(m.group(1))
+        if n is not None:
+            base, factor = _U[m.group(2)]
+            d.add((base, round(n * factor, 2)))
+    if len(d) == 1:
+        base, valor = next(iter(d))
+        return valor, base, "descripcion"
+    return None, None, "sin_dato"
 
 
 def cumple_terminos(nombre, termino):
@@ -286,7 +355,7 @@ def parsear(p):
         ean = None
     brand = ((p.get("brand") or "").strip()[:100]) or None
     imagenes = item.get("images") or []
-    net, unidad = extraer_tamano(p)
+    net, unidad, detalle = extraer_tamano(p)
     return {
         "ean": ean,
         "name": nombre,
@@ -297,6 +366,7 @@ def parsear(p):
         "image_url": imagenes[0].get("imageUrl") if imagenes else None,
         "net_content": net,
         "unit_base": unidad,
+        "tamano_detalle": detalle,
     }, None
 
 
@@ -378,9 +448,44 @@ def guardar_descartados():
     print(f"\nDescartes: {len(DESCARTADOS)} filas guardadas en {ruta}")
 
 
+SIN_TAMANO = []   # (tienda, término, nombre, detalle, sku, claves_specs, specs, link)
+
+
+def _fila_sin_tamano(t, p, d):
+    item = (p.get("items") or [{}])[0]
+    claves = ",".join(str(k) for k in (p.get("allSpecifications") or []))
+    specs = " | ".join(_textos_especificaciones(p))
+    return (t["store_name"], t["search_term"], d["name"], d["tamano_detalle"],
+            item.get("name") or "", claves, specs, p.get("link") or "")
+
+
+def imprimir_sin_tamano(tienda, termino, filas):
+    """Ofertas que SÍ se insertaron pero con net_content/unit_base en NULL, y por qué.
+    Se controla con MOSTRAR_DESCARTES, igual que los descartes."""
+    if not filas or not _mostrar_descartes():
+        return
+    en_actions = bool(os.getenv("GITHUB_ACTIONS"))
+    titulo = f"Sin tamaño · {tienda} · {termino} ({len(filas)})"
+    print(f"::group::{titulo}" if en_actions else f"   {titulo}")
+    for _, _, nombre, detalle, sku, claves, specs, _link in filas:
+        print(f"{detalle:<10} | {(nombre or '')[:90]} | sku={sku[:40]} | claves={claves[:120]} | specs={specs[:80]}")
+    if en_actions:
+        print("::endgroup::")
+
+
+def guardar_sin_tamano():
+    ruta = os.path.abspath(os.getenv("SIN_TAMANO_PATH", "sin_tamano.csv"))
+    with open(ruta, "w", newline="", encoding="utf-8-sig") as fh:
+        w = csv.writer(fh)
+        w.writerow(["tienda", "termino", "nombre", "detalle", "sku", "claves_especificaciones",
+                    "especificaciones", "link"])
+        w.writerows(SIN_TAMANO)
+    print(f"Sin tamaño: {len(SIN_TAMANO)} filas guardadas en {ruta}")
+
+
 # ─────────────────────────── Flujo principal ───────────────────────────
 def procesar_target(conn, cli, t):
-    st = dict(encontrados=0, filtrados=0, excluidos=0, no_disp=0, sin_precio=0, insertados=0, sin_tamano=0, error="")
+    st = dict(encontrados=0, filtrados=0, excluidos=0, no_disp=0, sin_precio=0, insertados=0, sin_tamano=0, error="", por_detalle=Counter())
     fq = (t["store_category_fq"] or "").strip() or None
     try:
         productos = cli.descargar(t["search_term"], fq)
@@ -421,8 +526,10 @@ def procesar_target(conn, cli, t):
             DESCARTADOS.append((t["store_name"], t["search_term"], "sin_precio",
                                 p.get("productName"), "", "", ""))
             continue
+        st["por_detalle"][d["tamano_detalle"].split(":")[0]] += 1
         if d["net_content"] is None:
             st["sin_tamano"] += 1
+            SIN_TAMANO.append(_fila_sin_tamano(t, p, d))
         filas.append((t["store_id"], t["id"], d["ean"], d["name"], d["brand_name"], d["price"],
                       d["list_price"], d["product_url"], d["image_url"], d["net_content"],
                       d["unit_base"], ahora, "PENDING"))
@@ -443,6 +550,9 @@ def linea_resultado(st, segundos):
     txt = (f"   ✔ {st['encontrados']} hallados · {st['filtrados']} sin match · {st['excluidos']} excluidos · "
            f"{st['no_disp']} no disponibles · {st['sin_precio']} sin precio · "
            f"{st['insertados']} insertados · {st['sin_tamano']} sin tamaño  ({segundos:.0f}s)")
+    pd = st.get("por_detalle")
+    if pd:
+        txt += "\n   · tamaño por: " + " · ".join(f"{k} {v}" for k, v in pd.most_common())
     if st.get("error"):
         txt = f"   ✖ {st['error']}\n" + txt
     return txt
@@ -465,6 +575,7 @@ def _correr():
 
         resumen = OrderedDict()          # (tienda, término) -> stats
         totales = {}                     # tienda -> ofertas insertadas
+        sin_tamano_tot = {}              # tienda -> ofertas insertadas sin tamaño
         clientes, omitidas = {}, set()
 
         for n, t in enumerate(targets, 1):
@@ -484,6 +595,7 @@ def _correr():
                   + ("" if t["store_category_fq"] else "  (sin fq: filtro por palabras)"))
             inicio = time.time()
             antes = len(DESCARTADOS)
+            antes_st = len(SIN_TAMANO)
             try:
                 st = procesar_target(conn, clientes[clave], t)
             except TiendaBloqueada as e:
@@ -492,7 +604,9 @@ def _correr():
                 st = dict(error=f"bloqueada: {e}")
             print(linea_resultado(st, time.time() - inicio))
             imprimir_descartes(tienda, t["search_term"], DESCARTADOS[antes:])
+            imprimir_sin_tamano(tienda, t["search_term"], SIN_TAMANO[antes_st:])
             totales[tienda] += st.get("insertados", 0)
+            sin_tamano_tot[tienda] = sin_tamano_tot.get(tienda, 0) + st.get("sin_tamano", 0)
             resumen[(tienda, t["search_term"])] = st
     finally:
         conn.close()
@@ -510,7 +624,14 @@ def _correr():
               f"{s['sin_precio']:>10} {s['insertados']:>10} {s['sin_tamano']:>10}{extra}")
     print("\nOfertas insertadas por tienda:")
     for tienda, n in totales.items():
-        print(f"  {tienda}: {n}")
+        sin = sin_tamano_tot.get(tienda, 0)
+        pct = round(100 * sin / n) if n else 0
+        print(f"  {tienda}: {n} ({sin} sin tamaño, {pct}%)")
+        if n and pct >= UMBRAL_SIN_TAMANO:
+            aviso = f"{tienda}: {sin} de {n} ofertas sin tamaño ({pct}%); revisa el CSV sin_tamano"
+            print(f"  ⚠ {aviso}")
+            if os.getenv("GITHUB_ACTIONS"):
+                print(f"::warning title=Ofertas sin tamaño::{aviso}")
 
     vacias = [t for t, n in totales.items() if n == 0]
     if vacias:
@@ -530,6 +651,7 @@ def main():
     finally:
         # El CSV se guarda siempre, incluso si la corrida falla a medias
         guardar_descartados()
+        guardar_sin_tamano()
 
 
 if __name__ == "__main__":

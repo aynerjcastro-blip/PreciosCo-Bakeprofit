@@ -9,7 +9,7 @@ on:
       tiendas:
         description: "Tiendas separadas por coma (d1, jumbo, olimpica, exito, la rebaja, farmatodo, farmanorte, cutis, medipiel, bellapiel). Vacío = todas (excepto exito)"
         required: false
-        default: "d1,jumbo,olimpica,la rebaja,farmatodo,farmanorte,cutis,medipiel,bellapiel"
+        default: ""
 
 concurrency:
   group: scraper-supermercados
@@ -94,13 +94,16 @@ jobs:
           SOLO_TIENDAS: ${{ github.event.inputs.tiendas || 'cutis,medipiel,bellapiel' }}
           MOSTRAR_DESCARTES: "1"
           DESCARTADOS_PATH: descartados_facial.csv
+          SIN_TAMANO_PATH: sin_tamano_facial.csv
         run: python scraper_cuidado_facial.py
 
-      - name: Subir descartados
+      - name: Subir descartados y sin tamaño
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: descartados
-          path: scrapers/facial/descartados_facial.csv
+          name: csv-cuidado-facial
+          path: |
+            scrapers/facial/descartados_facial.csv
+            scrapers/facial/sin_tamano_facial.csv
           if-no-files-found: warn
           retention-days: 7
