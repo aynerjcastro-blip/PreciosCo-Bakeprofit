@@ -5,6 +5,7 @@ __pycache__/
 .venv/
 venv/
 salida_urls/
+repomix-output.xml
 
 # Variables de entorno y credenciales
 .env
