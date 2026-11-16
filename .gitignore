@@ -1,0 +1,16 @@
+﻿# Python / Scrapers
+__pycache__/
+*.py[cod]
+*.class
+.venv/
+venv/
+salida_urls/
+
+# Variables de entorno y credenciales
+.env
+.env.*
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+.vscode/
