@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tiendas:
-        description: "Tiendas separadas por coma (d1, jumbo, olimpica, exito, la rebaja, farmatodo, farmanorte). Vacío = todas"
+        description: "Tiendas separadas por coma (d1, jumbo, olimpica, exito, la rebaja, farmatodo, farmanorte, cutis, medipiel, bellapiel). Vacío = todas (excepto exito)"
         required: false
-        default: "d1,jumbo,olimpica,la rebaja,farmatodo,farmanorte"
+        default: "d1,jumbo,olimpica,la rebaja,farmatodo,farmanorte,cutis,medipiel,bellapiel"
 
 concurrency:
   group: scraper-supermercados
@@ -69,3 +69,20 @@ jobs:
           DB_SSLMODE: require
           SOLO_TIENDAS: ${{ github.event.inputs.tiendas || 'la rebaja,farmatodo,farmanorte' }}
         run: python scraper_droguerias.py
+
+      - name: Correr scraper de cuidado facial
+        if: |
+          contains(github.event.inputs.tiendas, 'cutis') ||
+          contains(github.event.inputs.tiendas, 'medipiel') ||
+          contains(github.event.inputs.tiendas, 'bellapiel') ||
+          github.event.inputs.tiendas == ''
+        working-directory: scrapers/facial
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_SSLMODE: require
+          SOLO_TIENDAS: ${{ github.event.inputs.tiendas || 'cutis,medipiel,bellapiel' }}
+        run: python scraper_cuidado_facial.py
