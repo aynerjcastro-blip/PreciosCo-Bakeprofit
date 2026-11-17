@@ -116,3 +116,65 @@ Se ejecutaron 18 pruebas Python, 178 pruebas unitarias Java y 13 pruebas de inte
 La migración, reversión, consultas de revisión y revocaciones de permisos se probaron
 sobre la base aislada. `actionlint` validó el workflow. No se ejecutaron peticiones de
 scraping a tiendas reales ni escrituras en la base compartida.
+
+## Bella Piel: soluciones 2 y 3 (17-nov-2026)
+
+Esta extensión requiere el paquete anterior (`408288c`) y agrega la migración
+`scripts/2026-11-bellapiel-identidad-secundaria.sql`. Primero probarla en PostgreSQL
+local, después aplicarla a la compartida y desplegar el backend actualizado.
+El scraper facial ahora conserva `itemId` como `store_sku`; no modifica el EAN publicado.
+
+El procesador sigue este orden para Bella Piel cuando el EAN es corto o falta:
+
+1. Consultar la equivalencia de tienda/código local en `store_sku_ean_map`.
+2. Si no existe, buscar productos existentes de marca, presentación y categoría exactas.
+3. Elegir solo un nombre con similitud suficiente y ventaja clara frente al segundo.
+4. Validar rango y EAN esperado del objetivo, registrar precio y equivalencia en una
+   misma transacción. El código original queda en staging.
+
+Si la equivalencia guardada ya no es compatible o el resultado es ambiguo,
+la oferta queda UNCLASSIFIED con motivo. Revisar esos motivos antes de reintentar.
+La tabla comienza vacía: no se insertan los EAN de ejemplo del PDF.
+
+Configuración del backend:
+
+| Variable | Valor inicial | Propósito |
+| --- | --- | --- |
+| `SECONDARY_IDENTITY_STORES` | `bellapiel` | Nombres exactos de tiendas autorizadas, separados por coma. Ajustar a `Bella Piel` si ese es el nombre real en la base. Vacío deshabilita el respaldo. |
+| `SECONDARY_IDENTITY_MINIMUM_SCORE` | `0.90` | Similitud mínima del nombre. |
+| `SECONDARY_IDENTITY_MINIMUM_MARGIN` | `0.08` | Diferencia mínima respecto al segundo candidato. |
+| `SECONDARY_IDENTITY_CANDIDATE_LIMIT` | `100` | Más candidatos requieren revisión; no se elige de una muestra incompleta. |
+
+SPF, concentración y números deben coincidir; las variantes protegidas se
+centralizan en el comparador. No se cruza por similitud una presentación distinta.
+La similitud es una inferencia conservadora, no prueba de equivalencia física.
+Si falta la marca o el tamaño, no se aprende un mapeo. Los candidatos deben estar
+ya procesados en el catálogo: correr primero las tiendas con GTIN válido y revisar
+las ofertas sin clasificar después de procesarlas. La mera presencia de una oferta
+PENDING de Cutis/Medipiel no constituye un producto maestro.
+
+Consulta de revisión (solo lectura):
+
+```sql
+SELECT mapping.id, store.name AS tienda, mapping.store_sku, mapping.ean,
+       product.name AS producto, mapping.reason, mapping.created_at
+FROM store_sku_ean_map mapping
+JOIN stores store ON store.id = mapping.store_id
+LEFT JOIN products product ON product.ean = mapping.ean
+ORDER BY mapping.created_at DESC;
+```
+
+Una corrección manual debe justificar el vínculo en `reason`. El backend vuelve a
+validar marca, tamaño, categoría y nombre incluso para vínculos manuales.
+Antes de revertir, exportar la tabla y detener el procesador; el script de reversión
+borra equivalencias, pero conserva los precios ya registrados. No modifica precios
+históricos ni reclasifica ofertas procesadas de forma automática.
+
+Diseño: `SecondaryIdentityResolver` coordina el caso de uso; repositorios específicos
+encapsulan la persistencia y `ProductNameSimilarity` permite sustituir la métrica sin
+cambiar la ingesta. Las reglas se centralizan en configuración y constantes.
+
+Verificación de esta extensión: 188 pruebas unitarias Java, 17 pruebas de integración
+con PostgreSQL local (incluido el arranque con `ddl-auto=validate`) y 21 pruebas Python.
+Se verificaron además migración, reversión y revocaciones de la tabla de equivalencias.
+No se consultaron tiendas reales ni se modificó la base compartida.

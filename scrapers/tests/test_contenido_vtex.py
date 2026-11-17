@@ -75,3 +75,10 @@ def test_seleccion_sin_targets_no_simula_exito():
         assert ejecutar("Supermercado", Mock()) == 2
         begin.assert_not_called()
         conn.return_value.close.assert_called_once()
+
+
+@pytest.mark.parametrize("published, expected", [("8214", "8214"), (None, None), ("", None)])
+def test_facial_conserva_sku_publicado(published, expected):
+    from facial.scraper_cuidado_facial import extraerSku
+    assert extraerSku({"items": [{"itemId": published}]}) == expected
+    assert extraerSku({"items": []}) is None

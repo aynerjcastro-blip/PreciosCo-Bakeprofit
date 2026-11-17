@@ -51,6 +51,7 @@ MAX_PAGINAS = int(os.getenv("MAX_PAGINAS", "4"))
 PAUSA = 1.5                          # segundos entre peticiones (mínimo; sube si hay Crawl-delay)
 MAX_PAUSA_ROBOTS = 60                # si el Crawl-delay supera esto, se omite la tienda
 BLOQUEOS_MAX = 3                     # 403/429 seguidos antes de cortar la tienda
+SKU_MAX_LENGTH = 100
 TIMEOUT = 30
 OK = (200, 206)                      # VTEX responde 206 cuando se usa _from/_to
 USER_AGENT = os.getenv(
@@ -254,6 +255,17 @@ class Cliente:
 
 
 # ─────────────────────────── Parseo de productos ───────────────────────────
+def extraerSku(producto):
+    itemsPublicados = producto.get("items") or []
+    if not itemsPublicados:
+        return None
+    skuPublicado = itemsPublicados[0].get("itemId")
+    if skuPublicado is None:
+        return None
+    skuPublicado = str(skuPublicado).strip()
+    return skuPublicado if skuPublicado and len(skuPublicado) <= SKU_MAX_LENGTH else None
+
+
 def disponible(oferta):
     """IsAvailable y Stock > 0. Si la respuesta no trae Stock se usa AvailableQuantity;
     si no trae ninguno, decide solo IsAvailable."""
@@ -383,7 +395,7 @@ def procesar_target(conn, cli, t, run_id=None):
             st["sin_tamano"] += 1
         filas.append((t["store_id"], t["id"], d["ean"], d["name"], d["brand_name"], d["price"],
                       d["list_price"], d["product_url"], d["image_url"], d["net_content"],
-                      d["unit_base"], ahora, "PENDING"))
+                      d["unit_base"], ahora, "PENDING", extraerSku(p), None))
     if filas:
         try:
             insertar_ofertas(conn, filas, run_id)
