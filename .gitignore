@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+.venv/
+salida_urls/
+scrapers/**/salida_urls/
+.env
