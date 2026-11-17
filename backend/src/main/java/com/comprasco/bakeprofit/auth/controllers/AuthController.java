@@ -1,5 +1,7 @@
 package com.comprasco.bakeprofit.auth.controllers;
 
+import javax.security.auth.login.AccountLockedException;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,7 +40,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest loginRequest) throws AccountLockedException {
         // delega al service, devuelve JSON con el JWT
         return ResponseEntity.ok(userService.login(loginRequest));
     }
