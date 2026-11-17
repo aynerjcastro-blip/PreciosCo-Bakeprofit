@@ -105,5 +105,6 @@ jobs:
           path: |
             scrapers/facial/descartados_facial.csv
             scrapers/facial/sin_tamano_facial.csv
+            scrapers/facial/ean_diagnostico.json
           if-no-files-found: warn
           retention-days: 7
