@@ -55,7 +55,7 @@ public class UserService {
     private final JwtSecurity jwtSecurity;
     private final PasswordResetTokenRepository tokenRepository;
     private final EmailService emailService;
-
+    private final LoginAttemptService loginAttemptService;
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
     @Value("${google.client-id}")
     private String googleClientId;
@@ -67,12 +67,14 @@ public class UserService {
     private int lockDurationMinutes;
 
     public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, JwtSecurity jwtSecurity,
-            PasswordResetTokenRepository tokenRepository, EmailService emailService) {
+            PasswordResetTokenRepository tokenRepository, EmailService emailService,
+            LoginAttemptService loginAttemptService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtSecurity = jwtSecurity;
         this.tokenRepository = tokenRepository;
         this.emailService = emailService;
+        this.loginAttemptService = loginAttemptService;
     }
 
     /* CONSULTAS */
@@ -163,28 +165,25 @@ public class UserService {
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(InvalidCredentialsException::new);
-        // *Revisamos si esta bloqueado */
+
         if (isAccountLocked(user)) {
             throw new AccountLockedException(
-                    "Cuenta bloqueada por múltiples intentos fallidos. Intenta en "
-                            + lockDurationMinutes + " minutos."); 
+                    "Cuenta bloqueada por multiples intentos fallidos. Intenta en "
+                            + lockDurationMinutes + " minutos.");
         }
-        // *Verificamos la contraseña correcta */
+
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            handleFailedAttempt(user);
+            loginAttemptService.registerFailedAttempt(user.getId()); // CAMBIADO
             throw new InvalidCredentialsException();
         }
-        // *Revisamos si sigue activa la cuenta */
-        // RN-10: Rechazar login de cuentas inactivas
+
         if (!Boolean.TRUE.equals(user.getActive())) {
-            throw new InactiveUserException("La cuenta se encuentra desactivada. Contacte al administrador.");
+            throw new InactiveUserException(
+                    "La cuenta se encuentra desactivada. Contacte al administrador.");
         }
 
-        // *Login exitoso , entonces reiniciamos el contador */
-        resetFailedAttempts(user);
-
+        loginAttemptService.resetAttempts(user.getId()); // CAMBIADO
         String token = jwtSecurity.generateToken(user.getEmail(), user.getRole().name());
-
         return new AuthResponse(token, user.getName(), user.getEmail(), user.getRole());
     }
 
@@ -204,30 +203,6 @@ public class UserService {
             return false;
         }
         return true;
-    }
-
-    /**
-     * Incrementa el contador de intentos fallidos.
-     * Si alcanza el máximo, bloquea la cuenta registrando la hora actual.
-     */
-    private void handleFailedAttempt(User user) {
-        int current = (user.getFailedAttempts() != null) ? user.getFailedAttempts() : 0;
-        int newCount = current + 1;
-        user.setFailedAttempts(newCount);
-
-        if (newCount >= maxFailedAttempts) {
-            user.setLockTime(LocalDateTime.now());
-        }
-    }
-
-    /**
-     * Resetea el contador de intentos fallidos tras un login exitoso.
-     */
-    private void resetFailedAttempts(User user) {
-        if (user.getFailedAttempts() != null && user.getFailedAttempts() > 0) {
-            user.setFailedAttempts(0);
-            user.setLockTime(null);
-        }
     }
 
     /**

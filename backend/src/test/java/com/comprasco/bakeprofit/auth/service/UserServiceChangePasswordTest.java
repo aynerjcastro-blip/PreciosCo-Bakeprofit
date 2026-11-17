@@ -43,6 +43,9 @@ class UserServiceChangePasswordTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private LoginAttemptService loginAttemptService;
+
     // Codificador real y con coste bajo: así se prueba el hash de verdad sin que el test tarde
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(4);
 
@@ -50,7 +53,7 @@ class UserServiceChangePasswordTest {
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userRepository, encoder, jwtSecurity, tokenRepository, emailService);
+        userService = new UserService(userRepository, encoder, jwtSecurity, tokenRepository, emailService, loginAttemptService);
     }
 
     private User user(AuthProvider provider) {
