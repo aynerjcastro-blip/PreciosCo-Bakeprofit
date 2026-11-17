@@ -39,16 +39,17 @@ async function postJson(path, body, fallbackMessage) {
             body: JSON.stringify(body),
         });
     } catch {
-        // fetch solo rechaza por fallo de red, no por respuestas 4xx o 5xx
         throw new Error("No se pudo conectar con el servidor. Intenta de nuevo en unos minutos.");
     }
 
     const data = await readBody(response);
 
     if (!response.ok) {
-        // El backend ya manda un mensaje claro gracias al GlobalExceptionHandler,
-        // asi que lo reusamos en vez de inventar uno generico aqui.
-        throw new Error(data.message || fallbackMessage);
+        const error = new Error(data.message || fallbackMessage);
+        error.status = response.status;
+        // Si el backend manda Retry-After, lo pasamos
+        error.retryAfter = response.headers.get("Retry-After");
+        throw error;
     }
 
     return data;

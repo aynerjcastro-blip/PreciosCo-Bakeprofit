@@ -15,6 +15,7 @@ import com.comprasco.bakeprofit.auth.entity.AuthProvider;
 import com.comprasco.bakeprofit.auth.entity.PasswordResetToken;
 import com.comprasco.bakeprofit.auth.entity.Role;
 import com.comprasco.bakeprofit.auth.entity.User;
+import com.comprasco.bakeprofit.auth.exception.AccountLockedException;
 import com.comprasco.bakeprofit.auth.exception.EmailAlreadyExistsException;
 import com.comprasco.bakeprofit.auth.exception.ForbiddenActionException;
 import com.comprasco.bakeprofit.auth.exception.InactiveUserException;
@@ -39,9 +40,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
-import javax.security.auth.login.AccountLockedException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -161,18 +159,19 @@ public class UserService {
      * @return AuthResponse con el token generado
      * @throws AccountLockedException
      */
-    public AuthResponse login(LoginRequest request) throws AccountLockedException {
+    @Transactional
+    public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(InvalidCredentialsException::new);
         // *Revisamos si esta bloqueado */
         if (isAccountLocked(user)) {
             throw new AccountLockedException(
                     "Cuenta bloqueada por múltiples intentos fallidos. Intenta en "
-                            + lockDurationMinutes + " minutos.");
+                            + lockDurationMinutes + " minutos."); 
         }
         // *Verificamos la contraseña correcta */
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            handleFailedAttemp(user);
+            handleFailedAttempt(user);
             throw new InvalidCredentialsException();
         }
         // *Revisamos si sigue activa la cuenta */
@@ -190,33 +189,30 @@ public class UserService {
     }
 
     /**
-     * Inicia sesion y genera un token JWT para usuarios activos.
-     *
-     * @param user usuario bloqueado
-     * @return User con login desbloqueado
+     * Verifica si la cuenta del usuario está temporalmente bloqueada.
+     * Si el tiempo de bloqueo expiró, resetea el contador.
      */
-
     private boolean isAccountLocked(User user) {
         if (user.getLockTime() == null) {
             return false;
         }
-        boolean expired = LocalDateTime.now().isAfter(user.getLockTime().plusMinutes(lockDurationMinutes));
+        boolean expired = LocalDateTime.now()
+                .isAfter(user.getLockTime().plusMinutes(lockDurationMinutes));
         if (expired) {
             user.setLockTime(null);
-            user.setFailedAttempts(null);
+            user.setFailedAttempts(0); // 0, no null — la columna es NOT NULL
             return false;
         }
         return true;
     }
 
     /**
-     * Revisa si los intentos fallidos superan el limite permitido.
-     *
-     * @param user Usuario intentanto ingresar
+     * Incrementa el contador de intentos fallidos.
+     * Si alcanza el máximo, bloquea la cuenta registrando la hora actual.
      */
-
-    private void handleFailedAttemp(User user) {
-        int newCount = user.getFailedAttempts() + 1;
+    private void handleFailedAttempt(User user) {
+        int current = (user.getFailedAttempts() != null) ? user.getFailedAttempts() : 0;
+        int newCount = current + 1;
         user.setFailedAttempts(newCount);
 
         if (newCount >= maxFailedAttempts) {
@@ -224,8 +220,11 @@ public class UserService {
         }
     }
 
+    /**
+     * Resetea el contador de intentos fallidos tras un login exitoso.
+     */
     private void resetFailedAttempts(User user) {
-        if (user.getFailedAttempts() > 0) {
+        if (user.getFailedAttempts() != null && user.getFailedAttempts() > 0) {
             user.setFailedAttempts(0);
             user.setLockTime(null);
         }

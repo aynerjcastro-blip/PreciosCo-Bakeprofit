@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import GoogleSignInButton from './GoogleSignInButton';
 import styles from '../../pages/AuthPage.module.css';
+import { useEffect } from 'react';
 
 /* Íconos del formulario. Son decorativos (aria-hidden): el significado lo da la etiqueta. */
 function Icon({ children }) {
@@ -80,6 +81,7 @@ export default function AuthForm({
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [lockSeconds, setLockSeconds] = useState(0);
 
     const handleChange = (event) => {
         const { name, value, type, checked } = event.target;
@@ -102,15 +104,42 @@ export default function AuthForm({
         try {
             const authResponse = isLogin
                 ? await loginRequest(formData.email, formData.password)
-                : await register({ name: formData.name, email: formData.email, password: formData.password });
+                : await register({
+                    name: formData.name,
+                    email: formData.email,
+                    password: formData.password,
+                });
 
             onAuthenticated(authResponse);
         } catch (requestError) {
             setError(requestError.message);
+
+            // Si es 429, iniciar cuenta regresiva visual
+            if (requestError.status === 429) {
+                const seconds = parseInt(requestError.retryAfter, 10) || 60;
+                setLockSeconds(seconds);
+            }
         } finally {
             setIsLoading(false);
         }
     };
+
+
+    useEffect(() => {
+        if (lockSeconds <= 0) return;
+        const timer = setInterval(() => {
+            setLockSeconds((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [lockSeconds]);
+
+
 
     const submitLabel = isLogin ? 'Iniciar sesión' : 'Crear cuenta';
     const loadingLabel = isLogin ? 'Iniciando...' : 'Creando cuenta...';
@@ -215,8 +244,14 @@ export default function AuthForm({
 
             {error && <p className={styles['auth-form__error']} role="alert">{error}</p>}
 
-            <button type="submit" className={styles['auth-form__submit']} disabled={isLoading || googleBusy}>
-                {isLoading ? loadingLabel : submitLabel}
+            <button
+                type="submit"
+                className={styles['auth-form__submit']}
+                disabled={isLoading || googleBusy || lockSeconds > 0}
+            >
+                {lockSeconds > 0
+                    ? `Bloqueado (${lockSeconds}s)`
+                    : isLoading ? loadingLabel : submitLabel}
             </button>
 
             <p className={styles['auth-form__switch']}>
