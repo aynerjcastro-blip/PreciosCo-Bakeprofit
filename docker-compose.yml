@@ -14,6 +14,8 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Define GOOGLE_CLIENT_ID en el archivo .env de la raíz}
     container_name: bakeprofit-frontend
     ports:
       - "5173:80"

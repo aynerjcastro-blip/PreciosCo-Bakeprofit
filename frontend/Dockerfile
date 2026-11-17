@@ -14,6 +14,11 @@ RUN npm ci
 # Copia el resto del código React
 COPY . .
 
+# Vite incrusta las variables VITE_* al COMPILAR (no al ejecutar el contenedor),
+# por eso se reciben aquí como argumento de build.
+ARG VITE_GOOGLE_CLIENT_ID
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+
 # Genera los archivos estáticos en /app/dist
 RUN npm run build
 
