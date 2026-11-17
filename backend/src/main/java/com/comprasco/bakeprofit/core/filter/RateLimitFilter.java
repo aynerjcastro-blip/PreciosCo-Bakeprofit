@@ -1,4 +1,3 @@
-
 package com.comprasco.bakeprofit.core.filter;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -18,13 +17,22 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Filtro de rate limiting por IP usando Token Bucket (Bucket4j + Caffeine).
+ *
+ * Se usa {@code intervally} en vez de {@code greedy} para que los tokens
+ * se recarguen de golpe al cumplirse el minuto, no de forma continua.
+ * Con greedy un flujo constante de requests nunca agota el bucket
+ * porque recarga ~1 token/segundo; con intervally, la request 61
+ * dentro del mismo minuto recibe 429 sin importar el ritmo.
+ */
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    // Un bucket por IP, expira si no se usa en 10 min
     @Value("${app.rate-limit.requests-per-minute:60}")
     private int requestsPerMinute;
 
+    // Un bucket por IP, se descarta si la IP no hace requests en 10 min
     private final LoadingCache<String, Bucket> buckets = Caffeine.newBuilder()
             .maximumSize(100_000)
             .expireAfterAccess(10, TimeUnit.MINUTES)
@@ -36,10 +44,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 .addLimit(
                         Bandwidth.builder()
                                 .capacity(limit)
-                                .refillGreedy(limit, Duration.ofMinutes(1))
+                                .refillIntervally(limit, Duration.ofMinutes(1))
                                 .build())
                 .build();
-
     }
 
     @Override
@@ -53,7 +60,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
 
-        // Headers estándar para que el frontend sepa cuánto le queda
         response.setHeader("X-Rate-Limit-Remaining",
                 String.valueOf(probe.getRemainingTokens()));
 
@@ -75,8 +81,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    /**
+     * Resuelve la IP real del cliente.
+     * Detrás de un proxy/balanceador (Railway, Render, etc.)
+     * la IP viene en X-Forwarded-For; sin proxy, usa remoteAddr.
+     */
     private String resolveClientIp(HttpServletRequest request) {
-        // X-Forwarded-For lo pone el proxy/balanceador (Railway, Render, etc.)
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
             return forwarded.split(",")[0].trim();
