@@ -1,5 +1,6 @@
 package com.comprasco.bakeprofit.staging.repository;
 
+import java.util.UUID;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +26,7 @@ public interface ScrapedOfferRepository extends JpaRepository<ScrapedOffer, Long
                 SELECT new com.comprasco.bakeprofit.staging.repository.PendingOfferKey(o.id, o.scrapedAt)
                 FROM ScrapedOffer o
                 WHERE o.status = :status
+                  AND (o.runId IS NULL OR EXISTS (SELECT r.id FROM ScrapeRun r WHERE r.id = o.runId AND r.completedAt IS NOT NULL))
                 ORDER BY o.scrapedAt, o.id
             """)
     List<PendingOfferKey> findKeysByStatus(@Param("status") OfferStatus status, Pageable page);
@@ -45,6 +47,7 @@ public interface ScrapedOfferRepository extends JpaRepository<ScrapedOffer, Long
                 SELECT new com.comprasco.bakeprofit.staging.repository.PendingOfferKey(o.id, o.scrapedAt)
                 FROM ScrapedOffer o
                 WHERE o.status = :status
+                  AND (o.runId IS NULL OR EXISTS (SELECT r.id FROM ScrapeRun r WHERE r.id = o.runId AND r.completedAt IS NOT NULL))
                   AND (o.scrapedAt > :afterScrapedAt
                        OR (o.scrapedAt = :afterScrapedAt AND o.id > :afterId))
                 ORDER BY o.scrapedAt, o.id
@@ -63,51 +66,36 @@ public interface ScrapedOfferRepository extends JpaRepository<ScrapedOffer, Long
     @Query("SELECT o FROM ScrapedOffer o WHERE o.id = :id")
     Optional<ScrapedOffer> lockById(@Param("id") Long id);
 
-    /**
-     * Las demás ofertas PENDING con ese EAN y con tamaño, bloqueadas con FOR
-     * UPDATE.
-     *
-     * <p>
-     * El EAN de scraped_offers está tal como llegó, así que se compara rellenado a
-     * 14
-     * dígitos, igual que {@code Gtin.normalize}; solo se consideran los formatos
-     * que
-     * {@code Gtin} acepta (8, 12, 13 o 14 dígitos). El bloqueo evita que otra
-     * instancia
-     * procese una de ellas entre la consulta y {@link #unclassifyConflicting}.
-     * </p>
-     */
+    // Un bloqueo transaccional antes de bloquear ofertas evita interbloqueos entre
+    // dos workers que empiecen por miembros distintos de un EAN/corrida.
+    @Query(value = "SELECT 1 FROM pg_advisory_xact_lock(724193810)", nativeQuery = true)
+    Integer lockIngestion();
+
+    @Query(value = "SELECT EXISTS (SELECT 1 FROM scrape_runs WHERE id = :runId AND completed_at IS NOT NULL)", nativeQuery = true)
+    boolean isRunComplete(@Param("runId") UUID runId);
+
     @Query(value = """
-            SELECT o.id AS "id", o.net_content AS "netContent", o.unit_base AS "unitBase", s.name AS "storeName"
-            FROM scraped_offers o
-            JOIN stores s ON s.id = o.store_id
-            WHERE o.status = 'PENDING'
-              AND o.id <> :offerId
-              AND o.net_content IS NOT NULL
+            SELECT o.* FROM scraped_offers o
+            WHERE o.status = 'PENDING' AND o.id <> :offerId
               AND o.ean ~ '^([0-9]{8}|[0-9]{12,14})$'
               AND lpad(o.ean, 14, '0') = :gtin
-            ORDER BY o.id
-            FOR UPDATE OF o
+              AND (o.run_id IS NULL OR EXISTS (SELECT 1 FROM scrape_runs r WHERE r.id = o.run_id AND r.completed_at IS NOT NULL))
+            ORDER BY o.id FOR UPDATE OF o
             """, nativeQuery = true)
-    List<PendingOfferSize> findOtherPendingSizes(@Param("gtin") String gtin, @Param("offerId") Long offerId);
+    List<ScrapedOffer> findOtherPendingOffers(@Param("gtin") String gtin, @Param("offerId") Long offerId);
 
-    /**
-     * Marca UNCLASSIFIED, con el mismo motivo, las ofertas de un conflicto de
-     * tamaño.
-     * Solo cambia las que siguen PENDING.
-     */
-    @Modifying
-    @Query("""
-            UPDATE ScrapedOffer o
-            SET o.status = com.comprasco.bakeprofit.staging.entity.OfferStatus.UNCLASSIFIED,
-                o.reason = :reason,
-                o.processedAt = :markedAt
-            WHERE o.id IN :ids
-              AND o.status = com.comprasco.bakeprofit.staging.entity.OfferStatus.PENDING
-            """)
-    int unclassifyConflicting(@Param("ids") List<Long> ids,
-            @Param("reason") String reason,
-            @Param("markedAt") LocalDateTime markedAt);
+    @Query(value = """
+            SELECT o.* FROM scraped_offers o
+            WHERE o.run_id = :runId AND o.store_id = :storeId AND o.status = 'PENDING'
+              AND ((CAST(:gtin AS text) IS NOT NULL
+                    AND o.ean ~ '^([0-9]{8}|[0-9]{12,14})$' AND lpad(o.ean, 14, '0') = :gtin)
+                   OR (CAST(:productId AS bigint) IS NOT NULL AND EXISTS (
+                       SELECT 1 FROM store_product_links l WHERE l.store_id = o.store_id
+                         AND l.store_sku = o.store_sku AND l.product_id = :productId)))
+            ORDER BY o.id FOR UPDATE OF o
+            """, nativeQuery = true)
+    List<ScrapedOffer> lockRunOffers(@Param("runId") UUID runId, @Param("storeId") Long storeId,
+                                    @Param("gtin") String gtin, @Param("productId") Long productId);
 
     /**
      * Borra las ofertas de ese estado marcadas antes del corte. PENDING no tiene

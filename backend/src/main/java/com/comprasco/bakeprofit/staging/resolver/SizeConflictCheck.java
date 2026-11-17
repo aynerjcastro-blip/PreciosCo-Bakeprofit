@@ -1,7 +1,6 @@
 package com.comprasco.bakeprofit.staging.resolver;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -15,7 +14,6 @@ import org.springframework.stereotype.Component;
 import com.comprasco.bakeprofit.catalog.entity.UnitBase;
 import com.comprasco.bakeprofit.catalog.util.Gtin;
 import com.comprasco.bakeprofit.catalog.util.NetContentLabel;
-import com.comprasco.bakeprofit.staging.repository.PendingOfferSize;
 import com.comprasco.bakeprofit.staging.entity.ScrapedOffer;
 import com.comprasco.bakeprofit.staging.repository.ScrapedOfferRepository;
 
@@ -48,16 +46,14 @@ public class SizeConflictCheck {
 
     private final ScrapedOfferRepository offerRepository;
 
-    public SizeConflictCheck(ScrapedOfferRepository offerRepository) {
+    private final OfferScreening screening;
+
+    public SizeConflictCheck(ScrapedOfferRepository offerRepository, OfferScreening screening) {
+        this.screening = screening;
         this.offerRepository = offerRepository;
     }
 
     private record Sighting(Long offerId, BigDecimal netContent, UnitBase unitBase, String storeName) {
-
-        static Optional<Sighting> from(PendingOfferSize other) {
-            return UnitBase.parse(other.getUnitBase())
-                    .map(unit -> new Sighting(other.getId(), other.getNetContent(), unit, other.getStoreName()));
-        }
 
         boolean sameSizeAs(Sighting other) {
             return unitBase == other.unitBase && netContent.compareTo(other.netContent) == 0;
@@ -71,21 +67,24 @@ public class SizeConflictCheck {
     /**
      * Devuelve el motivo del conflicto si alguna otra oferta PENDING del mismo EAN trae otro
      * tamaño; en ese caso, esas otras ofertas ya quedaron UNCLASSIFIED con el mismo motivo.
-     * Las ofertas sin unidad reconocible no cuentan: los filtros las rechazan por su cuenta.
+     * Solo cuentan ofertas de corridas cerradas que pasan screening; se compara el tamaño efectivo.
      */
     public Optional<String> check(ScrapedOffer offer, OfferScreening.Accepted accepted) {
-        Sighting own = new Sighting(offer.getId(), offer.getNetContent(), accepted.unitBase(),
+        Sighting own = new Sighting(offer.getId(), accepted.netContent(), accepted.unitBase(),
                 offer.getStore().getName());
-        List<Sighting> others = offerRepository.findOtherPendingSizes(accepted.gtin(), offer.getId()).stream()
-                .map(Sighting::from)
-                .flatMap(Optional::stream)
-                .toList();
+        List<Sighting> others = offerRepository.findOtherPendingOffers(accepted.gtin(), offer.getId()).stream()
+                .map(other -> {
+                    var result = screening.screen(other);
+                    return result.isRejected() ? null : new Sighting(other.getId(), result.accepted().netContent(),
+                            result.accepted().unitBase(), other.getStore().getName());
+                }).filter(java.util.Objects::nonNull).toList();
         if (others.stream().allMatch(own::sameSizeAs)) {
             return Optional.empty();
         }
         String reason = SIZE_CONFLICT_REASON.formatted(Gtin.toDisplay(accepted.gtin()), describe(own, others));
-        offerRepository.unclassifyConflicting(others.stream().map(Sighting::offerId).toList(),
-                reason, LocalDateTime.now());
+        for (Long id : others.stream().map(Sighting::offerId).toList()) {
+            offerRepository.findById(id).filter(ScrapedOffer::isPending).ifPresent(o -> o.markUnclassified(reason));
+        }
         return Optional.of(reason);
     }
 

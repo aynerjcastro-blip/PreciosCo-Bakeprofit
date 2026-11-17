@@ -1,9 +1,13 @@
 package com.comprasco.bakeprofit.staging.resolver;
 
+import com.comprasco.bakeprofit.catalog.entity.Product;
+import com.comprasco.bakeprofit.catalog.util.GtinVerdict;
+import com.comprasco.bakeprofit.staging.entity.StoreProductLink;
+import com.comprasco.bakeprofit.staging.repository.EanSizeOverrideRepository;
+import com.comprasco.bakeprofit.staging.repository.StoreProductLinkRepository;
+import java.math.RoundingMode;
 import java.math.BigDecimal;
 import java.util.Optional;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
@@ -15,7 +19,7 @@ import com.comprasco.bakeprofit.staging.entity.ScrapedOffer;
 import com.comprasco.bakeprofit.store.rule.StoreDomainPolicy;
 
 /**
- * Filtros de una oferta que solo miran sus propios datos: no consultan ni escriben la BD.
+ * Valida identidad, tamaño efectivo y curaduría manual sin modificar la oferta cruda.
  * Se evalúan en orden y gana el primer motivo de rechazo, que queda en {@code reason}.
  *
  * <p>
@@ -39,12 +43,20 @@ public class OfferScreening {
 
     private final StoreDomainPolicy domainPolicy;
 
-    public OfferScreening(StoreDomainPolicy domainPolicy) {
+    private final EanSizeOverrideRepository overrides;
+    private final StoreProductLinkRepository links;
+
+    public OfferScreening(StoreDomainPolicy domainPolicy,
+            EanSizeOverrideRepository overrides,
+            StoreProductLinkRepository links) {
         this.domainPolicy = domainPolicy;
+        this.overrides = overrides;
+        this.links = links;
     }
 
     /** Oferta que pasó los filtros, con el EAN ya normalizado y la unidad ya interpretada. */
-    public record Accepted(String gtin, UnitBase unitBase) {
+    public record Accepted(String gtin, UnitBase unitBase, BigDecimal netContent,
+                           Product linkedProduct, BigDecimal price) {
     }
 
     /** Exactamente uno de los dos campos tiene valor. */
@@ -60,23 +72,69 @@ public class OfferScreening {
     }
 
     public Result screen(ScrapedOffer offer) {
-        return Stream.<Supplier<Optional<String>>>of(
-                    () -> missingTarget(offer),
-                    () -> gtinRejection(offer.getEan()),
-                    () -> missingContent(offer),
-                    () -> unknownUnit(offer.getUnitBase()),
-                    () -> outsideTarget(offer),
-                    () -> invalidCategory(offer.getScrapeTarget().getCategory()),
-                    () -> pendingIdentity(offer))
-                .map(Supplier::get)
-                .flatMap(Optional::stream)
-                .findFirst()
-                .map(Result::rejected)
-                .orElseGet(() -> new Result(accepted(offer), null));
+        if (offer.getScrapeTarget() == null) return Result.rejected(NO_TARGET_REASON);
+        ScrapeTarget target = offer.getScrapeTarget();
+        if (!Boolean.TRUE.equals(target.getActive())) return Result.rejected("objetivo de búsqueda inactivo");
+        if (!target.getStore().getId().equals(offer.getStore().getId()))
+            return Result.rejected("la tienda de la oferta no coincide con el objetivo");
+        if (offer.getPrice() == null || offer.getPrice().signum() <= 0)
+            return Result.rejected("precio no positivo");
+        Optional<String> categoryError = invalidCategory(target.getCategory());
+        if (categoryError.isPresent()) return Result.rejected(categoryError.get());
+        Optional<String> identityError = pendingIdentity(offer);
+        if (identityError.isPresent()) return Result.rejected(identityError.get());
+        String expected = target.getExpectedEan();
+        if (expected != null && (Gtin.assess(expected) != GtinVerdict.COMPARABLE
+                || Gtin.assess(offer.getEan()) != GtinVerdict.COMPARABLE
+                || !Gtin.normalize(expected).equals(Gtin.normalize(offer.getEan()))))
+            return Result.rejected("el EAN " + offer.getEan() + " no es el que espera el objetivo, " + expected);
+
+        var verdict = Gtin.assess(offer.getEan());
+        if (verdict == GtinVerdict.STORE_INTERNAL
+                || verdict == GtinVerdict.VARIABLE_MEASURE) {
+            return variableWeight(offer);
+        }
+        Optional<String> eanError = gtinRejection(offer.getEan());
+        if (eanError.isPresent()) return Result.rejected(eanError.get());
+        String gtin = Gtin.normalize(offer.getEan());
+        BigDecimal content = offer.getNetContent();
+        UnitBase unit = UnitBase.parse(offer.getUnitBase()).orElse(null);
+        var override = overrides.findById(gtin);
+        if (override.isPresent()) {
+            content = override.get().getNetContent();
+            unit = override.get().getUnitBase();
+        } else if ((content == null || offer.getUnitBase() == null) && expected != null
+                && target.getMinContent() != null && target.getMaxContent() != null
+                && target.getMinContent().compareTo(target.getMaxContent()) == 0
+                && (content == null || content.compareTo(target.getMinContent()) == 0)
+                && (offer.getUnitBase() == null || unit == target.getUnitBase())) {
+            content = target.getMinContent();
+            unit = target.getUnitBase();
+        }
+        if (content == null) return Result.rejected(NO_CONTENT_REASON);
+        if (unit == null) return Result.rejected(UNKNOWN_UNIT_REASON.formatted(offer.getUnitBase()));
+        if (content.signum() <= 0 || !target.accepts(content, unit))
+            return Result.rejected(OUT_OF_TARGET_REASON.formatted(content.toPlainString(), unit,
+                    target.getSearchTerm(), target.getUnitBase(), limit(target.getMinContent()), limit(target.getMaxContent())));
+        return new Result(new Accepted(gtin, unit, content, null, offer.getPrice()), null);
     }
 
-    private static Optional<String> missingTarget(ScrapedOffer offer) {
-        return offer.getScrapeTarget() == null ? Optional.of(NO_TARGET_REASON) : Optional.empty();
+    private Result variableWeight(ScrapedOffer offer) {
+        var link = offer.getStoreSku() == null ? Optional.<StoreProductLink>empty()
+                : links.findByStoreIdAndStoreSku(offer.getStore().getId(), offer.getStoreSku());
+        if (link.isEmpty()) return Result.rejected("peso variable sin asignar");
+        var product = link.get().getProduct();
+        if (!Boolean.TRUE.equals(product.getActive()) || product.getBrand() != null
+                || product.getEan() != null || product.getManufacturerRef() != null
+                || !product.hasSize(new BigDecimal("1000"), UnitBase.G)
+                || invalidCategory(product.getCategory()).isPresent()
+                || !product.getCategory().getId().equals(offer.getScrapeTarget().getCategory().getId()))
+            return Result.rejected("asignación de peso variable inválida: se exige un genérico de 1000 G en la categoría del objetivo");
+        if (offer.getSaleWeightKg() == null || offer.getSaleWeightKg().signum() <= 0)
+            return Result.rejected("peso variable sin peso de venta publicado en kg");
+        BigDecimal perKg = offer.getPrice().divide(offer.getSaleWeightKg(), 2, RoundingMode.HALF_UP);
+        if (perKg.signum() <= 0 || perKg.precision() > 12) return Result.rejected("precio por kg fuera de rango");
+        return new Result(new Accepted(null, UnitBase.G, new BigDecimal("1000"), product, perKg), null);
     }
 
     private static Optional<String> gtinRejection(String ean) {
@@ -84,27 +142,6 @@ public class OfferScreening {
             return Optional.of(NO_EAN_REASON);
         }
         return Gtin.assess(ean).rejectionMessage(ean);
-    }
-
-    private static Optional<String> missingContent(ScrapedOffer offer) {
-        return offer.getNetContent() == null ? Optional.of(NO_CONTENT_REASON) : Optional.empty();
-    }
-
-    private static Optional<String> unknownUnit(String rawUnit) {
-        return UnitBase.parse(rawUnit).isPresent()
-                ? Optional.empty()
-                : Optional.of(UNKNOWN_UNIT_REASON.formatted(rawUnit));
-    }
-
-    private static Optional<String> outsideTarget(ScrapedOffer offer) {
-        ScrapeTarget target = offer.getScrapeTarget();
-        UnitBase unit = UnitBase.parse(offer.getUnitBase()).orElseThrow();
-        if (target.accepts(offer.getNetContent(), unit)) {
-            return Optional.empty();
-        }
-        return Optional.of(OUT_OF_TARGET_REASON.formatted(
-                offer.getNetContent().toPlainString(), unit, target.getSearchTerm(),
-                target.getUnitBase(), limit(target.getMinContent()), limit(target.getMaxContent())));
     }
 
     private static Optional<String> invalidCategory(Category category) {
@@ -117,10 +154,6 @@ public class OfferScreening {
         return domainPolicy.hasPendingIdentity(offer.getStore())
                 ? Optional.of(PENDING_IDENTITY_REASON)
                 : Optional.empty();
-    }
-
-    private static Accepted accepted(ScrapedOffer offer) {
-        return new Accepted(Gtin.normalize(offer.getEan()), UnitBase.parse(offer.getUnitBase()).orElseThrow());
     }
 
     private static String limit(BigDecimal value) {
