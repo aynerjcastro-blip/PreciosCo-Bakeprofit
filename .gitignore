@@ -1,4 +1,8 @@
+# Cachés de Python y pytest
 __pycache__/
+*.pyc
+.pytest_cache/
+
 *.py[cod]
 .venv/
 salida_urls/
