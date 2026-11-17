@@ -26,13 +26,18 @@ import sys
 import time
 import unicodedata
 from collections import OrderedDict
-from datetime import datetime
+from pathlib import Path
+from uuid import uuid4
 from urllib.parse import quote, urlencode
 from urllib.robotparser import RobotFileParser
 
 import psycopg2
 import psycopg2.extras
 import requests
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from comun.ciudad import ahora_colombia
+from comun.staging import iniciar_corrida, terminar_corrida, insertar_ofertas
 
 # ─────────────────────────── Configuración ───────────────────────────
 TIENDAS = {  # nombre en la tabla stores (minúsculas) -> URL base
@@ -324,18 +329,6 @@ def leer_targets(conn, tiendas):
         return cur.fetchall()
 
 
-SQL_INSERT = """INSERT INTO scraped_offers
-    (store_id, scrape_target_id, ean, name, brand_name, price, list_price, product_url,
-     image_url, net_content, unit_base, scraped_at, status)
-    VALUES %s"""
-
-
-def insertar(conn, filas):
-    with conn.cursor() as cur:
-        psycopg2.extras.execute_values(cur, SQL_INSERT, filas, page_size=200)
-    conn.commit()
-
-
 # ─────────────────────────── Registro de descartes ───────────────────────────
 DESCARTADOS = []   # (tienda, término, motivo, nombre, IsAvailable, Stock, AvailableQuantity)
 
@@ -346,7 +339,7 @@ def _oferta(p):
 
 
 # ─────────────────────────── Flujo principal ───────────────────────────
-def procesar_target(conn, cli, t):
+def procesar_target(conn, cli, t, run_id=None):
     st = dict(encontrados=0, filtrados=0, no_disp=0, sin_precio=0, insertados=0, sin_tamano=0, error="")
     fq = (t["store_category_fq"] or "").strip() or None
     try:
@@ -357,7 +350,7 @@ def procesar_target(conn, cli, t):
         st["error"] = str(e)
         return st
 
-    ahora = datetime.now()
+    ahora = ahora_colombia()
     vistos, filas = set(), []
     for p in productos:
         clave = p.get("productId") or p.get("link")
@@ -393,7 +386,7 @@ def procesar_target(conn, cli, t):
                       d["unit_base"], ahora, "PENDING"))
     if filas:
         try:
-            insertar(conn, filas)
+            insertar_ofertas(conn, filas, run_id)
         except psycopg2.Error as e:
             conn.rollback()
             st["error"] = f"BD: {str(e).strip().splitlines()[0]}"
@@ -417,6 +410,8 @@ def main():
                   "(el seed los inserta con active = false: actívalos antes de correr).")
             return 1
 
+        run_id = uuid4()
+        iniciar_corrida(conn, run_id)
         resumen = OrderedDict()          # (tienda, término) -> stats
         totales = {}                     # tienda -> ofertas insertadas
         clientes, omitidas = {}, set()
@@ -436,7 +431,7 @@ def main():
                     continue
             print(f"→ {tienda} · {t['search_term']}" + ("" if t["store_category_fq"] else "  (sin fq: filtro por palabras)"))
             try:
-                st = procesar_target(conn, clientes[clave], t)
+                st = procesar_target(conn, clientes[clave], t, run_id)
             except TiendaBloqueada as e:
                 print(f"  ⛔ {tienda} cortada: {e}")
                 omitidas.add(clave)
@@ -445,6 +440,7 @@ def main():
                 print(f"  ✖ {st['error']}")
             totales[tienda] += st.get("insertados", 0)
             resumen[(tienda, t["search_term"])] = st
+        terminar_corrida(conn, run_id)
     finally:
         conn.close()
 
@@ -473,7 +469,7 @@ def main():
     if vacias:
         print(f"\n⛔ Alerta de cero resultados: {', '.join(vacias)} no insertó ninguna oferta.")
         return 1
-    return 0
+    return 1 if any(s.get("error") for s in resumen.values()) else 0
 
 
 if __name__ == "__main__":

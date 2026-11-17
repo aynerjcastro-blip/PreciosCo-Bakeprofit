@@ -30,7 +30,7 @@ SQL_TARGETS = """
 SQL_INSERT = """
     INSERT INTO scraped_offers
         (store_id, scrape_target_id, ean, name, brand_name, price, list_price,
-         product_url, image_url, net_content, unit_base, scraped_at, status)
+         product_url, image_url, net_content, unit_base, scraped_at, status, store_sku, sale_weight_kg, run_id)
     VALUES %s
 """
 
@@ -71,7 +71,20 @@ def filtrar_targets(targets, solo_tiendas):
     return [t for t in targets if any(p in sin_tildes(t["store_name"]) for p in pedidas)]
 
 
-def insertar_ofertas(conn, filas):
+def iniciar_corrida(conn, run_id):
+    with conn.cursor() as cur:
+        cur.execute("INSERT INTO scrape_runs (id) VALUES (%s)", (str(run_id),))
+    conn.commit()
+
+
+def terminar_corrida(conn, run_id):
+    with conn.cursor() as cur:
+        cur.execute("UPDATE scrape_runs SET completed_at = now() WHERE id = %s", (str(run_id),))
+    conn.commit()
+
+
+def insertar_ofertas(conn, filas, run_id=None):
+    filas = [tuple(f) + ((None, None) if len(f) == 13 else ()) + (str(run_id) if run_id else None,) for f in filas]
     with conn.cursor() as cur:
         psycopg2.extras.execute_values(cur, SQL_INSERT, filas, page_size=100)
     conn.commit()

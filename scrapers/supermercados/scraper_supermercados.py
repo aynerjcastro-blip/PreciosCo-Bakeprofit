@@ -38,8 +38,8 @@ DOMINIO = "Supermercado"
 TIENDAS_VTEX = OrderedDict([
     ("d1",       VtexStrategy("https://www.d1.com.co", regional=False)),   # precio nacional, sin vendedores por ciudad
     ("exito",    VtexStrategy("https://www.exito.com/io")),   # Éxito cuelga de /io/
-    ("jumbo",    VtexStrategy("https://www.jumbocolombia.com")),
-    ("olimpica", VtexStrategy("https://www.olimpica.com")),
+    ("jumbo",    VtexStrategy("https://www.jumbocolombia.com", tienda="jumbo")),
+    ("olimpica", VtexStrategy("https://www.olimpica.com", tienda="olimpica")),
 ])
 
 
