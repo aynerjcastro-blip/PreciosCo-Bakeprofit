@@ -387,6 +387,19 @@ def ean_valido(c):
     return (10 - suma % 10) % 10 == d[-1]
 
 
+def _ean_de_imagenes(item):
+    """Algunas tiendas (Bellapiel) no cargan el EAN en el catálogo pero nombran la foto con él
+    ('8429420248977-1.jpg.jpg'). Solo cuenta el número con el que EMPIEZA el nombre del archivo (la ruta,
+    no el '?v=...') y luego elegir_ean exige que tenga dígito verificador válido."""
+    out = []
+    for img in item.get("images") or []:
+        archivo = urlparse((img or {}).get("imageUrl") or "").path.rsplit("/", 1)[-1]
+        m = re.match(r"(\d{8}|\d{12,14})(?!\d)", archivo)
+        if m:
+            out.append(m.group(1))
+    return out
+
+
 def _candidatos_ean(p, item):
     """Todos los campos donde una tienda VTEX puede guardar el código de barras.
     Algunas (Bellapiel) dejan en items[0].ean el ID interno de 4 dígitos."""
@@ -398,6 +411,7 @@ def _candidatos_ean(p, item):
     for k in p.get("allSpecifications") or []:
         if isinstance(k, str) and re.search(r"\bean\b|gtin|barra", normalizar(k)):
             crudos += _valores(p.get(k))
+    crudos += _ean_de_imagenes(item)
     vistos, out = set(), []
     for x in crudos:
         x = str(x if x is not None else "").strip()
@@ -553,6 +567,23 @@ def _registrar_ean_diag(tienda, p):
     lista = EAN_DIAG.setdefault(tienda, [])
     if len(lista) < 3 and all(x.get("productId") != p.get("productId") for x in lista):
         lista.append(p)
+        item = (p.get("items") or [{}])[0]
+        resumen = {
+            "producto": p.get("productName"), "productId": p.get("productId"),
+            "productReference": p.get("productReference"),
+            "n_items": len(p.get("items") or []),
+            "item_keys": sorted(item.keys()),
+            "item.ean": item.get("ean"), "item.itemId": item.get("itemId"),
+            "item.referenceId": item.get("referenceId"),
+            "eans_otros_items": [i.get("ean") for i in (p.get("items") or [])[1:]],
+            "specs": p.get("allSpecifications"),
+            "imagen": ((item.get("images") or [{}])[0] or {}).get("imageUrl"),
+        }
+        print(f"::group::EAN diagnóstico · {tienda} · {p.get('productName', '')[:60]}"
+              if os.getenv("GITHUB_ACTIONS") else f"   EAN diagnóstico · {tienda}")
+        print(json.dumps(resumen, ensure_ascii=False, default=str))
+        if os.getenv("GITHUB_ACTIONS"):
+            print("::endgroup::")
 
 
 def guardar_ean_diag():
