@@ -47,17 +47,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain)
             throws ServletException, IOException {
-            String clientIp = resolveClientIp(request);
-                Bucket bucket = buckets.get(clientIp);
 
-                ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+        String clientIp = resolveClientIp(request);
+        Bucket bucket = buckets.get(clientIp);
 
-                // LOG TEMPORAL — eliminalo después de debuggear
-                logger.debug(String.format("IP=%s remaining=%d consumed=%s capacity=%d",
-                        clientIp, probe.getRemainingTokens(), probe.isConsumed(), requestsPerMinute));
+        ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
 
-                response.setHeader("X-Rate-Limit-Remaining",
-                        String.valueOf(probe.getRemainingTokens()));
+        // Headers estándar para que el frontend sepa cuánto le queda
+        response.setHeader("X-Rate-Limit-Remaining",
+                String.valueOf(probe.getRemainingTokens()));
 
         if (!probe.isConsumed()) {
             long waitSeconds = probe.getNanosToWaitForRefill() / 1_000_000_000;
