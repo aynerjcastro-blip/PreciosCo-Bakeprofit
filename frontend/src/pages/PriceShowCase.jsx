@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Icon from './Icon';
 import ProductImage from './ProductImage';
 import StoreLogo from './StoreLogo';
-import styles from './PriceShowcase.module.css';
+import styles from './PriceShowCase.module.css';
 
 const money = (value) => `$${Number(value).toLocaleString('es-CO')}`;
 

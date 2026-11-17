@@ -36,5 +36,5 @@ build/
 logback.xml
 application-local.properties
 repomix-output.xml
-
+.env
 

@@ -148,7 +148,7 @@ export default function Home() {
             <section className={styles.hero}>
                 <div className={styles.heroText}>
                     <h1 className={styles.title}>
-                        Ahorra en cada compra <span className={styles.accent}>antes de pagar.</span>
+                        Ahorra en cada compra antes de pagar
                     </h1>
                     <p className={styles.lead}>
                         {storeNames.length > 0

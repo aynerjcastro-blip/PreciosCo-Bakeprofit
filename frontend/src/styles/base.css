@@ -16,6 +16,18 @@ body {
     overflow-x: hidden;
 }
 
+/* Fondo de toda la app: dos luces suaves fijas a la pantalla (colores en tokens.css) */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(55% 50% at 12% -5%, var(--glow-1), transparent 70%),
+        radial-gradient(50% 45% at 92% 5%, var(--glow-2), transparent 70%);
+}
+
 h1,
 h2,
 h3,
@@ -36,4 +48,16 @@ img {
 a {
     text-decoration: none;
     color: inherit;
+}
+
+/* Footer siempre al fondo: si la página es corta, el contenido ocupa el espacio sobrante */
+#root {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.layout-content {
+    flex: 1 0 auto;
 }

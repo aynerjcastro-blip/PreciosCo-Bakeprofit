@@ -1,7 +1,6 @@
-import { login as loginRequest, register, googleLogin } from '@/api/auth';
+import { login as loginRequest, register } from '@/api/auth';
 import { useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { useAuth } from '../../context/useAuth';
+import { Link } from 'react-router-dom';
 import GoogleSignInButton from './GoogleSignInButton';
 import styles from '../../pages/AuthPage.module.css';
 
@@ -52,38 +51,33 @@ const EyeOffIcon = () => (
     </Icon>
 );
 
-const ShieldIcon = () => (
-    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
-        strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    </svg>
-);
-
-const CheckIcon = () => (
-    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
-        strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M20 6 9 17l-5-5" />
-    </svg>
-);
-
 /**
- * Formulario de inicio de sesión y registro.
- * Concentra el estado de los campos y las peticiones a la API en un solo componente,
- * para que la página solo decida cuál de los dos modos mostrar.
+ * Formulario de inicio de sesión o de registro.
+ * Se muestran los DOS a la vez (uno por cada lado de la pista deslizante), así que cada uno
+ * guarda su propio estado y prefija sus `id`: dos campos con el mismo id romperían las etiquetas.
+ * La navegación posterior al ingreso y el inicio con Google los resuelve la página (AuthPage).
  *
  * @param {boolean} isLogin true = inicio de sesión, false = registro
+ * @param {object} switchState estado de la ruta (a dónde volver); se conserva al cambiar de modo
+ * @param {(authResponse: object) => void} onAuthenticated se llama con la respuesta del backend
+ * @param {(credential: string) => void} onGoogleCredential credencial entregada por Google
+ * @param {(message: string|null) => void} onGoogleError error del botón de Google
+ * @param {string|null} googleError mensaje de error de Google (lo guarda la página)
+ * @param {boolean} googleBusy true mientras el backend valida la cuenta de Google
  */
-export default function AuthForm({ isLogin }) {
-    const navigate = useNavigate();
-    const location = useLocation();
-    // Ruta protegida desde la que llegó el usuario; se le devuelve ahí al entrar
-    const from = location.state?.from?.pathname || '/';
-    const { login } = useAuth();
+export default function AuthForm({
+    isLogin,
+    switchState,
+    onAuthenticated,
+    onGoogleCredential,
+    onGoogleError,
+    googleError,
+    googleBusy,
+}) {
+    const prefix = isLogin ? 'login' : 'register';
 
     const [formData, setFormData] = useState({ name: '', email: '', password: '', terms: false });
-    // Errores separados para mostrar cada uno junto al botón que el usuario pulsó
     const [error, setError] = useState(null);
-    const [googleError, setGoogleError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -95,32 +89,10 @@ export default function AuthForm({ isLogin }) {
         }));
     };
 
-    // replace evita que el botón "atrás" regrese a /login con la sesión ya iniciada
-    const finishLogin = (authResponse) => {
-        login(authResponse);
-        navigate(from, { replace: true });
-    };
-
-    const handleGoogleCredential = async (credential) => {
-        setError(null);
-        setGoogleError(null);
-        setIsLoading(true);
-        try {
-            // El token de Google se valida en el backend; el front nunca lo da por bueno
-            const authResponse = await googleLogin(credential);
-            finishLogin(authResponse);
-        } catch (err) {
-            // El backend explica el motivo (p. ej. cuenta desactivada); sin mostrarlo, el usuario no se entera
-            setGoogleError(err.message || 'Error al iniciar sesión con Google');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     const handleSubmit = async (event) => {
         event.preventDefault();
         setError(null);
-        setGoogleError(null);
+        onGoogleError(null);
 
         if (!isLogin && !formData.terms) {
             setError('Debes aceptar los términos y condiciones');
@@ -132,7 +104,7 @@ export default function AuthForm({ isLogin }) {
                 ? await loginRequest(formData.email, formData.password)
                 : await register({ name: formData.name, email: formData.email, password: formData.password });
 
-            finishLogin(authResponse);
+            onAuthenticated(authResponse);
         } catch (requestError) {
             setError(requestError.message);
         } finally {
@@ -140,135 +112,120 @@ export default function AuthForm({ isLogin }) {
         }
     };
 
-    const submitLabel = isLogin ? 'Iniciar sesión' : 'Empezar a comparar';
+    const submitLabel = isLogin ? 'Iniciar sesión' : 'Crear cuenta';
     const loadingLabel = isLogin ? 'Iniciando...' : 'Creando cuenta...';
 
     return (
-        <div className={styles['auth-form-wrapper']}>
-            <form className={styles['auth-form']} onSubmit={handleSubmit}>
-                <div className={styles['auth-form__header']}>
-                    <h2>{isLogin ? 'Qué bueno verte de nuevo' : 'Crea tu cuenta gratis'}</h2>
-                    <p>{isLogin ? 'Accede a tu cuenta y sigue ahorrando.' : 'Empieza a comparar en menos de un minuto.'}</p>
-                </div>
+        <form className={styles['auth-form']} onSubmit={handleSubmit}>
+            <div className={styles['auth-form__header']}>
+                {/* Solo hay un <h1> visible a la vez: el panel inactivo queda oculto para lectores de pantalla */}
+                <h1>{isLogin ? 'Bienvenido de nuevo' : 'Crea tu cuenta'}</h1>
+                <p>{isLogin ? 'Entra y compara precios en las tiendas conectadas.' : 'Regístrate para comparar precios y seguir tus productos.'}</p>
+            </div>
 
-                {!isLogin && (
-                    <div className={styles['auth-form__field']}>
-                        <label className={styles['auth-form__label']} htmlFor="name">Nombre</label>
-                        <div className={styles['input-with-icon']}>
-                            <span className={styles['input-icon']}><UserIcon /></span>
-                            <input
-                                className={styles['auth-form__input']}
-                                type="text"
-                                id="name"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                placeholder="Tu nombre"
-                                autoComplete="name"
-                                required
-                            />
-                        </div>
-                    </div>
-                )}
+            {/* Google va primero, como en el diseño de referencia. El botón es el mismo componente de siempre. */}
+            <div className={styles['auth-form__google']}>
+                <GoogleSignInButton onCredential={onGoogleCredential} onError={onGoogleError} />
+            </div>
+            {googleError && <p className={styles['auth-form__error']} role="alert">{googleError}</p>}
 
+            <div className={styles['auth-divider']}>
+                <span>o con tu correo</span>
+            </div>
+
+            {!isLogin && (
                 <div className={styles['auth-form__field']}>
-                    <label className={styles['auth-form__label']} htmlFor="email">Correo electrónico</label>
+                    <label className={styles['auth-form__label']} htmlFor={`${prefix}-name`}>Nombre</label>
                     <div className={styles['input-with-icon']}>
-                        <span className={styles['input-icon']}><MailIcon /></span>
+                        <span className={styles['input-icon']}><UserIcon /></span>
                         <input
                             className={styles['auth-form__input']}
-                            type="email"
-                            id="email"
-                            name="email"
-                            value={formData.email}
+                            type="text"
+                            id={`${prefix}-name`}
+                            name="name"
+                            value={formData.name}
                             onChange={handleChange}
-                            placeholder="tu@correo.com"
-                            autoComplete="email"
+                            placeholder="Tu nombre"
+                            autoComplete="name"
                             required
                         />
                     </div>
                 </div>
+            )}
 
-                <div className={styles['auth-form__field']}>
-                    <label className={styles['auth-form__label']} htmlFor="password">Contraseña</label>
-                    <div className={`${styles['input-with-icon']} ${styles['input-with-icon--password']}`}>
-                        <span className={styles['input-icon']}><LockIcon /></span>
-                        <input
-                            className={styles['auth-form__input']}
-                            type={showPassword ? 'text' : 'password'}
-                            id="password"
-                            name="password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            placeholder={isLogin ? 'Ingresa tu contraseña' : 'Crea una contraseña'}
-                            autoComplete={isLogin ? 'current-password' : 'new-password'}
-                            required
-                        />
-                        <button
-                            type="button"
-                            className={styles['password-toggle']}
-                            onClick={() => setShowPassword(!showPassword)}
-                            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                        >
-                            {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                        </button>
-                    </div>
-                    {isLogin ? (
-                        <div className={styles['auth-form__forgot']}>
-                            <Link to="/forgot-password">¿Olvidaste tu contraseña?</Link>
-                        </div>
-                    ) : (
-                        <span className={styles['auth-form__hint']}>Mínimo 8 caracteres</span>
-                    )}
+            <div className={styles['auth-form__field']}>
+                <label className={styles['auth-form__label']} htmlFor={`${prefix}-email`}>Correo</label>
+                <div className={styles['input-with-icon']}>
+                    <span className={styles['input-icon']}><MailIcon /></span>
+                    <input
+                        className={styles['auth-form__input']}
+                        type="email"
+                        id={`${prefix}-email`}
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        placeholder="tucorreo@email.com"
+                        autoComplete="email"
+                        required
+                    />
                 </div>
+            </div>
 
-                {!isLogin && (
-                    <div className={styles['auth-form__terms']}>
-                        <input type="checkbox" id="terms" name="terms" checked={formData.terms} onChange={handleChange} required />
-                        <label htmlFor="terms">
-                            Acepto los <Link to="/terminos">Términos y condiciones</Link> y la <Link to="/privacidad">Política de privacidad</Link>
-                        </label>
-                    </div>
-                )}
-
-                {error && <p className={styles['auth-form__error']} role="alert">{error}</p>}
-
-                <button type="submit" className={styles['auth-form__submit']} disabled={isLoading}>
-                    {isLoading ? loadingLabel : submitLabel}
-                </button>
-
-                {/* Solo en login: Google crea la cuenta en el primer ingreso, no hace falta flujo de registro aparte */}
-                {isLogin && (
-                    <>
-                        <div className={styles['auth-divider']}>
-                            <span>o continúa con</span>
-                        </div>
-
-                        <div className={styles['auth-form__google']}>
-                            <GoogleSignInButton
-                                onCredential={handleGoogleCredential}
-                                onError={setGoogleError}
-                            />
-                        </div>
-
-                        {googleError && <p className={styles['auth-form__error']} role="alert">{googleError}</p>}
-                    </>
-                )}
-
-                <div className={styles['auth-form__switch']}>
-                    {isLogin ? (
-                        <>
-                            <p>¿Aún no tienes una cuenta? <Link to="/register">Regístrate gratis</Link></p>
-                            <p className={styles['auth-form__trust']}><ShieldIcon /> Acceso seguro y gratuito</p>
-                        </>
-                    ) : (
-                        <>
-                            <p>¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link></p>
-                            <p className={styles['auth-form__trust']}><CheckIcon /> Registro gratuito · Sin tarjeta de crédito</p>
-                        </>
-                    )}
+            <div className={styles['auth-form__field']}>
+                <label className={styles['auth-form__label']} htmlFor={`${prefix}-password`}>Contraseña</label>
+                <div className={`${styles['input-with-icon']} ${styles['input-with-icon--password']}`}>
+                    <span className={styles['input-icon']}><LockIcon /></span>
+                    <input
+                        className={styles['auth-form__input']}
+                        type={showPassword ? 'text' : 'password'}
+                        id={`${prefix}-password`}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        placeholder={isLogin ? 'Tu contraseña' : 'Mínimo 8 caracteres'}
+                        autoComplete={isLogin ? 'current-password' : 'new-password'}
+                        required
+                    />
+                    <button
+                        type="button"
+                        className={styles['password-toggle']}
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    >
+                        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                    </button>
                 </div>
-            </form>
-        </div>
+                {isLogin ? (
+                    <div className={styles['auth-form__forgot']}>
+                        <Link to="/forgot-password">¿Olvidaste tu contraseña?</Link>
+                    </div>
+                ) : (
+                    <span className={styles['auth-form__hint']}>Mínimo 8 caracteres</span>
+                )}
+            </div>
+
+            {!isLogin && (
+                <div className={styles['auth-form__terms']}>
+                    <input type="checkbox" id={`${prefix}-terms`} name="terms" checked={formData.terms} onChange={handleChange} required />
+                    <label htmlFor={`${prefix}-terms`}>
+                        Acepto los <Link to="/terminos">Términos y condiciones</Link> y la <Link to="/privacidad">Política de privacidad</Link>
+                    </label>
+                </div>
+            )}
+
+            {error && <p className={styles['auth-form__error']} role="alert">{error}</p>}
+
+            <button type="submit" className={styles['auth-form__submit']} disabled={isLoading || googleBusy}>
+                {isLoading ? loadingLabel : submitLabel}
+            </button>
+
+            <p className={styles['auth-form__switch']}>
+                {isLogin ? (
+                    <>¿No tienes cuenta? <Link to="/register" state={switchState}>Crear cuenta</Link></>
+                ) : (
+                    <>¿Ya tienes cuenta? <Link to="/login" state={switchState}>Inicia sesión</Link></>
+                )}
+            </p>
+        </form>
     );
 }
