@@ -45,6 +45,12 @@ public class User {
     @Column(nullable = false)
     private LocalDateTime registrationDate = LocalDateTime.now();
 
+    @Column(nullable = false)
+    private Integer failedAttempts = 0;
+
+    @Column(nullable = false)
+    private LocalDateTime lockTime;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "auth_provider", nullable = false)
     private AuthProvider authProvider = AuthProvider.LOCAL;

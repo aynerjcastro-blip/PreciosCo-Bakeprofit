@@ -29,15 +29,20 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.webmvc.autoconfigure.WebMvcProperties.Apiversion.Use;
 import org.springframework.mail.MailException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import javax.security.auth.login.AccountLockedException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,6 +62,12 @@ public class UserService {
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
     @Value("${google.client-id}")
     private String googleClientId;
+
+    @Value("${app.security.max-failed-attempts:5}")
+    private int maxFailedAttempts;
+
+    @Value("${app.security.lock-duration-minutes:15}")
+    private int lockDurationMinutes;
 
     public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, JwtSecurity jwtSecurity,
             PasswordResetTokenRepository tokenRepository, EmailService emailService) {
@@ -149,23 +160,76 @@ public class UserService {
      *
      * @param request DTO con email y password
      * @return AuthResponse con el token generado
+     * @throws AccountLockedException
      */
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request) throws AccountLockedException {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(InvalidCredentialsException::new);
-
+        // *Revisamos si esta bloqueado */
+        if (isAccountLocked(user)) {
+            throw new AccountLockedException(
+                    "Cuenta bloqueada por múltiples intentos fallidos. Intenta en "
+                            + lockDurationMinutes + " minutos.");
+        }
+        // *Verificamos la contraseña correcta */
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+            handleFailedAttemp(user);
             throw new InvalidCredentialsException();
         }
-
+        // *Revisamos si sigue activa la cuenta */
         // RN-10: Rechazar login de cuentas inactivas
         if (!Boolean.TRUE.equals(user.getActive())) {
             throw new InactiveUserException("La cuenta se encuentra desactivada. Contacte al administrador.");
         }
 
+        // *Login exitoso , entonces reiniciamos el contador */
+        resetFailedAttempts(user);
+
         String token = jwtSecurity.generateToken(user.getEmail(), user.getRole().name());
 
         return new AuthResponse(token, user.getName(), user.getEmail(), user.getRole());
+    }
+
+    /**
+     * Inicia sesion y genera un token JWT para usuarios activos.
+     *
+     * @param user usuario bloqueado
+     * @return User con login desbloqueado
+     */
+
+    private boolean isAccountLocked(User user) {
+        if (user.getLockTime() == null) {
+            return false;
+        }
+        boolean expired = LocalDateTime.now().isAfter(user.getLockTime().plusMinutes(lockDurationMinutes));
+        if (expired) {
+            user.setLockTime(null);
+            user.setFailedAttempts(null);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Revisa si los intentos fallidos superan el limite permitido.
+     *
+     * @param user Usuario intentanto ingresar
+     */
+
+    private void handleFailedAttemp(User user) {
+        int newCount = user.getFailedAttempts() + 1;
+        user.setFailedAttempts(newCount);
+
+        if (newCount >= maxFailedAttempts) {
+            user.setLockTime(LocalDateTime.now());
+        }
+    }
+
+    private void resetFailedAttempts(User user) {
+        if (user.getFailedAttempts() > 0) {
+            user.setFailedAttempts(0);
+            user.setLockTime(null);
+        }
     }
 
     /**
@@ -340,7 +404,8 @@ public class UserService {
         userRepository.save(user);
         return getProfile(userId);
     }
-        /**
+
+    /**
      * Cambia la contraseña del usuario autenticado.
      * <p>
      * Exige la contraseña actual: así, quien tenga un token robado o una sesión
@@ -350,8 +415,9 @@ public class UserService {
      *
      * @param userId  usuario autenticado (viene del token, nunca del cuerpo)
      * @param request contraseña actual y contraseña nueva
-     * @throws ForbiddenActionException         si la cuenta es de Google (403)
-     * @throws InvalidPasswordChangeException   si la actual no coincide o la nueva es igual (400)
+     * @throws ForbiddenActionException       si la cuenta es de Google (403)
+     * @throws InvalidPasswordChangeException si la actual no coincide o la nueva es
+     *                                        igual (400)
      */
     @Transactional
     public void changePassword(Long userId, ChangePasswordRequest request) {
