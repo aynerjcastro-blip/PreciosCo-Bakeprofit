@@ -5,6 +5,7 @@ import com.comprasco.bakeprofit.catalog.util.GtinVerdict;
 import com.comprasco.bakeprofit.staging.entity.StoreProductLink;
 import com.comprasco.bakeprofit.staging.repository.EanSizeOverrideRepository;
 import com.comprasco.bakeprofit.staging.repository.StoreProductLinkRepository;
+import com.comprasco.bakeprofit.staging.identity.SecondaryIdentityResolver;
 import java.math.RoundingMode;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -42,13 +43,15 @@ public class OfferScreening {
     private static final String OPEN_LIMIT = "sin límite";
 
     private final StoreDomainPolicy domainPolicy;
+    private final SecondaryIdentityResolver secondaryIdentity;
 
     private final EanSizeOverrideRepository overrides;
     private final StoreProductLinkRepository links;
 
     public OfferScreening(StoreDomainPolicy domainPolicy,
             EanSizeOverrideRepository overrides,
-            StoreProductLinkRepository links) {
+            StoreProductLinkRepository links, SecondaryIdentityResolver secondaryIdentity) {
+        this.secondaryIdentity = secondaryIdentity;
         this.domainPolicy = domainPolicy;
         this.overrides = overrides;
         this.links = links;
@@ -83,6 +86,9 @@ public class OfferScreening {
         if (categoryError.isPresent()) return Result.rejected(categoryError.get());
         Optional<String> identityError = pendingIdentity(offer);
         if (identityError.isPresent()) return Result.rejected(identityError.get());
+        if (secondaryIdentity.supports(offer)) {
+            return screenSecondaryIdentity(offer);
+        }
         String expected = target.getExpectedEan();
         if (expected != null && (Gtin.assess(expected) != GtinVerdict.COMPARABLE
                 || Gtin.assess(offer.getEan()) != GtinVerdict.COMPARABLE
@@ -117,6 +123,25 @@ public class OfferScreening {
             return Result.rejected(OUT_OF_TARGET_REASON.formatted(content.toPlainString(), unit,
                     target.getSearchTerm(), target.getUnitBase(), limit(target.getMinContent()), limit(target.getMaxContent())));
         return new Result(new Accepted(gtin, unit, content, null, offer.getPrice()), null);
+    }
+
+    private Result screenSecondaryIdentity(ScrapedOffer offer) {
+        SecondaryIdentityResolver.Resolution resolution = secondaryIdentity.resolve(offer);
+        if (resolution.rejection() != null) {
+            return Result.rejected(resolution.rejection());
+        }
+        Product product = resolution.product();
+        ScrapeTarget target = offer.getScrapeTarget();
+        String expectedEan = target.getExpectedEan();
+        if (expectedEan != null && (Gtin.assess(expectedEan) != GtinVerdict.COMPARABLE
+                || !Gtin.normalize(expectedEan).equals(product.getEan()))) {
+            return Result.rejected("identidad secundaria: no coincide con el EAN esperado del objetivo");
+        }
+        if (!target.accepts(product.getNetContent(), product.getUnitBase())) {
+            return Result.rejected("identidad secundaria: presentación fuera del objetivo");
+        }
+        return new Result(new Accepted(product.getEan(), product.getUnitBase(),
+                product.getNetContent(), product, offer.getPrice()), null);
     }
 
     private Result variableWeight(ScrapedOffer offer) {

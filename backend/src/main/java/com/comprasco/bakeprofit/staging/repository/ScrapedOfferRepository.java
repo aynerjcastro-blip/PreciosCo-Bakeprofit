@@ -89,6 +89,7 @@ public interface ScrapedOfferRepository extends JpaRepository<ScrapedOffer, Long
             WHERE o.run_id = :runId AND o.store_id = :storeId AND o.status = 'PENDING'
               AND ((CAST(:gtin AS text) IS NOT NULL
                     AND o.ean ~ '^([0-9]{8}|[0-9]{12,14})$' AND lpad(o.ean, 14, '0') = :gtin)
+                   OR (CAST(:gtin AS text) IS NOT NULL AND (btrim(coalesce(o.ean, '')) = '' OR o.ean ~ '^[0-9]{1,7}$'))
                    OR (CAST(:productId AS bigint) IS NOT NULL AND EXISTS (
                        SELECT 1 FROM store_product_links l WHERE l.store_id = o.store_id
                          AND l.store_sku = o.store_sku AND l.product_id = :productId)))

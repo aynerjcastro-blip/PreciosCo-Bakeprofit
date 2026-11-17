@@ -13,7 +13,7 @@ import com.comprasco.bakeprofit.staging.repository.*;
 class OfferEnrichmentTest {
     private final EanSizeOverrideRepository overrides = mock(EanSizeOverrideRepository.class);
     private final StoreProductLinkRepository links = mock(StoreProductLinkRepository.class);
-    private final OfferScreening screening = new OfferScreening(domainPolicy(), overrides, links);
+    private final OfferScreening screening = new OfferScreening(domainPolicy(), overrides, links, mock(com.comprasco.bakeprofit.staging.identity.SecondaryIdentityResolver.class));
 
     @Test void drogueriaAceptaGtinEquivalenteYRespaldoExactoSinCambiarOferta() {
         var offer = offer("Droguería");

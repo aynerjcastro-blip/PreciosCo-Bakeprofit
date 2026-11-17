@@ -109,6 +109,7 @@ class StagingProcessorIntegrationTest {
         jdbcTemplate.update("DELETE FROM scraped_offers WHERE store_id = ?", storeId);
         jdbcTemplate.update("DELETE FROM prices WHERE store_id = ?", storeId);
         jdbcTemplate.update("DELETE FROM store_product_links WHERE store_id = ?", storeId);
+        jdbcTemplate.update("DELETE FROM store_sku_ean_map WHERE store_id = ?", storeId);
         jdbcTemplate.update("DELETE FROM ean_size_overrides WHERE ean IN (?, ?)", gtin14(eanRice), gtin14(eanBeans));
         for (UUID run : testRuns) jdbcTemplate.update("DELETE FROM scrape_runs WHERE id = ?", run);
         jdbcTemplate.update("DELETE FROM products WHERE category_id = ?", leafId);
@@ -124,6 +125,74 @@ class StagingProcessorIntegrationTest {
         jdbcTemplate.update("INSERT INTO scrape_runs (id, completed_at) VALUES (?, now())", run);
         for (Long id : ids) jdbcTemplate.update("UPDATE scraped_offers SET run_id = ? WHERE id = ?", run, id);
         return run;
+    }
+
+    @Test
+    void bellaPielResuelveCodigoLocalYConservaEquivalenciaEntreCorridas() {
+        jdbcTemplate.update("UPDATE stores SET name = 'bellapiel' WHERE id = ?", storeId);
+        Long original = insertFacialOffer(eanRice, PRICE, "500", null, KEYSET_BASE);
+        processor.processOffers(List.of(original));
+        Long local = insertFacialOffer("8214", LOWER_PRICE, "500", null, KEYSET_BASE.plusDays(1));
+        Long canonical = insertFacialOffer(eanRice, PRICE, "500", null, KEYSET_BASE.plusDays(1));
+        completedRun(local, canonical);
+        processor.processOffers(List.of(canonical, local));
+        assertThat(pricesOf(eanRice)).hasSize(2);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT ean FROM store_sku_ean_map WHERE store_id = ? AND store_sku = '8214'",
+                String.class, storeId)).isEqualTo(gtin14(eanRice));
+        assertThat(jdbcTemplate.queryForObject("SELECT ean FROM scraped_offers WHERE id = ?", String.class, local))
+                .isEqualTo("8214");
+        assertThat(jdbcTemplate.queryForObject("SELECT reason FROM scraped_offers WHERE id = ?", String.class, canonical))
+                .isEqualTo("duplicada en la corrida");
+        Long repeated = insertFacialOffer("8214", LOWER_PRICE, "500", null, KEYSET_BASE.plusDays(2));
+        assertThat(processor.processOffers(List.of(repeated)).count(Result.SAME_PRICE)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM store_sku_ean_map WHERE store_id = ?",
+                Integer.class, storeId)).isEqualTo(1);
+    }
+
+    @Test
+    void bellaPielAprendeTambienDelCodigoLocalDescartadoComoDuplicado() {
+        jdbcTemplate.update("UPDATE stores SET name = 'bellapiel' WHERE id = ?", storeId);
+        Long original = insertFacialOffer(eanRice, PRICE, "500", null, KEYSET_BASE);
+        processor.processOffers(List.of(original));
+        Long local = insertFacialOffer("8214", PRICE, "500", null, KEYSET_BASE.plusDays(1));
+        Long canonical = insertFacialOffer(eanRice, LOWER_PRICE, "500", null, KEYSET_BASE.plusDays(1));
+        completedRun(local, canonical);
+        processor.processOffers(List.of(local, canonical));
+        assertThat(pricesOf(eanRice)).hasSize(2);
+        assertThat(jdbcTemplate.queryForObject("SELECT reason FROM scraped_offers WHERE id = ?", String.class, local))
+                .isEqualTo("duplicada en la corrida");
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM store_sku_ean_map WHERE store_id = ?",
+                Integer.class, storeId)).isEqualTo(1);
+    }
+
+    @Test
+    void bellaPielNoAprendeSiElObjetivoEsperaOtroEan() {
+        jdbcTemplate.update("UPDATE stores SET name = 'bellapiel' WHERE id = ?", storeId);
+        Long original = insertFacialOffer(eanRice, PRICE, "500", null, KEYSET_BASE);
+        processor.processOffers(List.of(original));
+        jdbcTemplate.update("UPDATE scrape_targets SET expected_ean = ? WHERE id = ?", gtin14(eanBeans), targetId);
+        Long local = insertFacialOffer("8214", LOWER_PRICE, "500", null, KEYSET_BASE.plusDays(1));
+        assertThat(processor.processOffers(List.of(local)).count(Result.UNCLASSIFIED)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM store_sku_ean_map WHERE store_id = ?",
+                Integer.class, storeId)).isZero();
+        assertThat(pricesOf(eanRice)).hasSize(1);
+    }
+
+    @Test
+    void bellaPielSinEanUsaSkuPublicadoYRechazaEquivalenciaReutilizada() {
+        jdbcTemplate.update("UPDATE stores SET name = 'bellapiel' WHERE id = ?", storeId);
+        Long original = insertFacialOffer(eanRice, PRICE, "500", null, KEYSET_BASE);
+        processor.processOffers(List.of(original));
+        Long local = insertFacialOffer(null, LOWER_PRICE, "500", null, KEYSET_BASE.plusDays(1));
+        jdbcTemplate.update("UPDATE scraped_offers SET store_sku = 'sku-local' WHERE id = ?", local);
+        assertThat(processor.processOffers(List.of(local)).count(Result.NEW_PRICE)).isEqualTo(1);
+        Long changed = insertFacialOffer(null, PRICE, "1000", null, KEYSET_BASE.plusDays(2));
+        jdbcTemplate.update("UPDATE scraped_offers SET store_sku = 'sku-local' WHERE id = ?", changed);
+        assertThat(processor.processOffers(List.of(changed)).count(Result.UNCLASSIFIED)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT reason FROM scraped_offers WHERE id = ?", String.class, changed))
+                .contains("equivalencia guardada incompatible");
+        assertThat(pricesOf(eanRice)).hasSize(2);
     }
 
     @Test
@@ -346,9 +415,16 @@ class StagingProcessorIntegrationTest {
         assertThat(statusCount("PENDING")).isEqualTo(3);
     }
 
+    private Long insertFacialOffer(String ean, BigDecimal price, String content, String url,
+                                   LocalDateTime scrapedAt) {
+        Long offerId = insertOffer(ean, price, content, url, scrapedAt);
+        jdbcTemplate.update("UPDATE scraped_offers SET brand_name = ? WHERE id = ?", brandName, offerId);
+        return offerId;
+    }
+
     private Long insertOffer(String ean, BigDecimal price, String netContent, String url, LocalDateTime scrapedAt) {
-        String name = ean.equals(eanBeans) ? "Fríjol IT " + suffix : "Arroz IT " + suffix;
-        String brand = ean.equals(eanBeans) ? brandName : null;
+        String name = eanBeans.equals(ean) ? "Fríjol IT " + suffix : "Arroz IT " + suffix;
+        String brand = eanBeans.equals(ean) ? brandName : null;
         return insertId(INSERT_OFFER, storeId, targetId, ean, name, brand, price,
                 url, null, new BigDecimal(netContent), Timestamp.valueOf(scrapedAt));
     }

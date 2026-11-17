@@ -20,7 +20,8 @@ class OfferScreeningTest {
 
     private final OfferScreening screening = new OfferScreening(StagingFixtures.domainPolicy(),
             org.mockito.Mockito.mock(com.comprasco.bakeprofit.staging.repository.EanSizeOverrideRepository.class),
-            org.mockito.Mockito.mock(com.comprasco.bakeprofit.staging.repository.StoreProductLinkRepository.class));
+            org.mockito.Mockito.mock(com.comprasco.bakeprofit.staging.repository.StoreProductLinkRepository.class),
+            org.mockito.Mockito.mock(com.comprasco.bakeprofit.staging.identity.SecondaryIdentityResolver.class));
 
     @Test
     void aceptaUnaOfertaValidaConElEanNormalizadoYLaUnidadInterpretada() {

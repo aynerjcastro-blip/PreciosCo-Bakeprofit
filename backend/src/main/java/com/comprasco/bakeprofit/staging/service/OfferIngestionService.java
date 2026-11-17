@@ -114,20 +114,28 @@ public class OfferIngestionService {
         Outcome outcome = priceRecorder.record(match.product(), offer, screened.accepted().price())
                 .map(Outcome::newPrice)
                 .orElseGet(() -> Outcome.of(Result.SAME_PRICE));
+        productResolver.rememberIdentity(offer, match.product());
         offer.markProcessed();
         for (Candidate candidate : duplicates) {
-            if (!candidate.offer().getId().equals(offer.getId())) candidate.offer().markDuplicate();
+            if (!candidate.offer().getId().equals(offer.getId())) {
+                productResolver.rememberIdentity(candidate.offer(), match.product());
+                candidate.offer().markDuplicate();
+            }
         }
         return outcome;
     }
 
     private record Candidate(ScrapedOffer offer, OfferScreening.Accepted accepted) {}
 
-    private static boolean sameIdentity(OfferScreening.Accepted a, OfferScreening.Accepted b) {
-        if (a.linkedProduct() != null || b.linkedProduct() != null)
-            return a.linkedProduct() != null && b.linkedProduct() != null
-                    && a.linkedProduct().getId().equals(b.linkedProduct().getId());
-        return a.gtin().equals(b.gtin());
+    private static boolean sameIdentity(OfferScreening.Accepted firstAccepted,
+                                        OfferScreening.Accepted secondAccepted) {
+        if (firstAccepted.gtin() != null && secondAccepted.gtin() != null) {
+            return firstAccepted.gtin().equals(secondAccepted.gtin());
+        }
+        if (firstAccepted.linkedProduct() == null || secondAccepted.linkedProduct() == null) {
+            return false;
+        }
+        return firstAccepted.linkedProduct().getId().equals(secondAccepted.linkedProduct().getId());
     }
 
     private static Outcome unclassify(ScrapedOffer offer, String reason) {

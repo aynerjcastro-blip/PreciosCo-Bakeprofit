@@ -51,7 +51,7 @@ class OfferProductResolverTest {
     @BeforeEach
     void setUp() {
         resolver = new OfferProductResolver(productRepository, brandRepository, brandService,
-                StagingFixtures.domainPolicy(), sizeConflictCheck);
+                StagingFixtures.domainPolicy(), sizeConflictCheck, org.mockito.Mockito.mock(com.comprasco.bakeprofit.staging.identity.SecondaryIdentityResolver.class));
         lenient().when(sizeConflictCheck.check(any(), any())).thenReturn(Optional.empty());
     }
 
@@ -137,7 +137,7 @@ class OfferProductResolverTest {
 
         resolver.resolve(offer(SUPERMARKET), ACCEPTED);
 
-        verifyNoInteractions(sizeConflictCheck);
+        verifyNoInteractions(sizeConflictCheck, org.mockito.Mockito.mock(com.comprasco.bakeprofit.staging.identity.SecondaryIdentityResolver.class));
     }
 
     @Test
