@@ -16,6 +16,9 @@ Variables de entorno:
     DESCARTADOS_PATH      opcional, dónde se guarda el CSV de descartes (por defecto descartados.csv)
     SIN_TAMANO_PATH       opcional, CSV con las ofertas insertadas sin net_content/unit_base y por qué
                           (por defecto sin_tamano.csv)
+    EAN_DIAG_PATH         opcional, JSON con el producto crudo de hasta 3 ofertas por tienda cuyo EAN no
+                          es un GTIN válido, para ver en qué campo guarda la tienda el código de barras
+                          (por defecto ean_diagnostico.json)
 
 Uso:
     pip install -r requirements.txt
@@ -25,6 +28,7 @@ Código de salida 1 si una tienda no inserta ninguna oferta en toda la corrida
 (alerta de cero resultados, ver DECISIONS.md) o si no hay targets activos.
 """
 import csv
+import json
 import os
 import re
 import sys
@@ -372,6 +376,48 @@ class Cliente:
         return productos
 
 
+# ─────────────────────────── EAN ───────────────────────────
+def ean_valido(c):
+    """GTIN-8/12/13/14 con dígito verificador correcto (solo para ELEGIR entre campos candidatos;
+    la validación oficial sigue siendo del procesador de staging)."""
+    if not re.fullmatch(r"\d{8}|\d{12,14}", c or ""):
+        return False
+    d = [int(x) for x in c]
+    suma = sum(n * (3 if i % 2 == 0 else 1) for i, n in enumerate(reversed(d[:-1])))
+    return (10 - suma % 10) % 10 == d[-1]
+
+
+def _candidatos_ean(p, item):
+    """Todos los campos donde una tienda VTEX puede guardar el código de barras.
+    Algunas (Bellapiel) dejan en items[0].ean el ID interno de 4 dígitos."""
+    crudos = [item.get("ean")]
+    for r in item.get("referenceId") or []:
+        if isinstance(r, dict):
+            crudos.append(r.get("Value"))
+    crudos += [p.get("productReference"), p.get("productReferenceCode")]
+    for k in p.get("allSpecifications") or []:
+        if isinstance(k, str) and re.search(r"\bean\b|gtin|barra", normalizar(k)):
+            crudos += _valores(p.get(k))
+    vistos, out = set(), []
+    for x in crudos:
+        x = str(x if x is not None else "").strip()
+        if re.fullmatch(r"[\d\s-]+", x):
+            x = re.sub(r"\D", "", x)          # '7 702 123 ...' -> solo dígitos
+        if x and x not in vistos:
+            vistos.add(x)
+            out.append(x)
+    return out
+
+
+def elegir_ean(p, item):
+    """Primer candidato con dígito verificador válido; si ninguno lo es se deja el de items[0].ean tal cual
+    (staging lo marcará como inválido o ausente, como antes)."""
+    for c in _candidatos_ean(p, item):
+        if ean_valido(c):
+            return c
+    return str(item.get("ean") or "").strip() or None
+
+
 # ─────────────────────────── Parseo de productos ───────────────────────────
 def disponible(oferta):
     """IsAvailable y Stock > 0. Si la respuesta no trae Stock se usa AvailableQuantity;
@@ -402,7 +448,7 @@ def parsear(p):
     precio = _positivo(oferta.get("Price"))
     if not nombre or precio is None:
         return None, "sin_precio"
-    ean = str(item.get("ean") or "").strip() or None
+    ean = elegir_ean(p, item)
     if ean and len(ean) > 20:             # no cabe en VARCHAR(20); el backend lo verá sin EAN
         ean = None
     brand = ((p.get("brand") or "").strip()[:100]) or None
@@ -500,6 +546,24 @@ def guardar_descartados():
     print(f"\nDescartes: {len(DESCARTADOS)} filas guardadas en {ruta}")
 
 
+EAN_DIAG = {}     # tienda -> lista de productos crudos con EAN inválido (máx. 3 por tienda)
+
+
+def _registrar_ean_diag(tienda, p):
+    lista = EAN_DIAG.setdefault(tienda, [])
+    if len(lista) < 3 and all(x.get("productId") != p.get("productId") for x in lista):
+        lista.append(p)
+
+
+def guardar_ean_diag():
+    if not EAN_DIAG:
+        return
+    ruta = os.path.abspath(os.getenv("EAN_DIAG_PATH", "ean_diagnostico.json"))
+    with open(ruta, "w", encoding="utf-8") as fh:
+        json.dump(EAN_DIAG, fh, ensure_ascii=False, indent=1, default=str)
+    print(f"EAN inválido: producto crudo de {sum(len(v) for v in EAN_DIAG.values())} ofertas guardado en {ruta}")
+
+
 SIN_TAMANO = []   # (tienda, término, nombre, detalle, sku, claves_specs, specs, link)
 
 
@@ -537,7 +601,7 @@ def guardar_sin_tamano():
 
 # ─────────────────────────── Flujo principal ───────────────────────────
 def procesar_target(conn, cli, t):
-    st = dict(encontrados=0, filtrados=0, excluidos=0, no_disp=0, sin_precio=0, insertados=0, sin_tamano=0, rescatados=0, error="", por_detalle=Counter())
+    st = dict(encontrados=0, filtrados=0, excluidos=0, no_disp=0, sin_precio=0, insertados=0, sin_tamano=0, rescatados=0, kits=0, ean_invalido=0, error="", por_detalle=Counter())
     fq = (t["store_category_fq"] or "").strip() or None
     try:
         productos = cli.descargar(t["search_term"], fq)
@@ -581,6 +645,15 @@ def procesar_target(conn, cli, t):
             DESCARTADOS.append((t["store_name"], t["search_term"], "sin_precio",
                                 p.get("productName"), "", "", ""))
             continue
+        if d["tamano_detalle"] == "pack":
+            # Kits y packs ('2 x 30 ml'): no tienen un contenido neto único, así que staging siempre los
+            # deja UNCLASSIFIED ('sin contenido neto'); no se insertan.
+            st["kits"] += 1
+            DESCARTADOS.append((t["store_name"], t["search_term"], "kit", p.get("productName"), "", "", ""))
+            continue
+        if not ean_valido(d["ean"]):
+            st["ean_invalido"] += 1
+            _registrar_ean_diag(t["store_name"], p)
         st["por_detalle"][d["tamano_detalle"].split(":")[0]] += 1
         if d["net_content"] is None:
             st["sin_tamano"] += 1
@@ -605,6 +678,10 @@ def linea_resultado(st, segundos):
     txt = (f"   ✔ {st['encontrados']} hallados · {st['filtrados']} sin match · {st['excluidos']} excluidos · "
            f"{st['no_disp']} no disponibles · {st['sin_precio']} sin precio · "
            f"{st['insertados']} insertados · {st['sin_tamano']} sin tamaño  ({segundos:.0f}s)")
+    if st.get("kits"):
+        txt += f"\n   · {st['kits']} kits/packs omitidos"
+    if st.get("ean_invalido"):
+        txt += f"\n   · {st['ean_invalido']} ofertas con EAN ausente o inválido"
     if st.get("rescatados"):
         txt += f"\n   · {st['rescatados']} rescatados por regla de categoría"
     pd = st.get("por_detalle")
@@ -709,6 +786,7 @@ def main():
         # El CSV se guarda siempre, incluso si la corrida falla a medias
         guardar_descartados()
         guardar_sin_tamano()
+        guardar_ean_diag()
 
 
 if __name__ == "__main__":
