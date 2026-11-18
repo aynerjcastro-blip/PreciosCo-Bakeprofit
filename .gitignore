@@ -1,10 +1,17 @@
-# Cachés de Python y pytest
+﻿# Python / Scrapers
 __pycache__/
-*.pyc
-.pytest_cache/
-
 *.py[cod]
+*.class
 .venv/
+venv/
 salida_urls/
-scrapers/**/salida_urls/
+repomix-output.xml
+
+# Variables de entorno y credenciales
 .env
+.env.*
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+.vscode/
