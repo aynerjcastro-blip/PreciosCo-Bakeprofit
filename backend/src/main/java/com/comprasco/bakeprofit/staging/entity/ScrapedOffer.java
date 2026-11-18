@@ -73,6 +73,10 @@ public class ScrapedOffer {
     @Column(length = 20)
     private String ean;
 
+    // NULL conserva la interpretación del staging legado.
+    @Column
+    private Boolean hasEan;
+
     @Column(nullable = false, columnDefinition = "text")
     private String name;
 
@@ -110,6 +114,10 @@ public class ScrapedOffer {
 
     @Column
     private LocalDateTime processedAt;
+
+    public boolean usesSkuIdentity() {
+        return Boolean.FALSE.equals(hasEan);
+    }
 
     public boolean isPending() {
         return status == OfferStatus.PENDING;

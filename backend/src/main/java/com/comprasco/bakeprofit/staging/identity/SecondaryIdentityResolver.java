@@ -58,7 +58,7 @@ public class SecondaryIdentityResolver {
 
     public boolean supports(ScrapedOffer offer) {
         String rawEan = offer.getEan();
-        boolean localIdentity = rawEan == null || rawEan.isBlank() || LOCAL_CODE.matcher(rawEan).matches();
+        boolean localIdentity = offer.usesSkuIdentity() || rawEan == null || rawEan.isBlank() || LOCAL_CODE.matcher(rawEan).matches();
         String storeName = NormalizedProductNameSimilarity.normalize(offer.getStore().getName());
         return localIdentity && properties.stores().stream()
                 .map(NormalizedProductNameSimilarity::normalize).anyMatch(storeName::equals);
@@ -67,6 +67,9 @@ public class SecondaryIdentityResolver {
     public Resolution resolve(ScrapedOffer offer) {
         if (!hasPresentation(offer)) {
             return Resolution.rejected("identidad secundaria: falta marca o presentación válida");
+        }
+        if (offer.usesSkuIdentity() && localKey(offer).isEmpty()) {
+            return Resolution.rejected("identidad secundaria: falta el SKU publicado");
         }
         Optional<StoreSkuEanMap> mapping = localKey(offer)
                 .flatMap(key -> mappings.findByStoreIdAndStoreSku(offer.getStore().getId(), key));
@@ -162,6 +165,9 @@ public class SecondaryIdentityResolver {
     }
 
     private static Optional<String> localKey(ScrapedOffer offer) {
+        if (offer.usesSkuIdentity()) {
+            return Optional.ofNullable(offer.getStoreSku()).filter(key -> !key.isBlank());
+        }
         String rawEan = offer.getEan();
         if (rawEan != null && LOCAL_CODE.matcher(rawEan).matches()) {
             return Optional.of(rawEan);

@@ -77,6 +77,7 @@ public interface ScrapedOfferRepository extends JpaRepository<ScrapedOffer, Long
     @Query(value = """
             SELECT o.* FROM scraped_offers o
             WHERE o.status IN ('PENDING', 'UNCLASSIFIED') AND o.id <> :offerId
+              AND o.has_ean IS DISTINCT FROM false
               AND o.ean ~ '^([0-9]{8}|[0-9]{12,14})$'
               AND lpad(o.ean, 14, '0') = :gtin
               AND (o.run_id IS NULL OR EXISTS (SELECT 1 FROM scrape_runs r WHERE r.id = o.run_id AND r.completed_at IS NOT NULL))
@@ -88,8 +89,9 @@ public interface ScrapedOfferRepository extends JpaRepository<ScrapedOffer, Long
             SELECT o.* FROM scraped_offers o
             WHERE o.run_id = :runId AND o.store_id = :storeId AND o.status = 'PENDING'
               AND ((CAST(:gtin AS text) IS NOT NULL
+                    AND o.has_ean IS DISTINCT FROM false
                     AND o.ean ~ '^([0-9]{8}|[0-9]{12,14})$' AND lpad(o.ean, 14, '0') = :gtin)
-                   OR (CAST(:gtin AS text) IS NOT NULL AND (btrim(coalesce(o.ean, '')) = '' OR o.ean ~ '^[0-9]{1,7}$'))
+                   OR (CAST(:gtin AS text) IS NOT NULL AND (o.has_ean = false OR btrim(coalesce(o.ean, '')) = '' OR o.ean ~ '^[0-9]{1,7}$'))
                    OR (CAST(:productId AS bigint) IS NOT NULL AND EXISTS (
                        SELECT 1 FROM store_product_links l WHERE l.store_id = o.store_id
                          AND l.store_sku = o.store_sku AND l.product_id = :productId)))

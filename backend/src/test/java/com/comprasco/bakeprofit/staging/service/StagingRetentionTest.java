@@ -42,6 +42,7 @@ class StagingRetentionTest {
         verify(offerRepository).deleteByStatusMarkedBefore(eq(OfferStatus.PROCESSED), processedCutoff.capture());
         verify(offerRepository).deleteByStatusMarkedBefore(eq(OfferStatus.UNCLASSIFIED), unclassifiedCutoff.capture());
         verify(offerRepository, never()).deleteByStatusMarkedBefore(eq(OfferStatus.PENDING), any());
+        verify(offerRepository, never()).deleteByStatusMarkedBefore(eq(OfferStatus.CONFLICT), any());
         LocalDateTime now = LocalDateTime.now();
         assertThat(processedCutoff.getValue()).isCloseTo(now.minusDays(2), within(1, ChronoUnit.MINUTES));
         assertThat(unclassifiedCutoff.getValue()).isCloseTo(now.minusDays(7), within(1, ChronoUnit.MINUTES));

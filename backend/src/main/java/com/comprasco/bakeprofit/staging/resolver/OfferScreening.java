@@ -3,6 +3,7 @@ package com.comprasco.bakeprofit.staging.resolver;
 import com.comprasco.bakeprofit.catalog.entity.Product;
 import com.comprasco.bakeprofit.catalog.util.GtinVerdict;
 import com.comprasco.bakeprofit.staging.entity.StoreProductLink;
+import com.comprasco.bakeprofit.staging.entity.OfferStatus;
 import com.comprasco.bakeprofit.staging.repository.EanSizeOverrideRepository;
 import com.comprasco.bakeprofit.staging.repository.StoreProductLinkRepository;
 import com.comprasco.bakeprofit.staging.identity.SecondaryIdentityResolver;
@@ -87,6 +88,9 @@ public class OfferScreening {
     }
 
     private Result screen(ScrapedOffer offer, boolean requireTargetMatch) {
+        if (offer.getStatus() == OfferStatus.CONFLICT) {
+            return Result.rejected("oferta en conflicto: requiere revisión manual");
+        }
         if (offer.getScrapeTarget() == null) return Result.rejected(NO_TARGET_REASON);
         ScrapeTarget target = offer.getScrapeTarget();
         if (!Boolean.TRUE.equals(target.getActive())) return Result.rejected("objetivo de búsqueda inactivo");
@@ -98,6 +102,9 @@ public class OfferScreening {
         if (categoryError.isPresent()) return Result.rejected(categoryError.get());
         Optional<String> identityError = pendingIdentity(offer);
         if (identityError.isPresent()) return Result.rejected(identityError.get());
+        if (offer.usesSkuIdentity() && !secondaryIdentity.supports(offer)) {
+            return Result.rejected("identidad por SKU no habilitada para esta tienda");
+        }
         if (secondaryIdentity.supports(offer)) {
             return screenSecondaryIdentity(offer);
         }
