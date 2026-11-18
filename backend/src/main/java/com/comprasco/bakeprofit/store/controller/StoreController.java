@@ -60,8 +60,9 @@ public class StoreController {
     @Operation(summary = "Listar tiendas activas", description = "Filtra tiendas por su estado")
     @ApiResponse(responseCode = "200", description = "Lista de tiendas activas")
     @GetMapping("/active")
-    public ResponseEntity<List<StoreResponse>> findActive() {
-        return ResponseEntity.ok(storeService.findActive());
+    public ResponseEntity<List<StoreResponse>> findActive(
+            @RequestParam(required = false) Long sectionId) {
+        return ResponseEntity.ok(storeService.findActive(sectionId));
     }
 
 
