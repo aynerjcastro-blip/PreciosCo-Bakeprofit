@@ -94,4 +94,29 @@ class OfferEnrichmentTest {
         when(offer.getSaleWeightKg()).thenReturn(null);
         assertThat(screening.screen(offer).rejection()).contains("sin peso");
     }
+
+    @Test
+    void conflictoNoSeCompletaConOverrideNiTargetExacto() {
+        var publishedOffer = offer(SUPERMARKET);
+        var exactTarget = ScrapeTarget.of(publishedOffer.getStore(),
+                publishedOffer.getScrapeTarget().getCategory(), "arroz", UnitBase.G,
+                NET_CONTENT, NET_CONTENT);
+        ReflectionTestUtils.setField(exactTarget, "expectedEan", GTIN_14);
+        when(publishedOffer.getScrapeTarget()).thenReturn(exactTarget);
+        when(publishedOffer.getStatus()).thenReturn(OfferStatus.CONFLICT);
+        when(publishedOffer.getNetContent()).thenReturn(null);
+        when(publishedOffer.getUnitBase()).thenReturn(null);
+        assertThat(screening.screen(publishedOffer).rejection()).contains("conflicto");
+        assertThat(screening.screenSizeEvidence(publishedOffer).isRejected()).isTrue();
+        verifyNoInteractions(overrides, links);
+    }
+
+    @Test
+    void skuNoAutorizadoNoSeInterpretaComoEanComercial() {
+        var publishedOffer = offer(SUPERMARKET);
+        when(publishedOffer.usesSkuIdentity()).thenReturn(true);
+        assertThat(screening.screen(publishedOffer).rejection()).contains("SKU no habilitada");
+        verifyNoInteractions(overrides, links);
+    }
+
 }

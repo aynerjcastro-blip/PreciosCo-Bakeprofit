@@ -25,6 +25,7 @@ import org.springframework.test.context.event.RecordApplicationEvents;
 import com.comprasco.bakeprofit.notification.event.PriceRegisteredEvent;
 import com.comprasco.bakeprofit.staging.repository.PendingOfferKey;
 import com.comprasco.bakeprofit.staging.entity.OfferStatus;
+import com.comprasco.bakeprofit.staging.entity.ScrapedOffer;
 import com.comprasco.bakeprofit.staging.repository.ScrapedOfferRepository;
 import com.comprasco.bakeprofit.staging.service.StagingProcessor;
 import com.comprasco.bakeprofit.staging.service.OfferIngestionService.Result;
@@ -503,4 +504,63 @@ class StagingProcessorIntegrationTest {
         }
         return body.append((10 - sum % 10) % 10).toString();
     }
+
+    @Test
+    void skuRealAprendeSuMapaYDeduplicaSinBorrarElAnterior() {
+        jdbcTemplate.update("UPDATE stores SET name = 'bellapiel' WHERE id = ?", storeId);
+        Long initialOffer = insertFacialOffer(eanRice, PRICE, "500", null, KEYSET_BASE);
+        processor.processOffers(List.of(initialOffer));
+        String realSku = "7012";
+        jdbcTemplate.update("INSERT INTO store_sku_ean_map (store_id, store_sku, ean, reason) "
+                + "VALUES (?, '8214', ?, 'Mapa anterior verificado')", storeId, gtin14(eanRice));
+        Long skuOffer = insertFacialOffer(realSku, LOWER_PRICE, "500", null, KEYSET_BASE.plusDays(1));
+        jdbcTemplate.update("UPDATE scraped_offers SET store_sku = ?, has_ean = false WHERE id = ?",
+                realSku, skuOffer);
+        Long canonicalOffer = insertFacialOffer(eanRice, PRICE, "500", null, KEYSET_BASE.plusDays(1));
+        completedRun(skuOffer, canonicalOffer);
+        processor.processOffers(List.of(canonicalOffer, skuOffer));
+        assertThat(pricesOf(eanRice)).hasSize(2);
+        assertThat(jdbcTemplate.queryForObject("SELECT ean FROM store_sku_ean_map "
+                + "WHERE store_id = ? AND store_sku = ?", String.class, storeId, realSku))
+                .isEqualTo(gtin14(eanRice));
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM store_sku_ean_map WHERE store_id = ?",
+                Integer.class, storeId)).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForObject("SELECT reason FROM scraped_offers WHERE id = ?",
+                String.class, canonicalOffer)).isEqualTo("duplicada en la corrida");
+    }
+
+    @Test
+    void skuConChecksumNoSeMezclaConEseEanComercial() {
+        jdbcTemplate.update("UPDATE stores SET name = 'bellapiel' WHERE id = ?", storeId);
+        Long initialOffer = insertFacialOffer(eanRice, PRICE, "500", null, KEYSET_BASE);
+        processor.processOffers(List.of(initialOffer));
+        jdbcTemplate.update("INSERT INTO store_sku_ean_map (store_id, store_sku, ean, reason) "
+                + "VALUES (?, ?, ?, 'SKU numerico verificado')", storeId, eanBeans, gtin14(eanRice));
+        Long skuOffer = insertFacialOffer(eanBeans, LOWER_PRICE, "500", null, KEYSET_BASE.plusDays(1));
+        jdbcTemplate.update("UPDATE scraped_offers SET store_sku = ?, has_ean = false, "
+                + "name = (SELECT name FROM products WHERE ean = ?) WHERE id = ?",
+                eanBeans, gtin14(eanRice), skuOffer);
+        assertThat(processor.processOffers(List.of(skuOffer)).count(Result.NEW_PRICE)).isEqualTo(1);
+        assertThat(pricesOf(eanRice)).hasSize(2);
+        assertThat(pricesOf(eanBeans)).isEmpty();
+    }
+
+    @Test
+    void conflictoQuedaFueraDePendientesYNoGeneraPrecioNiEvento() {
+        Long conflictedOffer = insertFacialOffer(eanRice, PRICE, "500", null, KEYSET_BASE);
+        jdbcTemplate.update("UPDATE scrape_targets SET expected_ean = ?, min_content = 500, max_content = 500 "
+                + "WHERE id = ?", gtin14(eanRice), targetId);
+        jdbcTemplate.update("INSERT INTO ean_size_overrides (ean, net_content, unit_base, reason) "
+                + "VALUES (?, 500, 'G', 'Fixture de respaldo')", gtin14(eanRice));
+        jdbcTemplate.update("UPDATE scraped_offers SET net_content = NULL, unit_base = NULL, "
+                + "status = 'CONFLICT', reason = '30 ML vs 50 ML' WHERE id = ?", conflictedOffer);
+        assertThat(processor.processOffers(List.of(conflictedOffer)).count(Result.SKIPPED)).isEqualTo(1);
+        assertThat(offerRepository.findByStatus(OfferStatus.PENDING))
+                .extracting(ScrapedOffer::getId).doesNotContain(conflictedOffer);
+        assertThat(offerRepository.findById(conflictedOffer).orElseThrow().getStatus())
+                .isEqualTo(OfferStatus.CONFLICT);
+        assertThat(pricesOf(eanRice)).isEmpty();
+        assertThat(events.stream(PriceRegisteredEvent.class)).isEmpty();
+    }
+
 }

@@ -15,3 +15,7 @@ repomix-output.xml
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Diagnósticos regenerables del scraper facial
+scrapers/facial/sku_offers.csv
+scrapers/facial/conflictos_tamanos.csv

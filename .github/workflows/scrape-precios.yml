@@ -59,6 +59,8 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_SSLMODE: require
           SOLO_TIENDAS: ${{ matrix.dominio == 'supermercados' && (inputs.tiendas_supermercados || 'd1,jumbo,olimpica') || matrix.dominio == 'droguerias' && inputs.tiendas_droguerias || matrix.dominio == 'facial' && inputs.tiendas_facial || '' }}
+          SKU_OFFERS_PATH: sku_offers.csv
+          CONFLICTOS_TAMANOS_PATH: conflictos_tamanos.csv
           SCRAPER_SCRIPT: ${{ matrix.script }}
         run: python "$SCRAPER_SCRIPT"
       - name: Subir descartados
@@ -66,6 +68,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: descartados-facial
-          path: scrapers/facial/descartados.csv
+          path: |
+            scrapers/facial/descartados.csv
+            scrapers/facial/sin_tamano.csv
+            scrapers/facial/ean_diagnostico.json
+            scrapers/facial/sku_offers.csv
+            scrapers/facial/conflictos_tamanos.csv
           if-no-files-found: ignore
           retention-days: 7

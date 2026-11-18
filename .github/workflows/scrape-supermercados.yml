@@ -92,6 +92,8 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_SSLMODE: require
           SOLO_TIENDAS: ${{ github.event.inputs.tiendas || 'cutis,medipiel,bellapiel' }}
+          SKU_OFFERS_PATH: sku_offers.csv
+          CONFLICTOS_TAMANOS_PATH: conflictos_tamanos.csv
           MOSTRAR_DESCARTES: "1"
           DESCARTADOS_PATH: descartados_facial.csv
           SIN_TAMANO_PATH: sin_tamano_facial.csv
@@ -106,5 +108,7 @@ jobs:
             scrapers/facial/descartados_facial.csv
             scrapers/facial/sin_tamano_facial.csv
             scrapers/facial/ean_diagnostico.json
+            scrapers/facial/sku_offers.csv
+            scrapers/facial/conflictos_tamanos.csv
           if-no-files-found: warn
           retention-days: 7

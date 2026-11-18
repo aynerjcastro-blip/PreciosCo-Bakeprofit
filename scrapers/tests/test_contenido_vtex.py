@@ -46,8 +46,8 @@ def test_writer_admite_paginas_y_vtex_con_misma_corrida():
     with patch("comun.staging.psycopg2.extras.execute_values") as insert:
         insertar_ofertas(conn, [tuple(range(13)), tuple(range(15))], "run")
         rows = insert.call_args.args[2]
-        assert all(len(row) == 16 and row[-1] == "run" for row in rows)
-        assert rows[0][-3:-1] == (None, None)
+        assert all(len(row) == 18 and row[-1] == "run" for row in rows)
+        assert rows[0][13:17] == (None, None, None, None)
 
 
 def test_respaldo_no_confunde_piezas_y_reconoce_sixpack():

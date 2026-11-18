@@ -3,10 +3,11 @@ package com.comprasco.bakeprofit.staging.entity;
 /**
  * Estado de una oferta del staging del scraper.
  * PENDING: recién cargada. PROCESSED: el procesador la convirtió en precio.
+ * CONFLICT: requiere revisión manual y no entra al procesador.
  * UNCLASSIFIED: no pasó los filtros; {@code reason} explica por qué.
  */
 public enum OfferStatus {
-    PENDING, PROCESSED, UNCLASSIFIED;
+    PENDING, PROCESSED, UNCLASSIFIED, CONFLICT;
 
     /** Longitud de la columna VARCHAR que guarda el valor en la BD. */
     public static final int COLUMN_LENGTH = 15;

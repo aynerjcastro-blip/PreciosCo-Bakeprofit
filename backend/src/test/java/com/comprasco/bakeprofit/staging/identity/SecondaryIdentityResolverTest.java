@@ -170,4 +170,42 @@ class SecondaryIdentityResolverTest {
         verify(mappings, never()).save(any());
         verifyNoInteractions(catalog);
     }
+
+    @Test
+    void skuConFormaDeEanUsaMapaSecundarioYNoIdentidadComercial() {
+        ScrapedOffer publishedOffer = localOffer();
+        when(publishedOffer.usesSkuIdentity()).thenReturn(true);
+        when(publishedOffer.getEan()).thenReturn("4006381333931");
+        when(publishedOffer.getStoreSku()).thenReturn("4006381333931");
+        Product product = candidate(publishedOffer, OFFER_NAME);
+        when(mappings.findByStoreIdAndStoreSku(1L, "4006381333931"))
+                .thenReturn(Optional.of(StoreSkuEanMap.learned(1L, "4006381333931", GTIN_14)));
+        when(products.findByEan(GTIN_14)).thenReturn(Optional.of(product));
+        assertThat(resolver.supports(publishedOffer)).isTrue();
+        assertThat(resolver.resolve(publishedOffer).product()).isSameAs(product);
+    }
+
+    @Test
+    void identidadSkuExigeLaClaveRealAunqueEanContengaUnCodigoLocal() {
+        ScrapedOffer publishedOffer = localOffer();
+        when(publishedOffer.usesSkuIdentity()).thenReturn(true);
+        assertThat(resolver.resolve(publishedOffer).rejection()).contains("falta el SKU");
+        verifyNoInteractions(mappings, products, catalog);
+    }
+
+    @Test
+    void skuAlfanumericoAprendePorClaveRealSinCambiarElCodigoCrudo() {
+        ScrapedOffer publishedOffer = localOffer();
+        when(publishedOffer.usesSkuIdentity()).thenReturn(true);
+        when(publishedOffer.getEan()).thenReturn("sku-real");
+        when(publishedOffer.getStoreSku()).thenReturn("sku-real");
+        Product product = candidate(publishedOffer, OFFER_NAME);
+        candidates(product);
+        assertThat(resolver.resolve(publishedOffer).product()).isSameAs(product);
+        resolver.remember(publishedOffer, product);
+        verify(mappings).save(argThat(mapping -> mapping.getStoreSku().equals("sku-real")
+                && mapping.getEan().equals(GTIN_14)));
+        assertThat(publishedOffer.getEan()).isEqualTo("sku-real");
+    }
+
 }

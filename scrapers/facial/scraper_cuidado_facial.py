@@ -16,6 +16,8 @@ Variables de entorno:
     DESCARTADOS_PATH      opcional, dónde se guarda el CSV de descartes (por defecto descartados.csv)
     SIN_TAMANO_PATH       opcional, CSV con las ofertas insertadas sin net_content/unit_base y por qué
                           (por defecto sin_tamano.csv)
+    SKU_OFFERS_PATH       opcional, CSV de ofertas sin EAN comercial publicado (sku_offers.csv)
+    CONFLICTOS_TAMANOS_PATH opcional, evidencia de tamaños contradictorios (conflictos_tamanos.csv)
     EAN_DIAG_PATH         opcional, JSON con el producto crudo de hasta 3 ofertas por tienda cuyo EAN no
                           es un GTIN válido, para ver en qué campo guarda la tienda el código de barras
                           (por defecto ean_diagnostico.json)
@@ -34,12 +36,9 @@ import re
 import sys
 import time
 import unicodedata
-from collections import OrderedDict
 from pathlib import Path
 from uuid import uuid4
-from urllib.parse import quote, urlencode
 from collections import Counter, OrderedDict
-from datetime import datetime
 from urllib.parse import quote, urlencode, urlparse
 from urllib.robotparser import RobotFileParser
 
@@ -64,6 +63,7 @@ PAUSA = 1.5                          # segundos entre peticiones (mínimo; sube 
 MAX_PAUSA_ROBOTS = 60                # si el Crawl-delay supera esto, se omite la tienda
 UMBRAL_SIN_TAMANO = 30             # % de ofertas sin tamaño por tienda que dispara un aviso
 BLOQUEOS_MAX = 3                     # 403/429 seguidos antes de cortar la tienda
+EAN_MAX_LENGTH = 20
 SKU_MAX_LENGTH = 100
 TIMEOUT = 30
 OK = (200, 206)                      # VTEX responde 206 cuando se usa _from/_to
@@ -173,70 +173,59 @@ def _descripcion(p):
     return normalizar(re.sub(r"<[^>]+>", " ", t))
 
 
-def extraer_tamano(p):
-    """(net_content, unit_base, detalle).
-    detalle dice de dónde salió el tamaño (nombre, titulo, sku, spec, url, descripcion, mayoria) o por qué
-    no hay: pack (kit o '2 x 30 ml'), ambiguo (dos tamaños en el nombre), conflicto (las fuentes no
-    coinciden y ninguna tiene mayoría) o sin_dato.
-    Si el nombre no trae tamaño se consultan otras fuentes; cada TIPO de fuente (titulo, sku, spec, url)
-    vota una sola vez por valor, y gana el valor con más fuentes distintas. Un empate deja NULL.
-    Nunca se adivina: ante duda, NULL."""
-    item = (p.get("items") or [{}])[0]
-    nombre = p.get("productName") or ""
-    s = _tamanos_en(nombre)
-    if s is None:
+def fuentesPresentacion(producto):
+    itemPublicado = (producto.get("items") or [{}])[0]
+    fuentes = [("nombre", producto.get("productName") or ""),
+               ("titulo", producto.get("productTitle") or "")]
+    for campo in ("name", "nameComplete"):
+        fuentes.append(("sku." + campo, itemPublicado.get(campo) or ""))
+    fuentes.extend(("spec", texto) for texto in _textos_especificaciones(producto))
+    fuentes.append(("url", _slug(producto)))
+    return fuentes
+
+
+def evidenciaPresentacion(producto):
+    evidencias = []
+    for fuente, texto in fuentesPresentacion(producto):
+        medidas = _tamanos_en(texto)
+        if medidas is None:
+            return [], True
+        for unidad, contenido in sorted(medidas):
+            evidencias.append({"source": fuente, "source_text": texto,
+                               "detected_content": contenido, "detected_unit": unidad})
+    for coincidencia in _DESC.finditer(_descripcion(producto)):
+        numero = _numero(coincidencia.group(1))
+        unidad, factor = _U[coincidencia.group(2)]
+        if numero is not None and 0 < numero * factor < 10_000_000:
+            evidencias.append({"source": "descripcion", "source_text": coincidencia.group(0),
+                               "detected_content": round(numero * factor, 2),
+                               "detected_unit": unidad})
+    return evidencias, False
+
+
+def resolverPresentacion(evidencias, esPack):
+    if esPack:
         return None, None, "pack"
-    if len(s) == 1:
-        base, valor = next(iter(s))
-        return valor, base, "nombre"
-    if len(s) > 1:
-        return None, None, "ambiguo"
+    medidas = {(evidencia["detected_unit"], evidencia["detected_content"])
+               for evidencia in evidencias}
+    if len(medidas) > 1:
+        return None, None, "conflicto"
+    if not medidas:
+        return None, None, "sin_dato"
+    unidad, contenido = next(iter(medidas))
+    return contenido, unidad, evidencias[0]["source"]
 
-    # El nombre no trae tamaño: se prueban otras fuentes
-    fuentes = []
-    titulo = p.get("productTitle") or ""
-    if titulo and titulo != nombre:
-        fuentes.append(("titulo", titulo))
-    for k in ("name", "nameComplete"):
-        v = item.get(k) or ""
-        if v and v != nombre:
-            fuentes.append(("sku", v))
-    fuentes += [("spec", t) for t in _textos_especificaciones(p)]
-    fuentes.append(("url", _slug(p)))
-    candidatos = []
-    for fuente, texto in fuentes:
-        s = _tamanos_en(texto)
-        if s is None:
-            return None, None, "pack"
-        if len(s) == 1:
-            candidatos.append((fuente, next(iter(s))))
-    if candidatos:
-        votos = OrderedDict()                    # (unidad, cantidad) -> tipos de fuente distintos
-        for fuente, c in candidatos:
-            tipos = votos.setdefault(c, [])
-            if fuente not in tipos:
-                tipos.append(fuente)
-        orden = sorted(votos.items(), key=lambda kv: len(kv[1]), reverse=True)
-        if len(orden) == 1:
-            (base, valor), tipos = orden[0]
-            return valor, base, tipos[0]
-        if len(orden[0][1]) > len(orden[1][1]):
-            (base, valor), tipos = orden[0]
-            return valor, base, "mayoria: " + "+".join(tipos)
-        return None, None, "conflicto: " + " vs ".join(
-            f"{v:g} {b}({'+'.join(tipos)})" for (b, v), tipos in orden)
 
-    # Último recurso: la descripción, solo con una etiqueta de contenido delante
-    d = set()
-    for m in _DESC.finditer(_descripcion(p)):
-        n = _numero(m.group(1))
-        if n is not None:
-            base, factor = _U[m.group(2)]
-            d.add((base, round(n * factor, 2)))
-    if len(d) == 1:
-        base, valor = next(iter(d))
-        return valor, base, "descripcion"
-    return None, None, "sin_dato"
+def motivoConflicto(evidencias):
+    medidas = sorted({f"{evidencia['detected_content']:g} {evidencia['detected_unit']}"
+                      for evidencia in evidencias})
+    return "conflicto de tamaño publicado: " + " vs ".join(medidas) + "; requiere revisión manual"
+
+
+def extraer_tamano(producto):
+    """Toda contradicción queda pendiente; una URL no desempata por mayoría."""
+    evidencias, esPack = evidenciaPresentacion(producto)
+    return resolverPresentacion(evidencias, esPack)
 
 
 def cumple_terminos(nombre, termino):
@@ -387,8 +376,7 @@ class Cliente:
 
 # ─────────────────────────── EAN ───────────────────────────
 def ean_valido(c):
-    """GTIN-8/12/13/14 con dígito verificador correcto (solo para ELEGIR entre campos candidatos;
-    la validación oficial sigue siendo del procesador de staging)."""
+    """Comprueba estructura; Java conserva la validación oficial de identidad."""
     if not re.fullmatch(r"\d{8}|\d{12,14}", c or ""):
         return False
     d = [int(x) for x in c]
@@ -396,49 +384,20 @@ def ean_valido(c):
     return (10 - suma % 10) % 10 == d[-1]
 
 
-def _ean_de_imagenes(item):
-    """Algunas tiendas (Bellapiel) no cargan el EAN en el catálogo pero nombran la foto con él
-    ('8429420248977-1.jpg.jpg'). Solo cuenta el número con el que EMPIEZA el nombre del archivo (la ruta,
-    no el '?v=...') y luego elegir_ean exige que tenga dígito verificador válido."""
-    out = []
-    for img in item.get("images") or []:
-        archivo = urlparse((img or {}).get("imageUrl") or "").path.rsplit("/", 1)[-1]
-        m = re.match(r"(\d{8}|\d{12,14})(?!\d)", archivo)
-        if m:
-            out.append(m.group(1))
-    return out
+def eanComercial(codigo):
+    if not codigo or not codigo.isascii() or not ean_valido(codigo) or set(codigo) == {"0"}:
+        return False
+    normalizado = codigo.zfill(14)
+    if normalizado.startswith("000000"):
+        return not normalizado[-8:].startswith(("0", "2"))
+    if normalizado.startswith("0"):
+        return not normalizado[-13:].startswith(("02", "04", "2"))
+    return not normalizado.startswith("9")
 
 
-def _candidatos_ean(p, item):
-    """Todos los campos donde una tienda VTEX puede guardar el código de barras.
-    Algunas (Bellapiel) dejan en items[0].ean el ID interno de 4 dígitos."""
-    crudos = [item.get("ean")]
-    for r in item.get("referenceId") or []:
-        if isinstance(r, dict):
-            crudos.append(r.get("Value"))
-    crudos += [p.get("productReference"), p.get("productReferenceCode")]
-    for k in p.get("allSpecifications") or []:
-        if isinstance(k, str) and re.search(r"\bean\b|gtin|barra", normalizar(k)):
-            crudos += _valores(p.get(k))
-    crudos += _ean_de_imagenes(item)
-    vistos, out = set(), []
-    for x in crudos:
-        x = str(x if x is not None else "").strip()
-        if re.fullmatch(r"[\d\s-]+", x):
-            x = re.sub(r"\D", "", x)          # '7 702 123 ...' -> solo dígitos
-        if x and x not in vistos:
-            vistos.add(x)
-            out.append(x)
-    return out
-
-
-def elegir_ean(p, item):
-    """Primer candidato con dígito verificador válido; si ninguno lo es se deja el de items[0].ean tal cual
-    (staging lo marcará como inválido o ausente, como antes)."""
-    for c in _candidatos_ean(p, item):
-        if ean_valido(c):
-            return c
-    return str(item.get("ean") or "").strip() or None
+def elegir_ean(producto, item):
+    codigoPublicado = str(item.get("ean") or "").strip() or None
+    return codigoPublicado if eanComercial(codigoPublicado) else extraerSku(producto)
 
 
 # ─────────────────────────── Parseo de productos ───────────────────────────
@@ -482,14 +441,19 @@ def parsear(p):
     precio = _positivo(oferta.get("Price"))
     if not nombre or precio is None:
         return None, "sin_precio"
+    codigoOriginal = str(item.get("ean") or "").strip() or None
     ean = elegir_ean(p, item)
-    if ean and len(ean) > 20:             # no cabe en VARCHAR(20); el backend lo verá sin EAN
-        ean = None
+    tieneEan = eanComercial(codigoOriginal)
     brand = ((p.get("brand") or "").strip()[:100]) or None
     imagenes = item.get("images") or []
-    net, unidad, detalle = extraer_tamano(p)
+    evidencias, esPack = evidenciaPresentacion(p)
+    net, unidad, detalle = resolverPresentacion(evidencias, esPack)
+    identificadorFueraDeLimite = ean is not None and len(ean) > EAN_MAX_LENGTH
+    motivoIdentidad = None
+    if not tieneEan and (ean is None or identificadorFueraDeLimite):
+        motivoIdentidad = "SKU ausente o mayor de 20 caracteres: requiere revisión manual"
     return {
-        "ean": ean,
+        "ean": None if identificadorFueraDeLimite else ean,
         "name": nombre,
         "brand_name": brand,
         "price": precio,
@@ -499,6 +463,11 @@ def parsear(p):
         "net_content": net,
         "unit_base": unidad,
         "tamano_detalle": detalle,
+        "has_ean": tieneEan,
+        "original_code": codigoOriginal,
+        "status": "CONFLICT" if detalle == "conflicto" or motivoIdentidad else "PENDING",
+        "reason": motivoConflicto(evidencias) if detalle == "conflicto" else motivoIdentidad,
+        "size_evidence": evidencias,
     }, None
 
 
@@ -652,6 +621,7 @@ def procesar_target(conn, cli, t, run_id=None):
 
     ahora = ahora_colombia()
     vistos, filas = set(), []
+    ofertasSku, conflictosTamano = [], []
     for p in productos:
         clave = p.get("productId") or p.get("link")
         if clave in vistos:
@@ -690,7 +660,7 @@ def procesar_target(conn, cli, t, run_id=None):
             st["kits"] += 1
             DESCARTADOS.append((t["store_name"], t["search_term"], "kit", p.get("productName"), "", "", ""))
             continue
-        if not ean_valido(d["ean"]):
+        if not d["has_ean"]:
             st["ean_invalido"] += 1
             _registrar_ean_diag(t["store_name"], p)
         st["por_detalle"][d["tamano_detalle"].split(":")[0]] += 1
@@ -699,7 +669,19 @@ def procesar_target(conn, cli, t, run_id=None):
             SIN_TAMANO.append(_fila_sin_tamano(t, p, d))
         filas.append((t["store_id"], t["id"], d["ean"], d["name"], d["brand_name"], d["price"],
                       d["list_price"], d["product_url"], d["image_url"], d["net_content"],
-                      d["unit_base"], ahora, "PENDING", extraerSku(p), None))
+                      d["unit_base"], ahora, d["status"], extraerSku(p), None,
+                      d["has_ean"], d["reason"]))
+        contexto = {"run_id": str(run_id) if run_id else "", "store_id": t["store_id"],
+                    "store_name": t["store_name"], "target_id": t["id"],
+                    "store_sku": extraerSku(p), "ean": d["ean"], "local_code": d["original_code"],
+                    "name": d["name"], "brand_name": d["brand_name"],
+                    "net_content": d["net_content"], "unit_base": d["unit_base"],
+                    "price": d["price"], "product_url": d["product_url"],
+                    "status": d["status"], "reason": d["reason"]}
+        if not d["has_ean"]:
+            ofertasSku.append(contexto)
+        if d["tamano_detalle"] == "conflicto":
+            conflictosTamano.extend(dict(contexto, **evidencia) for evidencia in d["size_evidence"])
     if filas:
         try:
             insertar_ofertas(conn, filas, run_id)
@@ -707,6 +689,8 @@ def procesar_target(conn, cli, t, run_id=None):
             conn.rollback()
             st["error"] = f"BD: {str(e).strip().splitlines()[0]}"
             return st
+    SKU_OFFERS.extend(ofertasSku)
+    CONFLICTOS_TAMANOS.extend(conflictosTamano)
     st["insertados"] = len(filas)
     return st
 
@@ -829,6 +813,30 @@ def main():
         guardar_descartados()
         guardar_sin_tamano()
         guardar_ean_diag()
+        guardarRevisionManual()
+
+
+SKU_OFFERS = []
+CONFLICTOS_TAMANOS = []
+CAMPOS_REVISION = ["run_id", "store_id", "store_name", "target_id", "store_sku", "ean",
+                   "local_code", "name", "brand_name", "net_content", "unit_base", "price", "product_url", "status", "reason"]
+CAMPOS_CONFLICTO = CAMPOS_REVISION + ["source", "source_text", "detected_content", "detected_unit"]
+
+
+def guardarCsvRevision(variableRuta, rutaPredeterminada, campos, filas):
+    ruta = Path(os.getenv(variableRuta, rutaPredeterminada)).resolve()
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    with ruta.open("w", newline="", encoding="utf-8-sig") as archivo:
+        escritor = csv.DictWriter(archivo, fieldnames=campos)
+        escritor.writeheader()
+        escritor.writerows(filas)
+    print(f"Revisión manual: {len(filas)} filas guardadas en {ruta}")
+
+
+def guardarRevisionManual():
+    guardarCsvRevision("SKU_OFFERS_PATH", "sku_offers.csv", CAMPOS_REVISION, SKU_OFFERS)
+    guardarCsvRevision("CONFLICTOS_TAMANOS_PATH", "conflictos_tamanos.csv",
+                       CAMPOS_CONFLICTO, CONFLICTOS_TAMANOS)
 
 
 if __name__ == "__main__":

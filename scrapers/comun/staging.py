@@ -30,7 +30,7 @@ SQL_TARGETS = """
 SQL_INSERT = """
     INSERT INTO scraped_offers
         (store_id, scrape_target_id, ean, name, brand_name, price, list_price,
-         product_url, image_url, net_content, unit_base, scraped_at, status, store_sku, sale_weight_kg, run_id)
+         product_url, image_url, net_content, unit_base, scraped_at, status, store_sku, sale_weight_kg, has_ean, reason, run_id)
     VALUES %s
 """
 
@@ -84,7 +84,18 @@ def terminar_corrida(conn, run_id):
 
 
 def insertar_ofertas(conn, filas, run_id=None):
-    filas = [tuple(f) + ((None, None) if len(f) == 13 else ()) + (str(run_id) if run_id else None,) for f in filas]
+    filas = [normalizarFila(fila, run_id) for fila in filas]
     with conn.cursor() as cur:
         psycopg2.extras.execute_values(cur, SQL_INSERT, filas, page_size=100)
     conn.commit()
+
+
+def normalizarFila(fila, runId):
+    campos = tuple(fila)
+    if len(campos) == 13:
+        campos += (None, None)
+    if len(campos) == 15:
+        campos += (None, None)
+    if len(campos) != 17:
+        raise ValueError("La oferta debe contener 13, 15 o 17 campos antes del run_id")
+    return campos + (str(runId) if runId else None,)
