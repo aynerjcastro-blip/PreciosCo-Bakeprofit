@@ -108,16 +108,16 @@ class SecondaryIdentityResolverTest {
         Product product = candidate(offer, OFFER_NAME);
         product.setBrand(Brand.named("Otra marca"));
         candidates(product);
-        assertThat(resolver.resolve(offer).rejection()).contains("sin coincidencia");
+        assertThat(resolver.resolve(offer).rejection()).contains("sin identidad comparable o atributos compatibles");
         product.setBrand(Brand.named("Diana"));
         product.setUnitBase(UnitBase.ML);
-        assertThat(resolver.resolve(offer).rejection()).contains("sin coincidencia");
+        assertThat(resolver.resolve(offer).rejection()).contains("sin identidad comparable o atributos compatibles");
     }
 
     @Test
     void sinCatalogoNoCreaProductosNiMapeos() {
         ScrapedOffer offer = localOffer();
-        assertThat(resolver.resolve(offer).rejection()).contains("sin coincidencia");
+        assertThat(resolver.resolve(offer).rejection()).contains("sin candidatos por categoría, marca y presentación");
         verifyNoInteractions(products);
         verify(mappings, never()).save(any());
     }
@@ -144,5 +144,30 @@ class SecondaryIdentityResolverTest {
         when(catalog.findCandidates(anyLong(), anyString(), any(), anyString(), any()))
                 .thenReturn(java.util.Collections.nCopies(CANDIDATE_LIMIT + 1, product));
         assertThat(resolver.resolve(offer).rejection()).contains("demasiados");
+    }
+
+    @Test
+    void candidatosCompatiblesConNombreDistintoInformanPuntajeSinAprender() {
+        ScrapedOffer offer = localOffer();
+        candidates(candidate(offer, "Producto completamente diferente"));
+        assertThat(resolver.resolve(offer).rejection())
+                .contains("similitud de nombre insuficiente", "mejor=", "mínimo=0.9000");
+        verify(mappings, never()).save(any());
+    }
+
+    @Test
+    void equivalenciaIncompatibleIndicaElAtributoSinReemplazarElMapa() {
+        ScrapedOffer offer = localOffer();
+        Product product = candidate(offer, OFFER_NAME);
+        when(mappings.findByStoreIdAndStoreSku(1L, LOCAL_SKU))
+                .thenReturn(Optional.of(StoreSkuEanMap.learned(1L, LOCAL_SKU, GTIN_14)));
+        when(products.findByEan(GTIN_14)).thenReturn(Optional.of(product));
+        product.setUnitBase(UnitBase.ML);
+        assertThat(resolver.resolve(offer).rejection()).contains("presentación o unidad distinta");
+        product.setUnitBase(UnitBase.G);
+        product.setBrand(Brand.named("Marca distinta"));
+        assertThat(resolver.resolve(offer).rejection()).contains("marca distinta o ausente");
+        verify(mappings, never()).save(any());
+        verifyNoInteractions(catalog);
     }
 }
