@@ -20,6 +20,10 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     List<Category> findByActiveTrueAndParentIsNotNull ();
 
+    List<Category> findByParentIdAndActiveTrue(Long parentId);
+
+    List<Category> findByParentIsNullAndActiveTrue();
+
     List<Category> findByActiveFalseAndParentIsNotNull ();
 
     boolean existsByNameIgnoreCase(String name);

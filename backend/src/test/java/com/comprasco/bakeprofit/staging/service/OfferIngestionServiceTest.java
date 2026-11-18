@@ -37,7 +37,7 @@ class OfferIngestionServiceTest {
 
     private static final Long OFFER_ID = 100L;
     private static final OfferScreening.Accepted ACCEPTED =
-            new OfferScreening.Accepted(StagingFixtures.GTIN_14, UnitBase.G);
+            new OfferScreening.Accepted(StagingFixtures.GTIN_14, UnitBase.G, StagingFixtures.NET_CONTENT, null, StagingFixtures.PRICE);
 
     @Mock
     private ScrapedOfferRepository offerRepository;
@@ -120,7 +120,7 @@ class OfferIngestionServiceTest {
         passesUntilPrice();
         Price inserted = Price.observed(product, offer.getStore(), StagingFixtures.PRICE, "x", null, null);
         ReflectionTestUtils.setField(inserted, "id", 55L);
-        when(priceRecorder.record(product, offer)).thenReturn(Optional.of(inserted));
+        when(priceRecorder.record(product, offer, StagingFixtures.PRICE)).thenReturn(Optional.of(inserted));
 
         Outcome outcome = service.process(OFFER_ID);
 
@@ -132,7 +132,7 @@ class OfferIngestionServiceTest {
     @Test
     void precioRepetidoMarcaProcesadaSinEvento() {
         passesUntilPrice();
-        when(priceRecorder.record(product, offer)).thenReturn(Optional.empty());
+        when(priceRecorder.record(product, offer, StagingFixtures.PRICE)).thenReturn(Optional.empty());
 
         Outcome outcome = service.process(OFFER_ID);
 

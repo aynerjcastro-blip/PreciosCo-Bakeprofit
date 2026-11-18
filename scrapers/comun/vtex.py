@@ -17,6 +17,7 @@ from collections import OrderedDict
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from urllib.parse import quote, urlencode
 
+from .contenido_vtex import contenido_publicado, peso_venta_kg
 from .ciudad import CIUDAD, COORDENADAS_CIUDAD
 from .corrida import TiendaStrategy
 from .http import PAUSA, pedir_json
@@ -34,7 +35,8 @@ class VtexStrategy(TiendaStrategy):
     RUTA_REGIONES = "/api/checkout/pub/regions"
     RUTA_SIMULACION = "/api/checkout/pub/orderForms/simulation"
 
-    def __init__(self, base_url, regional=True):
+    def __init__(self, base_url, regional=True, tienda=None):
+        self.tienda = tienda
         self.base_url = base_url.rstrip("/")
         self.regional = regional
         self._vendedores = None     # vendedores de la ciudad, se consultan una vez por corrida
@@ -134,6 +136,10 @@ class VtexStrategy(TiendaStrategy):
 
     def tamano(self, p, target):
         """(net_content, unit_base) del producto: primero el nombre, después la descripción."""
+        if self.tienda in ("jumbo", "olimpica"):
+            estructurado = contenido_publicado(p, self.tienda)
+            if estructurado is not None:
+                return estructurado
         contenido, unidad = parsear_tamano((p.get("productName") or "").strip(), target.get("unit_base"))
         if contenido is None:
             contenido, unidad = tamano_desde_descripcion(p.get("description"), target.get("unit_base"))
@@ -165,8 +171,16 @@ class VtexStrategy(TiendaStrategy):
         marca = (p.get("brand") or "").strip()[:100] or None
         contenido, unidad = self.tamano(p, target)
 
+        peso_kg = peso_venta_kg(item)
+        if peso_kg is None and self.tienda == "olimpica":
+            publicado = contenido_publicado(p, self.tienda)
+            if publicado and publicado[1] == "G":
+                peso_kg = publicado[0] / 1000
+
         return (target["store_id"], target["id"], ean, nombre, marca, precio, lista,
-                p.get("link"), imagen, contenido, unidad, ahora, "PENDING")
+                p.get("link"), imagen, contenido, unidad, ahora, "PENDING",
+                str(item.get("itemId")) if item.get("itemId") is not None else None,
+                peso_kg)
 
     def _filas_regionales(self, session, productos, target, ahora, r):
         items, por_sku = [], {}

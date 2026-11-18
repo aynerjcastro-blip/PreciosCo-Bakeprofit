@@ -1,6 +1,7 @@
 package com.comprasco.bakeprofit.staging.resolver;
 
 import java.util.Optional;
+import com.comprasco.bakeprofit.staging.identity.SecondaryIdentityResolver;
 
 import org.springframework.stereotype.Component;
 
@@ -43,10 +44,13 @@ public class OfferProductResolver {
     private final BrandService brandService;
     private final StoreDomainPolicy domainPolicy;
     private final SizeConflictCheck sizeConflictCheck;
+    private final SecondaryIdentityResolver secondaryIdentity;
 
     public OfferProductResolver(ProductRepository productRepository, BrandRepository brandRepository,
                                 BrandService brandService, StoreDomainPolicy domainPolicy,
-                                SizeConflictCheck sizeConflictCheck) {
+                                SizeConflictCheck sizeConflictCheck,
+                                SecondaryIdentityResolver secondaryIdentity) {
+        this.secondaryIdentity = secondaryIdentity;
         this.productRepository = productRepository;
         this.brandRepository = brandRepository;
         this.brandService = brandService;
@@ -71,18 +75,25 @@ public class OfferProductResolver {
     }
 
     public Match resolve(ScrapedOffer offer, OfferScreening.Accepted accepted) {
+        if (accepted.linkedProduct() != null) {
+            return Match.of(accepted.linkedProduct());
+        }
         return productRepository.findByEan(accepted.gtin())
                 .map(existing -> matchExisting(existing, offer, accepted))
                 .orElseGet(() -> createProduct(offer, accepted));
     }
 
+    public void rememberIdentity(ScrapedOffer offer, Product product) {
+        secondaryIdentity.remember(offer, product);
+    }
+
     private static Match matchExisting(Product existing, ScrapedOffer offer, OfferScreening.Accepted accepted) {
-        if (existing.hasSize(offer.getNetContent(), accepted.unitBase())) {
+        if (existing.hasSize(accepted.netContent(), accepted.unitBase())) {
             return Match.of(existing);
         }
         return Match.rejected(DIFFERENT_SIZE_REASON.formatted(
                 existing.getName(), sizeOf(existing),
-                NetContentLabel.format(offer.getNetContent(), accepted.unitBase())));
+                NetContentLabel.format(accepted.netContent(), accepted.unitBase())));
     }
 
     private Match createProduct(ScrapedOffer offer, OfferScreening.Accepted accepted) {
@@ -106,7 +117,7 @@ public class OfferProductResolver {
     private Product saveProduct(ScrapedOffer offer, OfferScreening.Accepted accepted, Brand brand) {
         return productRepository.save(Product.withIdentity(
                 offer.getName(), offer.getScrapeTarget().getCategory(), brand,
-                accepted.gtin(), offer.getNetContent(), accepted.unitBase()));
+                accepted.gtin(), accepted.netContent(), accepted.unitBase()));
     }
 
     private static String sizeOf(Product product) {

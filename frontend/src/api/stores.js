@@ -10,11 +10,14 @@ const API_BASE = 'http://localhost:8080/api/stores'; // TODO: usar el cliente AP
  * @returns {Promise<Array<{id: number, name: string, category: string}>>}
  * @throws {Error} con `status` (código HTTP, 0 si no hubo conexión)
  */
-export async function findActiveStores() {
+export async function findActiveStores({ sectionId, signal } = {}) {
+    const query = new URLSearchParams();
+    if (sectionId != null) query.set('sectionId', sectionId);
     let response;
     try {
-        response = await fetch(`${API_BASE}/active`);
-    } catch {
+        response = await fetch(`${API_BASE}/active?${query}`, { signal });
+    } catch (failure) {
+        if (failure.name === 'AbortError') throw failure;
         const error = new Error('No se pudo conectar con el servidor');
         error.status = 0;
         throw error;

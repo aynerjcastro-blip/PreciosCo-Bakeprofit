@@ -34,6 +34,10 @@ import re
 import sys
 import time
 import unicodedata
+from collections import OrderedDict
+from pathlib import Path
+from uuid import uuid4
+from urllib.parse import quote, urlencode
 from collections import Counter, OrderedDict
 from datetime import datetime
 from urllib.parse import quote, urlencode, urlparse
@@ -42,6 +46,10 @@ from urllib.robotparser import RobotFileParser
 import psycopg2
 import psycopg2.extras
 import requests
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from comun.ciudad import ahora_colombia
+from comun.staging import iniciar_corrida, terminar_corrida, insertar_ofertas
 
 # ─────────────────────────── Configuración ───────────────────────────
 TIENDAS = {  # nombre en la tabla stores (minúsculas) -> URL base
@@ -56,6 +64,7 @@ PAUSA = 1.5                          # segundos entre peticiones (mínimo; sube 
 MAX_PAUSA_ROBOTS = 60                # si el Crawl-delay supera esto, se omite la tienda
 UMBRAL_SIN_TAMANO = 30             # % de ofertas sin tamaño por tienda que dispara un aviso
 BLOQUEOS_MAX = 3                     # 403/429 seguidos antes de cortar la tienda
+SKU_MAX_LENGTH = 100
 TIMEOUT = 30
 OK = (200, 206)                      # VTEX responde 206 cuando se usa _from/_to
 USER_AGENT = os.getenv(
@@ -433,6 +442,17 @@ def elegir_ean(p, item):
 
 
 # ─────────────────────────── Parseo de productos ───────────────────────────
+def extraerSku(producto):
+    itemsPublicados = producto.get("items") or []
+    if not itemsPublicados:
+        return None
+    skuPublicado = itemsPublicados[0].get("itemId")
+    if skuPublicado is None:
+        return None
+    skuPublicado = str(skuPublicado).strip()
+    return skuPublicado if skuPublicado and len(skuPublicado) <= SKU_MAX_LENGTH else None
+
+
 def disponible(oferta):
     """IsAvailable y Stock > 0. Si la respuesta no trae Stock se usa AvailableQuantity;
     si no trae ninguno, decide solo IsAvailable."""
@@ -507,18 +527,6 @@ def leer_targets(conn, tiendas):
             (list(tiendas),),
         )
         return cur.fetchall()
-
-
-SQL_INSERT = """INSERT INTO scraped_offers
-    (store_id, scrape_target_id, ean, name, brand_name, price, list_price, product_url,
-     image_url, net_content, unit_base, scraped_at, status)
-    VALUES %s"""
-
-
-def insertar(conn, filas):
-    with conn.cursor() as cur:
-        psycopg2.extras.execute_values(cur, SQL_INSERT, filas, page_size=200)
-    conn.commit()
 
 
 # ─────────────────────────── Registro de descartes ───────────────────────────
@@ -631,7 +639,7 @@ def guardar_sin_tamano():
 
 
 # ─────────────────────────── Flujo principal ───────────────────────────
-def procesar_target(conn, cli, t):
+def procesar_target(conn, cli, t, run_id=None):
     st = dict(encontrados=0, filtrados=0, excluidos=0, no_disp=0, sin_precio=0, insertados=0, sin_tamano=0, rescatados=0, kits=0, ean_invalido=0, error="", por_detalle=Counter())
     fq = (t["store_category_fq"] or "").strip() or None
     try:
@@ -642,7 +650,7 @@ def procesar_target(conn, cli, t):
         st["error"] = str(e)
         return st
 
-    ahora = datetime.now()
+    ahora = ahora_colombia()
     vistos, filas = set(), []
     for p in productos:
         clave = p.get("productId") or p.get("link")
@@ -691,10 +699,10 @@ def procesar_target(conn, cli, t):
             SIN_TAMANO.append(_fila_sin_tamano(t, p, d))
         filas.append((t["store_id"], t["id"], d["ean"], d["name"], d["brand_name"], d["price"],
                       d["list_price"], d["product_url"], d["image_url"], d["net_content"],
-                      d["unit_base"], ahora, "PENDING"))
+                      d["unit_base"], ahora, "PENDING", extraerSku(p), None))
     if filas:
         try:
-            insertar(conn, filas)
+            insertar_ofertas(conn, filas, run_id)
         except psycopg2.Error as e:
             conn.rollback()
             st["error"] = f"BD: {str(e).strip().splitlines()[0]}"
@@ -738,6 +746,8 @@ def _correr():
                   "(el seed los inserta con active = false: actívalos antes de correr).")
             return 1
 
+        run_id = uuid4()
+        iniciar_corrida(conn, run_id)
         resumen = OrderedDict()          # (tienda, término) -> stats
         totales = {}                     # tienda -> ofertas insertadas
         sin_tamano_tot = {}              # tienda -> ofertas insertadas sin tamaño
@@ -762,7 +772,7 @@ def _correr():
             antes = len(DESCARTADOS)
             antes_st = len(SIN_TAMANO)
             try:
-                st = procesar_target(conn, clientes[clave], t)
+                st = procesar_target(conn, clientes[clave], t, run_id)
             except TiendaBloqueada as e:
                 print(f"  ⛔ {tienda} cortada: {e}")
                 omitidas.add(clave)
@@ -773,6 +783,7 @@ def _correr():
             totales[tienda] += st.get("insertados", 0)
             sin_tamano_tot[tienda] = sin_tamano_tot.get(tienda, 0) + st.get("sin_tamano", 0)
             resumen[(tienda, t["search_term"])] = st
+        terminar_corrida(conn, run_id)
     finally:
         conn.close()
 
@@ -802,7 +813,7 @@ def _correr():
     if vacias:
         print(f"\n⛔ Alerta de cero resultados: {', '.join(vacias)} no insertó ninguna oferta.")
         return 1
-    return 0
+    return 1 if any(s.get("error") for s in resumen.values()) else 0
 
 
 def main():

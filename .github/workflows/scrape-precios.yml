@@ -1,0 +1,71 @@
+name: Scraping de precios
+on:
+  workflow_dispatch:
+    inputs:
+      dominios:
+        description: Dominio a ejecutar
+        type: choice
+        options: [todos, supermercados, droguerias, facial]
+        default: todos
+      tiendas_supermercados:
+        description: Tiendas de supermercados (vacío usa D1, Jumbo y Olímpica)
+        default: d1,jumbo,olimpica
+      tiendas_droguerias:
+        description: Tiendas de droguería (vacío usa todas las activas)
+        default: rebaja,farmatodo,farmanorte
+      tiendas_facial:
+        description: Tiendas de cuidado facial
+        default: cutis,medipiel,bellapiel
+permissions:
+  contents: read
+concurrency:
+  group: scraper-precios
+  cancel-in-progress: false
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dominio: supermercados
+            carpeta: supermercados
+            script: scraper_supermercados.py
+          - dominio: droguerias
+            carpeta: droguerias
+            script: scraper_droguerias.py
+          - dominio: facial
+            carpeta: facial
+            script: scraper_cuidado_facial.py
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scrapers/requirements.txt
+      - name: Instalar dependencias
+        if: inputs.dominios == 'todos' || inputs.dominios == matrix.dominio
+        run: pip install -r scrapers/requirements.txt
+      - name: Ejecutar scraper
+        if: inputs.dominios == 'todos' || inputs.dominios == matrix.dominio
+        working-directory: scrapers/${{ matrix.carpeta }}
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_SSLMODE: require
+          SOLO_TIENDAS: ${{ matrix.dominio == 'supermercados' && (inputs.tiendas_supermercados || 'd1,jumbo,olimpica') || matrix.dominio == 'droguerias' && inputs.tiendas_droguerias || matrix.dominio == 'facial' && inputs.tiendas_facial || '' }}
+          SCRAPER_SCRIPT: ${{ matrix.script }}
+        run: python "$SCRAPER_SCRIPT"
+      - name: Subir descartados
+        if: always() && matrix.dominio == 'facial'
+        uses: actions/upload-artifact@v4
+        with:
+          name: descartados-facial
+          path: scrapers/facial/descartados.csv
+          if-no-files-found: ignore
+          retention-days: 7

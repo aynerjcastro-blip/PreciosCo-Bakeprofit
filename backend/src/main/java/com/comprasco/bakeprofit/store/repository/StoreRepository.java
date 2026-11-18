@@ -16,6 +16,8 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
 
     List<Store> findByActiveTrue ();
 
+    List<Store> findByActiveTrueAndCategoryId(Long categoryId);
+
     List<Store> findByActiveFalse ();
 
     boolean existsByNameIgnoreCase(String name);

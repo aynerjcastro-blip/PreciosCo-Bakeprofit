@@ -36,6 +36,5 @@ build/
 logback.xml
 application-local.properties
 repomix-output.xml
-salida_urls/
-__pycache__/
-*.py[cod]
+
+.env

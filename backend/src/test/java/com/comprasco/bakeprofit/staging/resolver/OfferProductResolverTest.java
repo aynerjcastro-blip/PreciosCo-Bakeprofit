@@ -35,7 +35,7 @@ import com.comprasco.bakeprofit.staging.entity.ScrapedOffer;
 @ExtendWith(MockitoExtension.class)
 class OfferProductResolverTest {
 
-    private static final OfferScreening.Accepted ACCEPTED = new OfferScreening.Accepted(GTIN_14, UnitBase.G);
+    private static final OfferScreening.Accepted ACCEPTED = new OfferScreening.Accepted(GTIN_14, UnitBase.G, new java.math.BigDecimal("500"), null, new java.math.BigDecimal("4500"));
 
     @Mock
     private ProductRepository productRepository;
@@ -51,7 +51,7 @@ class OfferProductResolverTest {
     @BeforeEach
     void setUp() {
         resolver = new OfferProductResolver(productRepository, brandRepository, brandService,
-                StagingFixtures.domainPolicy(), sizeConflictCheck);
+                StagingFixtures.domainPolicy(), sizeConflictCheck, org.mockito.Mockito.mock(com.comprasco.bakeprofit.staging.identity.SecondaryIdentityResolver.class));
         lenient().when(sizeConflictCheck.check(any(), any())).thenReturn(Optional.empty());
     }
 
@@ -137,7 +137,7 @@ class OfferProductResolverTest {
 
         resolver.resolve(offer(SUPERMARKET), ACCEPTED);
 
-        verifyNoInteractions(sizeConflictCheck);
+        verifyNoInteractions(sizeConflictCheck, org.mockito.Mockito.mock(com.comprasco.bakeprofit.staging.identity.SecondaryIdentityResolver.class));
     }
 
     @Test

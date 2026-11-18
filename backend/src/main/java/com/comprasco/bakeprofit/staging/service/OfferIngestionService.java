@@ -1,5 +1,9 @@
 package com.comprasco.bakeprofit.staging.service;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,7 +16,7 @@ import com.comprasco.bakeprofit.staging.resolver.OfferProductResolver;
 import com.comprasco.bakeprofit.staging.resolver.OfferScreening;
 
 /**
- * Convierte UNA oferta del staging en producto y precio, en su propia transacción.
+ * Resuelve una oferta y sus duplicadas de la corrida en una sola transacción.
  *
  * <p>
  * Es un bean distinto del orquestador para que el proxy de Spring aplique
@@ -73,8 +77,10 @@ public class OfferIngestionService {
 
     @Transactional
     public Outcome process(Long offerId) {
+        offerRepository.lockIngestion();
         return offerRepository.lockById(offerId)
                 .filter(ScrapedOffer::isPending)
+                .filter(o -> o.getRunId() == null || offerRepository.isRunComplete(o.getRunId()))
                 .map(this::ingest)
                 .orElseGet(() -> Outcome.of(Result.SKIPPED));
     }
@@ -84,15 +90,52 @@ public class OfferIngestionService {
         if (screened.isRejected()) {
             return unclassify(offer, screened.rejection());
         }
+        List<Candidate> duplicates = new ArrayList<>();
+        if (offer.getRunId() != null) {
+            for (ScrapedOffer other : offerRepository.lockRunOffers(offer.getRunId(), offer.getStore().getId(),
+                    screened.accepted().gtin(), screened.accepted().linkedProduct() == null
+                            ? null : screened.accepted().linkedProduct().getId())) {
+                OfferScreening.Result result = screening.screen(other);
+                if (!result.isRejected() && sameIdentity(screened.accepted(), result.accepted()))
+                    duplicates.add(new Candidate(other, result.accepted()));
+            }
+        }
+        if (!duplicates.isEmpty()) {
+            Candidate winner = duplicates.stream().min(Comparator
+                    .comparing((Candidate c) -> c.accepted().price())
+                    .thenComparing(c -> c.offer().getId())).orElseThrow();
+            offer = winner.offer();
+            screened = new OfferScreening.Result(winner.accepted(), null);
+        }
         OfferProductResolver.Match match = productResolver.resolve(offer, screened.accepted());
         if (match.isRejected()) {
             return unclassify(offer, match.rejection());
         }
-        Outcome outcome = priceRecorder.record(match.product(), offer)
+        Outcome outcome = priceRecorder.record(match.product(), offer, screened.accepted().price())
                 .map(Outcome::newPrice)
                 .orElseGet(() -> Outcome.of(Result.SAME_PRICE));
+        productResolver.rememberIdentity(offer, match.product());
         offer.markProcessed();
+        for (Candidate candidate : duplicates) {
+            if (!candidate.offer().getId().equals(offer.getId())) {
+                productResolver.rememberIdentity(candidate.offer(), match.product());
+                candidate.offer().markDuplicate();
+            }
+        }
         return outcome;
+    }
+
+    private record Candidate(ScrapedOffer offer, OfferScreening.Accepted accepted) {}
+
+    private static boolean sameIdentity(OfferScreening.Accepted firstAccepted,
+                                        OfferScreening.Accepted secondAccepted) {
+        if (firstAccepted.gtin() != null && secondAccepted.gtin() != null) {
+            return firstAccepted.gtin().equals(secondAccepted.gtin());
+        }
+        if (firstAccepted.linkedProduct() == null || secondAccepted.linkedProduct() == null) {
+            return false;
+        }
+        return firstAccepted.linkedProduct().getId().equals(secondAccepted.linkedProduct().getId());
     }
 
     private static Outcome unclassify(ScrapedOffer offer, String reason) {
