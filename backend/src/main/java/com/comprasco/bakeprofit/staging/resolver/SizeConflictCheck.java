@@ -18,8 +18,8 @@ import com.comprasco.bakeprofit.staging.entity.ScrapedOffer;
 import com.comprasco.bakeprofit.staging.repository.ScrapedOfferRepository;
 
 /**
- * Antes de crear un producto con un EAN nuevo, comprueba que las demás ofertas PENDING
- * de ese EAN traigan el mismo tamaño.
+ * Antes de crear un producto con un EAN nuevo, compara las presentaciones de otras
+ * ofertas pendientes o rechazadas, aunque no cumplan el rango de su target.
  *
  * <p>
  * Un producto toma el tamaño de la primera oferta que lo crea y nunca se modifica (RN-02).
@@ -65,16 +65,15 @@ public class SizeConflictCheck {
     }
 
     /**
-     * Devuelve el motivo del conflicto si alguna otra oferta PENDING del mismo EAN trae otro
-     * tamaño; en ese caso, esas otras ofertas ya quedaron UNCLASSIFIED con el mismo motivo.
-     * Solo cuentan ofertas de corridas cerradas que pasan screening; se compara el tamaño efectivo.
+     * Solo cuentan identidades verificadas de corridas cerradas o del staging legado.
+     * Los rechazos previos conservan su motivo; las pendientes se marcan por conflicto.
      */
     public Optional<String> check(ScrapedOffer offer, OfferScreening.Accepted accepted) {
         Sighting own = new Sighting(offer.getId(), accepted.netContent(), accepted.unitBase(),
                 offer.getStore().getName());
-        List<Sighting> others = offerRepository.findOtherPendingOffers(accepted.gtin(), offer.getId()).stream()
+        List<Sighting> others = offerRepository.findOtherSizeEvidenceOffers(accepted.gtin(), offer.getId()).stream()
                 .map(other -> {
-                    var result = screening.screen(other);
+                    var result = screening.screenSizeEvidence(other);
                     return result.isRejected() ? null : new Sighting(other.getId(), result.accepted().netContent(),
                             result.accepted().unitBase(), other.getStore().getName());
                 }).filter(java.util.Objects::nonNull).toList();
@@ -82,8 +81,9 @@ public class SizeConflictCheck {
             return Optional.empty();
         }
         String reason = SIZE_CONFLICT_REASON.formatted(Gtin.toDisplay(accepted.gtin()), describe(own, others));
-        for (Long id : others.stream().map(Sighting::offerId).toList()) {
-            offerRepository.findById(id).filter(ScrapedOffer::isPending).ifPresent(o -> o.markUnclassified(reason));
+        for (Long conflictingOfferId : others.stream().map(Sighting::offerId).toList()) {
+            offerRepository.findById(conflictingOfferId).filter(ScrapedOffer::isPending)
+                    .ifPresent(pendingOffer -> pendingOffer.markUnclassified(reason));
         }
         return Optional.of(reason);
     }

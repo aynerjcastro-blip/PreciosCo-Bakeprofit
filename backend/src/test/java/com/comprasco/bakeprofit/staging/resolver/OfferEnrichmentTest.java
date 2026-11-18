@@ -15,6 +15,27 @@ class OfferEnrichmentTest {
     private final StoreProductLinkRepository links = mock(StoreProductLinkRepository.class);
     private final OfferScreening screening = new OfferScreening(domainPolicy(), overrides, links, mock(com.comprasco.bakeprofit.staging.identity.SecondaryIdentityResolver.class));
 
+    @Test
+    void evidenciaConservaGramosAunqueElObjetivoPidaMililitros() {
+        ScrapedOffer publishedOffer = offer(SUPERMARKET);
+        ScrapeTarget target = ScrapeTarget.of(publishedOffer.getStore(),
+                publishedOffer.getScrapeTarget().getCategory(), "limpiadora", UnitBase.ML,
+                NET_CONTENT, NET_CONTENT);
+        when(publishedOffer.getScrapeTarget()).thenReturn(target);
+        assertThat(screening.screen(publishedOffer).isRejected()).isTrue();
+        assertThat(screening.screenSizeEvidence(publishedOffer).accepted().unitBase()).isEqualTo(UnitBase.G);
+    }
+
+    @Test
+    void evidenciaNoPermiteEanDistintoNiUnidadDesconocida() {
+        ScrapedOffer publishedOffer = offer(SUPERMARKET);
+        ReflectionTestUtils.setField(publishedOffer.getScrapeTarget(), "expectedEan", "036000291452");
+        assertThat(screening.screenSizeEvidence(publishedOffer).rejection()).contains("no es el que espera");
+        ReflectionTestUtils.setField(publishedOffer.getScrapeTarget(), "expectedEan", null);
+        when(publishedOffer.getUnitBase()).thenReturn("unidad-inventada");
+        assertThat(screening.screenSizeEvidence(publishedOffer).rejection()).contains("Unidad base desconocida");
+    }
+
     @Test void drogueriaAceptaGtinEquivalenteYRespaldoExactoSinCambiarOferta() {
         var offer = offer("Droguería");
         var target = ScrapeTarget.of(offer.getStore(), offer.getScrapeTarget().getCategory(), "algodón", UnitBase.G, NET_CONTENT, NET_CONTENT);

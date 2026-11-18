@@ -76,13 +76,13 @@ public interface ScrapedOfferRepository extends JpaRepository<ScrapedOffer, Long
 
     @Query(value = """
             SELECT o.* FROM scraped_offers o
-            WHERE o.status = 'PENDING' AND o.id <> :offerId
+            WHERE o.status IN ('PENDING', 'UNCLASSIFIED') AND o.id <> :offerId
               AND o.ean ~ '^([0-9]{8}|[0-9]{12,14})$'
               AND lpad(o.ean, 14, '0') = :gtin
               AND (o.run_id IS NULL OR EXISTS (SELECT 1 FROM scrape_runs r WHERE r.id = o.run_id AND r.completed_at IS NOT NULL))
             ORDER BY o.id FOR UPDATE OF o
             """, nativeQuery = true)
-    List<ScrapedOffer> findOtherPendingOffers(@Param("gtin") String gtin, @Param("offerId") Long offerId);
+    List<ScrapedOffer> findOtherSizeEvidenceOffers(@Param("gtin") String gtin, @Param("offerId") Long offerId);
 
     @Query(value = """
             SELECT o.* FROM scraped_offers o

@@ -75,6 +75,18 @@ public class OfferScreening {
     }
 
     public Result screen(ScrapedOffer offer) {
+        return screen(offer, true);
+    }
+
+    /**
+     * Evidencia para comparar GTIN: omite el rango del target, no autoriza la ingesta.
+     * Las rutas de identidad secundaria y peso variable conservan sus propios filtros.
+     */
+    public Result screenSizeEvidence(ScrapedOffer offer) {
+        return screen(offer, false);
+    }
+
+    private Result screen(ScrapedOffer offer, boolean requireTargetMatch) {
         if (offer.getScrapeTarget() == null) return Result.rejected(NO_TARGET_REASON);
         ScrapeTarget target = offer.getScrapeTarget();
         if (!Boolean.TRUE.equals(target.getActive())) return Result.rejected("objetivo de búsqueda inactivo");
@@ -119,7 +131,7 @@ public class OfferScreening {
         }
         if (content == null) return Result.rejected(NO_CONTENT_REASON);
         if (unit == null) return Result.rejected(UNKNOWN_UNIT_REASON.formatted(offer.getUnitBase()));
-        if (content.signum() <= 0 || !target.accepts(content, unit))
+        if (content.signum() <= 0 || (requireTargetMatch && !target.accepts(content, unit)))
             return Result.rejected(OUT_OF_TARGET_REASON.formatted(content.toPlainString(), unit,
                     target.getSearchTerm(), target.getUnitBase(), limit(target.getMinContent()), limit(target.getMaxContent())));
         return new Result(new Accepted(gtin, unit, content, null, offer.getPrice()), null);

@@ -250,6 +250,33 @@ class StagingProcessorIntegrationTest {
     }
 
     @Test
+    void presentacionEnGramosFueraDelTargetBloqueaCrearProductoEnMililitros() {
+        verifyCrossUnitConflict(false);
+    }
+
+    @Test
+    void presentacionYaRechazadaPorUnidadSigueBloqueandoProductoContradictorio() {
+        verifyCrossUnitConflict(true);
+    }
+
+    private void verifyCrossUnitConflict(boolean rejectGramsFirst) {
+        jdbcTemplate.update("UPDATE scrape_targets SET unit_base='ML', min_content=100, max_content=500 WHERE id=?",
+                targetId);
+        Long grams = insertOffer(eanRice, PRICE, "100", null, KEYSET_BASE);
+        Long milliliters = insertOffer(eanRice, PRICE, "100", null, KEYSET_BASE.plusSeconds(1));
+        jdbcTemplate.update("UPDATE scraped_offers SET unit_base='ML' WHERE id=?", milliliters);
+        if (rejectGramsFirst) {
+            assertThat(processor.processOffers(List.of(grams)).count(Result.UNCLASSIFIED)).isEqualTo(1);
+        }
+        assertThat(processor.processOffers(List.of(milliliters)).count(Result.UNCLASSIFIED)).isEqualTo(1);
+        assertThat(productCount()).isZero();
+        assertThat(pricesOf(eanRice)).isEmpty();
+        assertThat(eventsForOurStore()).isEmpty();
+        assertThat(jdbcTemplate.queryForObject("SELECT reason FROM scraped_offers WHERE id=?", String.class,
+                milliliters)).contains("conflicto", "100 g", "100 ml");
+    }
+
+    @Test
     void overrideResuelveConflictoSinModificarOfertasNiProductosExistentes() {
         jdbcTemplate.update("INSERT INTO ean_size_overrides VALUES (?, 500, 'G', 'ficha verificada')", gtin14(eanRice));
         Long a = insertOffer(eanRice, PRICE, "8000", null, KEYSET_BASE);
