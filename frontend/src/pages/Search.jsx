@@ -9,6 +9,7 @@ import {
 } from '../components/ui/icons/Sectoricons.jsx';
 import { Link, useSearchParams } from 'react-router-dom';
 import { searchProducts } from '../api/products';
+import StoreLogo from './StoreLogo.jsx';
 import useSearchCatalog from '../hooks/useSearchCatalog';
 import StoreFilter from '../components/search/StoreFilter/StoreFilter.jsx';
 import PriceRangeFilter from '../components/search/PriceRangeFilter/PriceRangeFilter.jsx';
@@ -16,18 +17,8 @@ import SearchPagination from '../components/search/SearchPagination/SearchPagina
 
 
 /**
- * Sectores que muestran las pestañas. Se define fuera del componente para no recrear el
- * arreglo en cada render.
- *
- * IMPORTANTE: el `id` de cada sector es un slug que también existe en config/sections.js, y es
- * el mismo que viaja en la URL (?sector=supermercados). Si un slug cambia en un archivo y no
- * en el otro, useSectionBySlug no encuentra la sección y el sector queda como "llega pronto".
- * Aquí viven solo los datos de presentación (ícono, textos); el id numérico de la sección en
- * la base de datos NO se escribe aquí: se obtiene del backend con useSectionBySlug.
- *
- * `available` es una guarda optimista: evita pedir datos de un sector que sabemos que no existe
- * todavía. La verdad la decide el backend (ver `sectionUnavailable` más abajo): si una sección
- * marcada como disponible llega sin productos, también se trata como "llega pronto".
+ * Los slugs viajan en ?sector= y rootName identifica la raíz que resuelve useSearchCatalog.
+ * Los IDs de la base y los filtros disponibles se obtienen del catálogo de esa sección.
  */
 const SECTORS = [
     {
@@ -97,7 +88,7 @@ function setOrDelete(params, key, value) {
  * si navega a otra pagina (como el comparador) y luego regresa.
  * Se usa try/catch porque algunos navegadores bloquean sessionStorage en modo incognito.
  * Ojo: lo guardado puede estar desactualizado (por ejemplo, un sector que ya no existe),
- * por eso el componente nunca lo da por válido sin comprobarlo (ver `knownSectorId`).
+ * por eso useSearchCatalog comprueba que exista la raíz antes de permitir la búsqueda.
  */
 function loadSaved() {
     try {
@@ -488,8 +479,8 @@ export default function Search() {
     ]);
     const hasTerm = searchTerm.trim() !== '';
     const hasPriceFilter = storeKey !== '' || minPrice !== '' || maxPrice !== '';
-    // Se usa knownSectorId (no selectedSectorId): un sector invalido no cuenta como filtro.
-    const hasFilter = selectedCategoryId !== null || knownSectorId !== null || showAll || hasPriceFilter;
+    // Mantener el sector solicitado permite mostrar su indisponibilidad sin buscar globalmente.
+    const hasFilter = selectedCategoryId !== null || selectedSectorId !== null || showAll || hasPriceFilter;
 
     // isIdle: Evita hacer peticiones a la API cuando el usuario no ha pedido nada.
     const isIdle = !hasTerm && !hasFilter;
@@ -606,8 +597,7 @@ export default function Search() {
         changeFilters((next) => next.delete('sector'));
     }
 
-    // Ojo: las pestañas cambian el estado local pero NO escriben ?sector= en la URL. Por eso un
-    // enlace copiado despues de cambiar de pestaña apunta al sector con el que se entro a la pagina.
+    // La URL conserva el sector activo y cambiarlo limpia las tiendas y la página anteriores.
     function toggleSector(id) {
         setShowAll(false);
         const nextSectorId = selectedSectorId === id ? null : id;

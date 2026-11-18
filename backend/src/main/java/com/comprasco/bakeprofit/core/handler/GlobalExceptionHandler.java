@@ -34,6 +34,8 @@ import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.util.DisconnectedClientHelper;
+import org.jspecify.annotations.Nullable;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -461,12 +463,18 @@ public class GlobalExceptionHandler {
          *
          * @param ex      excepcion general
          * @param request peticion HTTP actual
-         * @return respuesta HTTP 500 Internal Server Error
+         * @return respuesta HTTP 500, o null si el cliente ya cerró la conexión
          */
         @ExceptionHandler(Exception.class)
-        public ResponseEntity<ErrorResponse> handleGeneric(
+        public @Nullable ResponseEntity<ErrorResponse> handleGeneric(
                         Exception ex,
                         HttpServletRequest request) {
+
+                if (DisconnectedClientHelper.isClientDisconnectedException(ex)) {
+                        // La conexión cerrada no permite escribir otra respuesta.
+                        log.debug("Cliente desconectado en {}; se omite la respuesta", request.getRequestURI());
+                        return null;
+                }
 
                 log.error("Error no controlado en {}", request.getRequestURI(), ex);
 

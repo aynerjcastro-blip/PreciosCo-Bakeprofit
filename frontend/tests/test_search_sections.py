@@ -37,6 +37,8 @@ class SearchSectionsBrowserTest(unittest.IsolatedAsyncioTestCase):
         self.context = await self.browser.new_context(reduced_motion='reduce')
         self.page = await self.context.new_page()
         self.requests = []
+        self.page_errors = []
+        self.page.on('pageerror', lambda error: self.page_errors.append(str(error)))
         self.fail_next_categories = False
         self.slow_supermarket = False
         self.empty_filters = False
@@ -52,7 +54,11 @@ class SearchSectionsBrowserTest(unittest.IsolatedAsyncioTestCase):
         self.requests.append((parsed.path, query))
         section_id = int(query['sectionId'][0]) if 'sectionId' in query else None
         status = 200
-        if parsed.path == '/api/categories/roots':
+        if parsed.path == '/api/landing/stats':
+            response = {'totalProducts': 3, 'totalStores': 3, 'lastUpdate': None,
+                        'sections': [dict(section, productCount=1, storeCount=1)
+                                     for section in SECTIONS]}
+        elif parsed.path == '/api/categories/roots':
             response = SECTIONS
         elif parsed.path == '/api/categories/active':
             if self.fail_next_categories:
@@ -71,6 +77,12 @@ class SearchSectionsBrowserTest(unittest.IsolatedAsyncioTestCase):
                 'id': section_id or 100, 'name': 'Producto de prueba',
                 'category': 'Categoría de prueba', 'offers': [],
             }]
+            if products and getattr(self, 'include_offers', False):
+                store = next(store for store in STORES if store['id'] - 200 == section_id)
+                products[0].update({
+                    'minPrice': 4500, 'maxPrice': 4500,
+                    'offers': [{'storeId': store['id'], 'storeName': store['name'], 'value': 4500}],
+                })
             response = {'content': products,
                         'page': {'totalElements': len(products), 'totalPages': 1}}
         else:
@@ -167,6 +179,30 @@ class SearchSectionsBrowserTest(unittest.IsolatedAsyncioTestCase):
         await expect(self.page.get_by_text('No hay categorías activas disponibles.')).to_be_visible()
         await expect(self.page.get_by_text('No hay tiendas activas disponibles.')).to_be_visible()
         await expect(self.page.get_by_text('Sin resultados', exact=True)).to_be_visible()
+
+
+    async def test_entrar_desde_cada_seccion_con_ofertas_no_queda_en_blanco(self):
+        self.include_offers = True
+        for section, slug in zip(SECTIONS, SECTOR_SLUGS):
+            await self.page.goto(f'{BASE_URL}/secciones/{slug}')
+            await self.page.get_by_role('link', name='Buscar y comparar').click()
+            await expect(self.page.get_by_text('1 producto', exact=True)).to_be_visible()
+            await expect(self.page.get_by_role('link', name='Comparar precios de Producto de prueba')).to_be_visible()
+            self.assertEqual([], self.page_errors)
+            searches = [query for path, query in self.requests if path == '/api/products/search']
+            self.assertTrue(searches)
+            self.assertEqual([str(section['id'])], searches[-1].get('sectionId'))
+
+    async def test_error_del_servidor_muestra_estado_y_conserva_la_pagina(self):
+        async def fail_search(route):
+            await route.fulfill(status=500, content_type='application/json',
+                                headers={'Access-Control-Allow-Origin': '*'},
+                                body=json.dumps({'message': 'Fallo simulado'}))
+        await self.page.route('http://localhost:8080/api/products/search**', fail_search)
+        await self.page.goto(f'{BASE_URL}/buscar?sector=cuidado-facial')
+        await expect(self.page.get_by_text('Algo salió mal', exact=True)).to_be_visible()
+        await expect(self.page.get_by_role('searchbox')).to_be_visible()
+        self.assertEqual([], self.page_errors)
 
 
 if __name__ == '__main__':

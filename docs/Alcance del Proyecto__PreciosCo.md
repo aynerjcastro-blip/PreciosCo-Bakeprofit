@@ -2,7 +2,7 @@
 
 Plataforma web para comparación de productos y precios
 
-**Versión 2.0** · Actualizado a partir de las decisiones tomadas durante la Fase 2 (octubre de 2026). Los requisitos funcionales y no funcionales completos, el modelo de negocio, las historias de usuario y las matrices de trazabilidad están en el documento **[PreciosCo — Análisis y especificación](https://claude.ai/code/artifact/a461c386-dc60-44af-ba80-be1a686b1631)**; este documento conserva la visión general del proyecto.
+**Versión 2.1 · Actualización: 18 de noviembre de 2026.** Consolida la visión general y las decisiones de captura, identidad, comparación y revisión de datos acordadas durante el desarrollo. Los requisitos e historias se mantienen en [PreciosCo — Análisis y especificación](<PreciosCo__Analisis y especificacion (historias, modelo de negocio, requisitos y trazabilidad).md>); las decisiones técnicas y su estado de integración, en [DECISIONS.md](DECISIONS.md). Estos tres documentos son las referencias principales; no requieren conservar los informes y guías auxiliares de la conversación.
 
 ## 1. Descripción del proyecto
 
@@ -43,7 +43,8 @@ Objetivos del negocio asociados (ver el documento de Análisis y especificación
 - Búsqueda por nombre, marca o categoría.
 - Filtros por precio, tienda, marca y categoría, con resultados por páginas.
 - Comparación de precios entre establecimientos.
-- Ordenamiento de resultados del menor al mayor precio.
+- Búsqueda paginada ordenada por porcentaje de ahorro; los precios de un producto en el comparador se muestran de menor a mayor.
+- Al entrar a una sección, el buscador carga solo sus categorías y tiendas activas; cambiar de sección limpia los filtros incompatibles.
 - Visualización de la fecha en que la tienda confirmó el precio por última vez.
 - Enlace a la página del producto en la tienda, junto a cada precio.
 - Diseño adaptable para computador, tableta y celular.
@@ -63,8 +64,8 @@ Objetivos del negocio asociados (ver el documento de Análisis y especificación
 ### C. Comparación de establecimientos
 
 - Supermercados: D1, Jumbo, Éxito y Olímpica.
-- Droguerías.
-- Tiendas de productos para cuidado facial.
+- Droguerías: Drogas La Rebaja, Farmatodo y Farmanorte, mediante las fuentes públicas admitidas para cada integración.
+- Cuidado facial: Cutis, Medipiel y BellaPiel; los códigos locales de una tienda requieren resolución de identidad controlada.
 - Tiendas de repuestos para vehículos y motos.
 - Otros proveedores comerciales en fases posteriores.
 
@@ -114,6 +115,16 @@ Objetivos del negocio asociados (ver el documento de Análisis y especificación
 - Reportes básicos.
 - Bloqueo de cuentas.
 - Consulta del historial de cambios administrativos, con fecha y responsable.
+
+### I. Captura, validación y revisión de precios
+
+- Scrapers separados para supermercados, droguerías y cuidado facial, con componentes comunes donde corresponde. Capturan observaciones y las guardan en staging; el backend decide si se publican en el catálogo.
+- Comparación comercial por GTIN/EAN válido y presentación exacta. Un SKU identifica una oferta dentro de una tienda, no el mismo producto entre establecimientos.
+- Equivalencias de códigos locales para tiendas autorizadas, inicialmente BellaPiel: enlazan con productos comerciales existentes y vuelven a comprobar marca, presentación, categoría y nombre.
+- Comparación de alimentos vendidos por peso mediante productos genéricos de referencia de 1 kg y asociaciones manuales de SKU, con peso publicado y precio expresado sobre una base comprobada. Incluye carnes y puede extenderse a frutas, verduras y otros productos a granel equivalentes; no convierte automáticamente una categoría completa a peso variable.
+- Revisión de presentaciones contradictorias sin elegir por mayoría. El scraper facial conserva la oferta en estado `CONFLICT`, con tamaño nulo y motivo, y entrega evidencia en CSV; esas ofertas no entran al procesador mientras esperan revisión.
+- Corridas identificadas y cerradas antes de procesar, deduplicación por tienda/identidad/corrida y conservación del historial por periodos.
+- Curaduría mediante SQL y archivos `sku_offers.csv` y `conflictos_tamanos.csv`, sin afirmar que exista ya un panel administrativo para esas tareas.
 
 ## 5. Entregables del proyecto
 
@@ -165,7 +176,7 @@ Hasta que el panel administrativo (Fase 5) esté construido, la moderación de c
 
 ## 10. Supuestos y restricciones
 
-**Supuestos:** los proveedores proporcionarán información correcta y actualizada; se tendrá acceso a la información del bot; los productos podrán identificarse por nombre, marca, presentación o código; las tiendas aceptarán participar; y la IA tendrá acceso a una base de datos organizada. El visitante puede buscar y comparar precios sin registrarse. Los precios se cargan desde una fuente externa (el scraper) o los registra el proveedor, ambos con fecha y fuente. Los productos que publique un proveedor se muestran de inmediato tras su registro; el administrador los revisa después y decide si se conservan o se dan de baja — no requieren aprobación previa, porque esperarla sería lento para el proveedor y dispendioso para el administrador.
+**Supuestos:** los proveedores proporcionarán información correcta y actualizada; se tendrá acceso a la información del bot; la identidad comercial se verificará por EAN/GTIN y presentación; el nombre por sí solo no acredita equivalencia, y los SKU locales o genéricos por peso requieren los controles y asociaciones documentados; las tiendas aceptarán participar; y la IA tendrá acceso a una base de datos organizada. El visitante puede buscar y comparar precios sin registrarse. Los precios se cargan desde una fuente externa (el scraper) o los registra el proveedor, ambos con fecha y fuente. Los productos que publique un proveedor se muestran de inmediato tras su registro; el administrador los revisa después y decide si se conservan o se dan de baja — no requieren aprobación previa, porque esperarla sería lento para el proveedor y dispendioso para el administrador.
 
 **Restricciones:** el presupuesto y el tiempo pueden limitar las categorías iniciales; los precios cambian con frecuencia; algunas tiendas pueden no ofrecer mecanismos oficiales de consulta; será necesario revisar aspectos legales sobre marcas e información comercial; y la calidad de la IA dependerá de los datos disponibles.
 
@@ -180,20 +191,28 @@ Hasta que el panel administrativo (Fase 5) esté construido, la moderación de c
 
 Inicialmente, el sistema no incluye compras, pagos, domicilios, aplicación móvil, diagnósticos médicos ni garantía de disponibilidad en tiempo real de los productos. Estas funcionalidades podrán considerarse como ampliaciones posteriores.
 
+### Estado operativo y límites actuales
+
+La cobertura de código no equivale a cobertura de datos verificados. Éxito conserva estrategia, pero queda fuera de la selección inicial por bloqueos; las tiendas sin objetivos activos no se capturan. Repuestos mantiene sus historias de Fase 3 y su validación de viabilidad, pero su ingesta automática sigue pendiente de la identidad por referencia.
+
+La calidad depende de objetivos, categorías, equivalencias y pesos curados. No se incluyen asignaciones ficticias de SKU, correcciones automáticas de maestros históricos, equivalencias de medicamentos por ingrediente activo ni conversión supuesta entre gramos y mililitros. La ejecución compartida requiere preflight, migraciones comprobadas y una instancia de procesador designada; el arranque de un backend o un BUILD SUCCESS no certifican datos correctos.
+
+Los errores de desconexión del navegador durante una cancelación se distinguen de los fallos reales del servidor. La cancelación de peticiones obsoletas se conserva para evitar resultados atrasados.
+
 ## Stack tecnológico propuesto (puede cambiar)
 
 ### 1. Backend — MVP (Fase 1)
 
 | Componente | Tecnología | Por qué / rol en el proyecto |
 | --- | --- | --- |
-| Lenguaje / Framework | Java + Spring Boot | Framework principal del backend; expone la API REST que consume el frontend |
-| ORM | Spring Data JPA + Hibernate | Mapea las entidades (Usuario, Producto, Tienda, Categoría, Precio) a la base de datos sin escribir SQL manual |
+| Lenguaje / Framework | Java 25 + Spring Boot | Framework principal del backend; expone la API REST que consume el frontend |
+| ORM | Spring Data JPA + Hibernate | Mapea entidades; las consultas especializadas, índices, restricciones y migraciones también usan SQL versionado |
 | Base de datos | PostgreSQL en Supabase | Motor relacional gestionado; requisito del profesor de usar BD en la nube |
 | Autenticación | Spring Security + JWT | Cubre registro, inicio de sesión, cierre de sesión y recuperación de contraseña del alcance |
 | Búsqueda sin tildes | Extensión `unaccent` de PostgreSQL | La búsqueda por nombre no distingue tildes ni mayúsculas ("cafe" encuentra "Café") y se resuelve en SQL, para poder paginar |
 | Documentación de API | Swagger / OpenAPI (springdoc-openapi) | Genera documentación interactiva automática de los endpoints |
 | Pruebas manuales de API | Postman | Probar endpoints (GET/POST/PUT/DELETE) antes de tener el frontend listo |
-| Inicio de sesión con Google | Spring Security OAuth2 Client | Valida la cuenta de Google y, tras validarla, el backend emite su propio JWT como en el inicio de sesión normal |
+| Inicio de sesión con Google | Spring Security + verificación del ID token de Google | Valida la cuenta de Google y, tras validarla, el backend emite su propio JWT como en el inicio de sesión normal |
 
 ### 2. Frontend — MVP (Fase 1)
 
@@ -217,10 +236,10 @@ Se extiende el modelo de datos (categorías raíz Droguería, Cuidado facial y R
 
 | Componente | Tecnología | Por qué / rol en el proyecto |
 | --- | --- | --- |
-| Carga de precios | Python + requests contra la API pública de catálogo VTEX | Reemplaza a Selenium: D1, Éxito, Jumbo y Olímpica usan VTEX y entregan nombre, marca, EAN, URL, imagen y precio en campos separados |
+| Carga de precios | Python 3.12 + requests | Catálogo/simulación públicos VTEX y páginas HTML curadas según la tienda; sin navegador automatizado ni APIs privadas de Farmatodo/Farmanorte |
 | Tabla de staging | `scraped_offers` en PostgreSQL | El scraper solo escribe datos crudos; el backend los procesa |
-| Procesamiento | Spring @Scheduled | Empareja por EAN, crea productos, registra precios por periodos (un precio que no cambió solo actualiza su fecha de confirmación) y dispara la detección de bajas |
-| Ejecución programada | GitHub Actions | Corre el scraper una vez al día, sin instalar un navegador |
+| Procesamiento | Servicios Spring + @Scheduled | Valida identidad y presentación, consulta equivalencias/genéricos, procesa solo pendientes elegibles y registra precios por periodos; publica eventos después del commit |
+| Ejecución de scrapers | GitHub Actions, disparo manual | Selección por dominio/tienda y artefactos de revisión. La programación diaria y el disparo por push no están habilitados en el workflow nuevo |
 
 ### 5. Fase 4 — Inteligencia artificial especializada
 
@@ -238,7 +257,7 @@ Se reutiliza el mismo backend Spring Boot y frontend React, agregando nuevas ent
 | Componente | Tecnología | Por qué / rol en el proyecto |
 | --- | --- | --- |
 | Repositorio | Git + GitHub | Control de versiones y colaboración del equipo |
-| Flujo de ramas | Feature branches | Una rama feature/ por funcionalidad, integrada a main mediante Pull Request |
+| Flujo de ramas | Feature branches | Ramas feature/ por funcionalidad; sincronización e integración mediante PR hacia develop, y promoción a main según el flujo del equipo |
 
 ### 8. Base de datos en la nube
 
@@ -259,3 +278,4 @@ DBeaver o pgAdmin para inspeccionar la base de datos; Docker, opcional, para emp
 | 27-oct-2026 | 4.A | Enlace a la tienda junto a cada precio (RF57) | Funcionalidad ya implementada que no estaba documentada; las plataformas de los antecedentes también la ofrecen |
 | 04-nov-2026 | Stack (Fase 3) | Carga de precios con la API VTEX y tabla de staging procesada por el backend; marca, EAN y contenido neto en el modelo | Decisión del equipo en el Sprint 2 |
 | 09-nov-2026 | 4.A, Stack (Fase 1 y Fase 3) | Resultados de búsqueda por páginas; la fecha mostrada es la de la última confirmación del precio; búsqueda sin tildes en SQL; precios registrados por periodos | Decisiones del equipo en el Sprint 2 (HU-06b, DP-32 y HT-10) |
+| 18-nov-2026 | Visión, funcionalidades, restricciones y stack | Versión 2.1: captura por dominios, identidad secundaria, genéricos por kg, revisión CONFLICT/CSV, filtros por sección y ejecución manual real de Actions; enlaces locales a los documentos principales | Consolidar las decisiones de la entrega sin presentar curaduría o despliegue como completados |

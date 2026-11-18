@@ -2,13 +2,13 @@
 
 Análisis y especificación: historias de usuario, modelo de negocio, requisitos y trazabilidad
 
-Oct 15, 2026 · Versión 1.0 (borrador para revisión) · Actualizado el 9 de noviembre de 2026
+Documento iniciado el 15 de octubre de 2026 · Versión 1.1 (reconciliación de requisitos) · Actualizado el 18 de noviembre de 2026
 
 **Universidad Popular del Cesar** · Programa de Ingeniería de Sistemas · Asignatura: Ingeniería de Software I · Docente: John Jairo Patiño Vanegas
 
 **Integrantes:** Abisael Freyle Almenarez, Ayner José Castro Benavides, Darwin Banquett, Sebastián Ramos
 
-Valledupar, Colombia · octubre de 2026
+Valledupar, Colombia · actualización de noviembre de 2026
 
 ## 1. Planteamiento y contexto
 
@@ -28,7 +28,7 @@ PreciosCo compara los precios de productos del hogar, de droguería, de cuidado 
 | PB-6 | La comparación existente solo cubre supermercados; droguería, cuidado facial y repuestos de vehículos y motos quedan fuera | Observado en el bot actual |
 | PB-7 | Los establecimientos no tienen un canal propio para mantener sus precios al día | Por validar con usuarios |
 
-### Estado actual (AS-IS)
+### Estado de partida (AS-IS del bot)
 
 - Proceso manual: el consumidor decide qué comprar, recorre o consulta tiendas, compara por su cuenta y compra donde cree que conviene.
 - Bot de Telegram: navega por categorías y productos, compara precios entre supermercados y muestra el promedio de calificación.
@@ -66,7 +66,7 @@ Entregables de cada fase: E-01 pruebas funcionales y de seguridad; E-02 manual d
 
 ### Estado y límites de este documento
 
-Describe lo desarrollado hasta la Fase 2 (octubre de 2026) y las historias de la Fase 3 (noviembre de 2026). Reconstruye el modelo de negocio a partir del bot, del documento de alcance y de los planes de trabajo, y las historias de usuario se derivaron de los requisitos para validarlos. Los problemas PB-3, PB-4, PB-5 y PB-7 y las reglas marcadas «por confirmar» no se han validado con usuarios reales. Los valores con asterisco (\*) son propuestas del equipo. Hasta la Fase 5, la moderación de comentarios y el bloqueo de cuentas se hacen a mano en la base de datos.
+Conserva el modelo de negocio y las historias de las Fases 1 a 3 y los reconcilia con las decisiones de captura, identidad, calidad y navegación del 18-nov-2026. La descripción del bot es el estado de partida, no el estado actual de la web. El comportamiento acordado se especifica aquí; el detalle técnico, la evidencia y los pendientes de integración se registran en DECISIONS.md. Reconstruye el modelo de negocio a partir del bot, del documento de alcance y de los planes de trabajo, y las historias de usuario se derivaron de los requisitos para validarlos. Los problemas PB-3, PB-4, PB-5 y PB-7 y las reglas marcadas «por confirmar» no se han validado con usuarios reales. Los valores con asterisco (\*) son propuestas del equipo. Hasta la Fase 5, la moderación de comentarios y el bloqueo de cuentas se hacen a mano en la base de datos.
 
 ### Glosario
 
@@ -75,6 +75,10 @@ Describe lo desarrollado hasta la Fase 2 (octubre de 2026) y las historias de la
 - **Administrador:** rol ADMIN.
 - **Calificación:** puntaje de un producto en una tienda. Una opinión es la calificación y el comentario que se registran juntos.&#32;
 - **Borrado lógico:** el registro se conserva con estado ELIMINADO y deja de mostrarse.
+- **Observación/oferta cruda:** dato capturado en staging; todavía no es un precio publicado.
+- **SKU local:** identificador de un artículo dentro de una tienda; no acredita identidad entre tiendas.
+- **Producto genérico por peso:** referencia curada de 1000 G, sin EAN/marca/referencia, usada para comparar COP/kg de SKU físicamente equivalentes.
+- **CONFLICT:** estado de una observación que requiere revisión; no es una respuesta HTTP 409 ni la cláusula SQL ON CONFLICT.
 - **Nombres internos:** el repositorio usa BakeProfit (backend) y ComprasCo (paquete Java); el nombre del producto es PreciosCo.
 
 ## 2. Objetivos del negocio
@@ -98,14 +102,14 @@ Intervienen cuatro actores humanos y cuatro actores automáticos; los roles de a
 
 | ID | Actor | Naturaleza | Participación | Rol en el sistema |
 | --- | --- | --- | --- | --- |
-| ACT-01 | Visitante | Humano | Iniciador | Sin sesión; puede buscar y comparar (por confirmar) |
+| ACT-01 | Visitante | Humano | Iniciador | Sin sesión; puede buscar y comparar mediante endpoints públicos |
 | ACT-02 | Consumidor registrado | Humano | Iniciador | USER |
 | ACT-03 | Proveedor | Humano | Iniciador | SUPPLIER |
 | ACT-04 | Administrador | Humano | Iniciador | ADMIN |
 | ACT-05 | Servicio de IA | Sistema externo | Secundario | — |
 | ACT-06 | Servicio de correo | Sistema externo | Secundario | — |
 | ACT-07 | Revisión periódica de precios | Tiempo | Iniciador | Tarea programada |
-| ACT-08 | Fuente externa de precios | Sistema externo | Secundario | Scraper que carga precios (GitHub Actions) |
+| ACT-08 | Fuente externa de precios | Sistema externo | Secundario | Scraper que captura observaciones; el backend valida y publica precios. Ejecución local o manual en GitHub Actions |
 | ACT-09 | Proveedor de identidad (Google) | Sistema externo | Secundario | Valida la cuenta de Google al iniciar sesión |  
 
 Solo el rol USER puede calificar, comentar y reportar: ADMIN y SUPPLIER reciben 403. No se consideran actores «el sistema», la base de datos, el bot de Telegram, el panel administrativo ni «el usuario» genérico.
@@ -117,12 +121,14 @@ Siete procesos recorren el servicio, desde la cuenta del consumidor hasta la adm
 | ID | Proceso | Actor | Entrada | Salida |
 | --- | --- | --- | --- | --- |
 | P-01 | Gestionar cuenta de consumidor | Consumidor, proveedor de identidad | Datos personales y credenciales, o cuenta de Google | Cuenta activa y acceso |
-| P-02 | Consultar y comparar precios | Visitante o consumidor | Producto o categoría, filtros | Precios comparados, mejor opción y fecha de cada precio |
+| P-02 | Consultar y comparar precios | Visitante o consumidor | Sección, producto o categoría y filtros compatibles | Precios comparables, mejor opción y fecha de confirmación |
 | P-03 | Calificar, comentar y reportar | Consumidor registrado | Producto, tienda, puntaje, comentario, razón del reporte | Calificación o comentario registrado y promedio actualizado |
 | P-04 | Seguir productos y recibir alertas | Consumidor registrado, revisión periódica | Producto seguido, precio objetivo | Aviso de baja de precio |
 | P-05 | Consultar asesoría de compra | Consumidor registrado | Lista, receta o necesidad | Recomendación con productos y precios del catálogo |
 | P-06 | Publicar y actualizar oferta | Proveedor | Datos del establecimiento, productos, precios, disponibilidad | Oferta publicada de inmediato y pendiente de revisión |
 | P-07 | Administrar y moderar | Administrador | Solicitudes, productos publicados, reportes, precios registrados | Decisiones registradas en el historial y reportes |
+
+**Subproceso de soporte a P-02 y P-04 (RF51):** capturar observaciones de fuentes permitidas, cerrar la corrida, verificar identidad/presentación, resolver duplicados y registrar o refrescar el precio. Los rechazos y conflictos se revisan antes de autorizar su reintento. Este soporte no otorga al proveedor ni al visitante acceso directo a staging o equivalencias.
 
 ## 5. Historias de usuario
 
@@ -165,7 +171,9 @@ Como consumidor registrado, quiero iniciar sesión con mi correo y contraseña, 
 
 Como visitante, quiero ver en la página de inicio qué es PreciosCo y cómo funciona, para decidir rápido si me sirve y llegar a la búsqueda.
 
-- La página tiene las 8 secciones acordadas, en este orden: hero, sobre nosotros, servicios, cómo funciona, productos, testimonios, llamada a la acción y pie de página.
+- La portada muestra presentación del servicio, ejemplos con productos y precios reales, cifras y tiendas activas, acceso a secciones comerciales, beneficios, cómo funciona, quiénes somos, preguntas frecuentes y llamada a la acción.
+- Los bloques sin datos se omiten sin inventar cifras; no se muestran testimonios ni asistentes de IA todavía no implementados.
+- Cada página de sección muestra disponibilidad y avisos aplicables y enlaza al buscador mediante `?sector=<slug>`.
 - Desde el inicio llego a la búsqueda en un clic.
 - La navegación y el pie son iguales en todas las páginas.
 
@@ -183,7 +191,7 @@ Como visitante, quiero ver los productos agrupados por categoría, para explorar
 
 - Elegir una categoría lista solo sus productos activos.
 - Combinar categoría y texto filtra por ambos (mínimo 2 casos probados).
-- Las categorías se muestran con su jerarquía de categoría y subcategoría.
+- Las categorías siguen dos niveles: sección raíz y categoría hoja; los productos pertenecen a la hoja.
 
 **HU-06a · Filtrar por nombre y categoría** — RF06 (parcial; se completa con HU-06b y HU-35) · OB-01, OB-02 · S
 
@@ -191,6 +199,8 @@ Como visitante, quiero filtrar los resultados por nombre y categoría, para qued
 
 - El filtro combinado (nombre y categoría) se aplica en una sola consulta.
 - Cada filtro se resuelve en el backend, no con una manipulación visual del cliente.
+- Si hay una sección seleccionada, las opciones de categoría y tienda pertenecen a esa sección y la búsqueda envía su ID real. «Todas» elimina la categoría, no la sección.
+- Al cambiar de sección se limpian categoría, tiendas y página; un sector desconocido no ejecuta una búsqueda global y un fallo de filtros ofrece reintento.
 - Una categoría inexistente responde 404; una categoría que existe pero no tiene productos responde vacío, sin error.
 - Se separó de HU-06 por alcance del Sprint 1; los filtros por tienda y por rango de precio pasaron a HU-06b, y el filtro por marca, a HU-35.
 
@@ -201,6 +211,8 @@ Como visitante, quiero filtrar los resultados por tienda y por rango de precio, 
 - Filtrar por una o varias tiendas deja solo los productos con un precio vigente en alguna de esas tiendas; solo cuentan las tiendas activas.
 - Filtrar por precio mínimo y máximo deja solo los productos cuyo precio vigente (el más reciente de cada tienda) está dentro del rango; con tiendas seleccionadas, solo cuenta el precio de esas tiendas (DP-34).
 - Cada filtro se resuelve en el backend, no con una manipulación visual del cliente.
+- Si hay una sección seleccionada, las opciones de categoría y tienda pertenecen a esa sección y la búsqueda envía su ID real. «Todas» elimina la categoría, no la sección.
+- Al cambiar de sección se limpian categoría, tiendas y página; un sector desconocido no ejecuta una búsqueda global y un fallo de filtros ofrece reintento.
 - Combinado con nombre y categoría (HU-06a), el resultado cumple todos los filtros a la vez.
 - Una tienda inexistente o inactiva responde 404; un precio negativo o un mínimo mayor que el máximo responde 400; una búsqueda sin resultados responde vacío, sin error (DP-35).
 - Los resultados se muestran por páginas, ordenados por mayor ahorro (DP-36, DP-39), y los filtros de tienda, precio y página quedan en la dirección de la búsqueda.
@@ -409,6 +421,7 @@ Como visitante, quiero entrar a la sección de droguería y ver sus categorías,
 - Droguería aparece como categoría raíz, con sus categorías.
 - La sección muestra los productos activos que tienen precio en al menos una droguería, aunque estén clasificados en otro dominio (DP-26).
 - Elegir una categoría de Droguería lista solo sus productos activos.
+- El buscador ofrece únicamente categorías y tiendas activas de esa sección; quitar la categoría conserva la sección y sus filtros compatibles.
 - Combinar la sección con texto, tienda o rango de precio filtra por todo a la vez (HU-06a, HU-06b).
 
 **HU-30 · Comparar precios de cuidado facial** — RF58 · OB-04 · M
@@ -417,7 +430,8 @@ Como visitante, quiero comparar el precio de un producto de cuidado facial entre
 
 - Un producto de cuidado facial vendido en 2 o más tiendas muestra el precio de cada una con su fecha.
 - Se resalta la tienda con el menor precio más reciente y los precios se ordenan de menor a mayor (RF08, RF09).
-- Solo se compara el mismo producto, identificado por su EAN: un limpiador de 150 ml no se compara con uno de 400 ml (RN-02, DP-27).
+- Solo se compara el mismo producto comercial y presentación: un limpiador de 150 ml no se compara con uno de 400 ml (RN-02, DP-27).
+- Una tienda autorizada como BellaPiel puede resolver un SKU local mediante equivalencia o coincidencia secundaria controlada hacia un maestro comercial existente; no crea otro producto por semejanza de nombre ni acepta una imagen como prueba suficiente de EAN.
 - Cada precio con página registrada muestra el enlace a la tienda; uno sin página se muestra sin enlace (RF57).
 
 **HU-31 · Explorar la sección de cuidado facial** — RF11, RF58 · OB-04 · S
@@ -427,6 +441,7 @@ Como visitante, quiero entrar a la sección de cuidado facial y ver sus categor�
 - Cuidado facial aparece como categoría raíz, con sus categorías.
 - La sección muestra los productos activos que tienen precio en al menos una tienda de cuidado facial (DP-26).
 - Elegir una categoría de Cuidado facial lista solo sus productos activos.
+- El buscador ofrece únicamente categorías y tiendas activas de esa sección; quitar la categoría conserva la sección y sus filtros compatibles.
 - Combinar la sección con texto, tienda o rango de precio filtra por todo a la vez (HU-06a, HU-06b).
 
 **HU-32 · Comparar un repuesto por su referencia** — RF55 · OB-04 · M
@@ -507,11 +522,11 @@ Las 37 historias cumplen Valiosa, Negociable y Testeable; estas son las excepcio
 
 | ID | Tipo | Regla | Estado |
 | --- | --- | --- | --- |
-| RN-01 | Validación | Todo precio publicado tiene valor, fecha de registro y fuente. | Definida |
-| RN-02 | Restricción | Solo se comparan precios de un mismo producto y presentación entre establecimientos distintos. | Definida |
+| RN-01 | Validación | Todo precio publicado tiene valor positivo, fecha de registro, fuente y una base comparable. Se muestra su última confirmación; para un genérico por peso, el valor publicado corresponde a 1 kg y el total capturado se conserva en staging. | Definida |
+| RN-02 | Restricción | Solo se comparan precios del mismo producto y presentación entre establecimientos. La identidad comercial es GTIN comparable y tamaño exacto; una equivalencia local no omite sus validaciones. Los productos por peso pueden compararse mediante un genérico curado de 1 kg, solo con SKU equivalentes y peso/base de precio comprobados. Una contradicción no se resuelve por mayoría ni por conversión supuesta G↔ML. | Definida |
 | RN-03 | Cálculo | La mejor opción de compra es el establecimiento cuyo precio registrado más reciente sea el menor. | Definida |
 | RN-04 | Restricción | Los precios son informativos y no vinculantes: no se garantiza su actualización en tiempo real. | Definida |
-| RN-05 | Validación | Todo producto pertenece a una categoría y todo establecimiento a un tipo (supermercado, droguería, cuidado facial o repuestos para vehículos y motos). | Definida |
+| RN-05 | Validación | Las categorías tienen dos niveles: sección raíz y categoría hoja. Cada establecimiento pertenece a una raíz y cada producto/objetivo a una hoja; cambiar una sección de búsqueda limita sus opciones, sin reclasificar automáticamente productos históricos. | Definida |
 | RN-06 | Restricción | Los supermercados comparables en la etapa inicial son D1, Jumbo, Éxito y Olímpica; otros establecimientos se incorporan por fases. | Definida |
 | RN-07 | Autorización | Solo un consumidor registrado (rol USER) puede calificar, comentar, reportar comentarios y seguir productos; ADMIN y SUPPLIER no. | Definida |
 | RN-08 | Validación | Cada cuenta se identifica con un correo único, también cuando se inicia sesión con Google, y la recuperación de contraseña solo se envía a ese correo. | Definida |
@@ -560,15 +575,15 @@ Son 58 requisitos en siete módulos. DEBE indica obligación y DEBERÍA una func
 | ID | Nombre | Actor | Fase | Requisito |
 | --- | --- | --- | --- | --- |
 | RF05 | Buscar productos | ACT-01, 02 | 1 | El sistema DEBE permitir buscar productos por nombre, marca o categoría, y los repuestos también por su referencia o código del fabricante. |
-| RF06 | Filtrar resultados | ACT-01, 02 | 1 | El sistema DEBE permitir filtrar los resultados por rango de precio, establecimiento, marca y categoría. |
+| RF06 | Filtrar resultados | ACT-01, 02 | 1 | El sistema DEBE filtrar por precio, establecimiento, marca y categoría. Con una sección seleccionada, las opciones de categoría y tienda DEBEN limitarse a esa sección; cambiarla limpia filtros incompatibles y reinicia la página. |
 | RF07 | Comparar precios | ACT-01, 02 | 1 | El sistema DEBE mostrar, para un producto, el precio registrado en cada establecimiento donde esté disponible. |
 | RF08 | Identificar mejor opción | ACT-01, 02 | 1 | El sistema DEBE resaltar el establecimiento con el menor precio registrado más reciente del producto consultado. |
-| RF09 | Ordenar resultados | ACT-01, 02 | 1 | El sistema DEBE permitir ordenar los resultados de menor a mayor precio. |
+| RF09 | Ordenar resultados | ACT-01, 02 | 1 | El comparador DEBE mostrar los precios de un producto de menor a mayor. La búsqueda DEBE ordenar productos por porcentaje de ahorro, con desempate por nombre e ID (DP-36, DP-39); no exige un selector de orden en la interfaz. |
 | RF10 | Mostrar fecha de precio | ACT-01, 02 | 1 | El sistema DEBE mostrar junto a cada precio la fecha en que la fuente lo confirmó por última vez. |
-| RF11 | Navegar por categorías | ACT-01, 02 | 1 | El sistema DEBE permitir consultar los productos agrupados por categoría. |
+| RF11 | Navegar por categorías | ACT-01, 02 | 1 | El sistema DEBE permitir consultar productos por sección y categoría hoja. La opción «Todas» conserva la sección elegida; un enlace de sección inexistente no debe convertirse silenciosamente en una búsqueda global. |
 | RF12 | Comparar cadenas iniciales | ACT-01, 02 | 1 | El sistema DEBE incluir en la comparación los precios de D1, Jumbo, Éxito y Olímpica. |
-| RF50 | Mostrar página de inicio | ACT-01 | 1 | El sistema DEBE mostrar una página de inicio con buscador y las 8 secciones acordadas (alcance 4.A). |
-| RF51 | Cargar precios de fuente externa | ACT-08 | 1 | El sistema DEBE registrar los precios recibidos de una fuente externa con su valor, fecha y fuente (RN-01). Un precio igual al último de ese producto en esa tienda no crea un registro nuevo: solo actualiza la fecha de su última confirmación. |
+| RF50 | Mostrar página de inicio | ACT-01 | 1 | El sistema DEBE mostrar una portada con presentación del servicio, datos y ejemplos reales disponibles y acceso a las secciones comerciales. DEBE omitir bloques sin respaldo y enlazar cada sección con su búsqueda correspondiente, sin testimonios ni IA ficticios. |
+| RF51 | Cargar precios de fuente externa | ACT-08 | 1 | El sistema DEBE capturar observaciones en staging y validar identidad/presentación antes de publicar precios. Procesa pendientes de corridas cerradas o legado sin corrida, deduplica por tienda/identidad/corrida y mantiene historial por periodos. Un precio igual refresca su confirmación; las contradicciones quedan para revisión sin registrar precios. |
 | RF52 | Comparar droguerías | ACT-01, 02 | 3 | El sistema DEBE incluir en la comparación los precios de droguerías. |
 | RF55 | Comparar repuestos | ACT-01, 02 | 3 | El sistema DEBE incluir en la comparación los precios de tiendas de repuestos para vehículos y motos. |
 | RF57 | Enlazar a la tienda | ACT-01, 02 | 1 | El sistema DEBE mostrar junto a cada precio un enlace a la página del producto en la tienda, cuando la fuente la haya registrado. |
@@ -648,9 +663,9 @@ Diez requisitos de calidad condicionan cómo funciona el sistema; las pruebas y 
 | RNF03 | Disponibilidad | El sistema DEBE estar publicado en un servidor accesible por internet. | Se accede por una URL pública |
 | RNF04 | Escalabilidad | El sistema DEBE permitir incorporar categorías y establecimientos sin rediseñar la arquitectura base. | Agregar una categoría no cambia el esquema base |
 | RNF05 | Mantenibilidad | El sistema DEBE permitir agregar fases de forma modular sobre la misma arquitectura base. | Una fase nueva no obliga a reescribir las anteriores |
-| RNF06 | Calidad de datos | Las fuentes de los precios deben ser oficiales y verificables. | Por definir: falta precisar «oficial» y «verificable» y cómo se mide |
+| RNF06 | Calidad de datos | Las fuentes y evidencias de precios DEBEN ser identificables y revisables, respetando las restricciones de la integración. | Conservar tienda, URL cuando exista, fecha, código/SKU y evidencia de equivalencias o conflictos; un checksum o nombre de imagen no prueba la identidad física ni un acuerdo oficial con la tienda |
 | RNF07 | Seguridad | El sistema DEBE firmar los tokens de sesión con una clave secreta de al menos 32 bytes y hacerlos vencer a las 24 horas. | La aplicación no arranca con una clave menor; un token vencido se rechaza |
-| RNF08 | Robustez de la API | Las respuestas de error DEBEN tener formato JSON uniforme y el código correcto: 400 datos inválidos, 401 sin autenticación, 403 rol no permitido o autor distinto del solicitante, 404 no encontrado, 409 conflicto. | Un usuario anónimo recibe 401 y no un 403 vacío |
+| RNF08 | Robustez de la API | Los errores reales DEBEN conservar código y JSON uniforme mientras la conexión sea utilizable; una desconexión reconocida del cliente no debe provocar otra respuesta ni un falso error interno. | Verificar 400/401/403/404/409 y 500 real; una cancelación reconocida deja registro DEBUG sin stack trace y no oculta fallos de aplicación, base o API externa |
 | RNF09 | Seguridad | El sistema DEBE mostrar los textos escritos por usuarios (comentarios y reportes) como texto plano, sin interpretarlos como HTML. | Un comentario con una etiqueta de script se ve literal |
 | RNF10 | Rendimiento | La búsqueda de productos y la comparación de precios DEBEN responder en menos de 3 segundos\* en el 95% de las consultas, con hasta 20 usuarios concurrentes\*. | En 30 consultas consecutivas sobre la plataforma publicada, al menos 29 responden en menos de 3 s |
 
@@ -664,7 +679,7 @@ Cuatro matrices conectan cada objetivo con sus procesos, reglas, requisitos e hi
 | --- | --- | --- | --- |
 | OB-01 | P-01, P-02, P-04, P-05 | RN-02, 04, 05, 06, 07, 08, 09, 10, 15, 18 | RF01–RF07, RF12, RF23, RF25, RF26, RF29, RF30, RF50, RF56, RF57 |
 | OB-02 | P-02, P-04, P-05 | RN-02 a RN-07, RN-15, RN-16, RN-18 | RF05–RF09, RF12, RF23, RF24, RF27 a RF30, RF53, RF54 |
-| OB-03 | P-02, P-06, P-07 | RN-01, 04, 09, 19, 20, 22, 23 | RF10, RF36, RF39 a RF42, RF44, RF46, RF48, RF51 |
+| OB-03 | P-02, P-06, P-07 | RN-01, 02, 04, 09, 19, 20, 22, 23 | RF10, RF36, RF39 a RF42, RF44, RF46, RF48, RF51 |
 | OB-04 | P-02, P-05, P-06, P-07 | RN-02, 05, 09, 17, 18, 20, 21, 32 | RF05, RF11, RF31, RF32, RF35, RF43, RF52, RF55, RF58 |
 | OB-05 | P-01, P-03, P-07 | RN-07 a RN-14, RN-23 a RN-30 | RF01–RF04, RF13–RF22, RF40, RF45, RF47, RF48, RF49, RF56 |
 | OB-06 | P-06, P-07 | RN-01, 05, 09, 19 a 23 | RF33–RF39, RF41, RF42, RF46 |
@@ -702,9 +717,9 @@ Cuatro matrices conectan cada objetivo con sus procesos, reglas, requisitos e hi
 | HU-26 Modificar mi perfil | RF04 | RN-08 | OB-05 |
 | HU-27 Ir a la tienda | RF57 | RN-01 | OB-01 |
 | HU-28 Comparar precios de droguería | RF52 | RN-01, RN-02 | OB-04 |
-| HU-29 Explorar la sección de droguería | RF11, RF52 | RN-05 | OB-04 |
+| HU-29 Explorar la sección de droguería | RF06, RF11, RF52 | RN-05 | OB-04 |
 | HU-30 Comparar precios de cuidado facial | RF58 | RN-01, RN-02 | OB-04 |
-| HU-31 Explorar la sección de cuidado facial | RF11, RF58 | RN-05 | OB-04 |
+| HU-31 Explorar la sección de cuidado facial | RF06, RF11, RF58 | RN-05 | OB-04 |
 | HU-32 Comparar un repuesto por su referencia | RF55 | RN-02, RN-32 | OB-04 |
 | HU-33 Buscar un repuesto por su referencia | RF05, RF55 | RN-05, RN-32 | OB-01, OB-04 |
 | HU-34 Explorar la sección de repuestos | RF11, RF55 | RN-05 | OB-04 |
@@ -718,7 +733,7 @@ Sin historia todavía: RF29 a RF48 (Fases 4 a 6).
 | Regla | Requisitos | Regla | Requisitos |
 | --- | --- | --- | --- |
 | RN-01 | RF10, RF36, RF44, RF51, RF57 | RN-16 | RF24, RF27, RF28 |
-| RN-02 | RF07, RF52, RF55, RF58 | RN-17 | RF31, RF32 |
+| RN-02 | RF07, RF51, RF52, RF55, RF58 | RN-17 | RF31, RF32 |
 | RN-03 | RF08, RF09 | RN-18 | RF29 a RF32 |
 | RN-04 | RF07, RF10 | RN-19 | RF33, RF34, RF41 |
 | RN-05 | RF05, RF06, RF11, RF35, RF43, RF52, RF55, RF58 | RN-20 | RF35, RF42 |
@@ -765,7 +780,7 @@ Cada requisito se verifica con un criterio de «pasa si…»; los valores con as
 | RF06 | OB-01, OB-02 | RN-05 | Filtrar por Éxito y precio máximo deja solo esos productos; un producto barato en otra tienda pero caro en Éxito no aparece; un mínimo mayor que el máximo responde 400 |
 | RF07 | OB-01, OB-02 | RN-02, RN-04 | Un producto vendido en 3 tiendas muestra los 3 precios |
 | RF08 | OB-02 | RN-03 | Se resalta la tienda de menor precio más reciente |
-| RF09 | OB-02 | RN-03 | Cada precio es menor o igual al siguiente |
+| RF09 | OB-02 | RN-03 | En el comparador cada precio es menor o igual al siguiente; la búsqueda respeta el ahorro porcentual y sus desempates |
 | RF10 | OB-03 | RN-01, RN-04 | Todo precio mostrado exhibe la fecha de su última confirmación. |
 | RF11 | OB-04 | RN-05 | Elegir «Lácteos» lista solo productos de esa categoría |
 | RF12 | OB-01, OB-02 | RN-06 | Aparecen D1, Jumbo, Éxito y Olímpica |
@@ -806,8 +821,8 @@ Cada requisito se verifica con un criterio de «pasa si…»; los valores con as
 | RF47 | OB-05 | RN-10, RN-23 | La cuenta bloqueada no inicia sesión |
 | RF48 | OB-03, OB-05 | RN-23 | Cada cambio administrativo aparece con fecha y responsable |
 | RF49 | OB-05 | — | Cerrar sesión borra el token; una petición posterior con ese token devuelve 401 |
-| RF50 | OB-01 | — | La página de inicio muestra las 8 secciones y desde ella se llega a la búsqueda en un clic |
-| RF51 | OB-03 | RN-01 | Un precio cargado desde la fuente externa queda con valor, fecha y fuente; un precio igual al último de ese producto en esa tienda no crea un registro nuevo, solo actualiza la fecha de su última confirmación |
+| RF50 | OB-01 | — | La portada muestra datos respaldados, omite bloques sin información y cada página de sección abre su búsqueda sin perder el sector |
+| RF51 | OB-03 | RN-01, RN-02 | Una observación aceptada registra/refresca un precio; una corrida abierta o una oferta CONFLICT no publica; duplicados de una corrida registran solo el ganador válido y una repetición sin pendientes no añade precios |
 | RF52 | OB-04 | RN-02, RN-05 | Un producto de droguería vendido en dos droguerías muestra los dos precios en la comparación |
 | RF53 | OB-02 | RN-15, RN-16 | La lista de mis avisos incluye los generados por RF27 con su cantidad de no leídos |
 | RF54 | OB-02 | — | Marcar un aviso como leído baja el contador del encabezado |
@@ -816,22 +831,22 @@ Cada requisito se verifica con un criterio de «pasa si…»; los valores con as
 | RF57 | OB-01 | RN-01 | Un precio con página registrada muestra el enlace y abre la página del producto en la tienda; un precio sin página registrada no muestra enlace |
 | RF58 | OB-04 | RN-02, RN-05 | Un producto de cuidado facial vendido en dos tiendas muestra los dos precios en la comparación |
 
-### Anexo B. Decisiones pendientes
+### Anexo B. Registro de decisiones y pendientes
 
-Treinta y ocho decisiones siguen abiertas; cada una tiene un valor provisional con el que el documento ya funciona. Desde RF49 (incluido), los IDs de requisito ya no se renumeran: lo nuevo se agrega al final del módulo que le corresponde, aunque quede fuera de orden en la página.
+Este registro reúne acuerdos definidos y decisiones que conservan un valor provisional. Las decisiones técnicas consolidadas el 18-nov-2026 se agregan desde DP-40; no se renumeran los IDs existentes. Desde RF49 (incluido), los IDs de requisito ya no se renumeran: lo nuevo se agrega al final del módulo que le corresponde, aunque quede fuera de orden en la página.
 
 | ID | Decisión | Valor provisional | Afecta |
 | --- | --- | --- | --- |
-| DP-01 | ¿El visitante puede buscar y comparar sin registrarse? | Sí | ACT-01, RF05 a RF12 |
+| DP-01 | ¿El visitante puede buscar y comparar sin registrarse? | Definida: sí, mediante consultas públicas | ACT-01, RF05 a RF12 |
 | DP-02 | Código HTTP al modificar una opinión fuera del plazo | 409 | RF19 |
 | DP-03 | ¿El plazo de 1 día se reinicia con cada edición? | No: cuenta desde el registro | RN-29 |
 | DP-04 | Comentario eliminado que tiene reportes pendientes | Los reportes siguen PENDIENTE para el administrador | RN-14, RF22, RF45 |
 | DP-05 | Reactivar un aviso: ¿genera avisos de bajas ocurridas mientras estuvo desactivado? | No | RF25, RF27 |
-| DP-06 | Frecuencia de la revisión de bajas de precio | Cada 24 horas\* | RF27 |
+| DP-06 | Frecuencia de la revisión de bajas de precio | Evento inmediato tras un precio nuevo y detector de respaldo cada 24 horas, configurable | RF27 |
 | DP-07 | Reglas sin validar con usuarios o con el equipo | Se mantienen como «por confirmar» | RN-02, 08, 14, 24, 26, 27 |
 | DP-08 | Seguir productos solo para el rol USER | Sí | RN-07, RF23 |
 | DP-09 | Producto de proveedor visible de inmediato (RN-20): ¿se muestra una etiqueta «en revisión»? | No. Riesgo: precios erróneos visibles hasta la revisión; se mitiga con proveedor aprobado (RN-19) y con fuente y fecha obligatorias (RN-01) | RF35, RF42 |
-| DP-10 | RNF06: definir «oficial» y «verificable» y cómo se mide | Pendiente | RNF06 |
+| DP-10 | Evidencia de una fuente verificable | Criterio operativo definido: fuente pública permitida para la integración, tienda/fecha/URL y evidencia de identidad/presentación. Un acuerdo contractual u oficial no se presume por acceder a una API pública | RNF06, RF51 |
 | DP-11 | Marca en RF05, RF06, RF35 y RF43 | Se integra al modelo (tabla `brands`, Sprint 2); la búsqueda y el filtro por marca se habilitan cuando esté en `main` | RF05, RF06, RF35, RF43 |
 | DP-12 | Fase de RF03 y RF04 | Fase 2 (Sprint 2, épica Cuenta de usuario) | RF03, RF04 |
 | DP-13 | La Fase 6 incluye «aplicación móvil» y el alcance excluye la app móvil nativa | Aclarar si es web adaptable o nativa | Fase 6 |
@@ -848,15 +863,50 @@ Treinta y ocho decisiones siguen abiertas; cada una tiene un valor provisional c
 | DP-24 | ¿Proveedores y administradores pueden iniciar sesión con Google? | No: Google solo crea o abre cuentas con rol USER | RF56, RN-09 |
 | DP-25 | Un producto que se vende en supermercado y en droguería: ¿se compara junto? | Sí: la comparación muestra todas las tiendas que lo venden, sin importar su dominio | RF07, RF52, RF58 |
 | DP-26 | ¿Qué productos muestra una sección (Droguería, Cuidado facial, Repuestos)? | Los que tienen precio en al menos una tienda de ese dominio; un producto clasificado en otro dominio no aparece bajo las categorías de la sección (limitación conocida) | RF11, RF52, RF55, RF58 |
-| DP-27 | ¿Cómo se identifica un mismo producto entre tiendas? | Por su EAN guardado como GTIN-14, solo si es un código comparable (no de uso interno de una tienda, de relleno ni de peso variable), y su contenido neto; los empaques son productos distintos de la unidad suelta; si las ofertas de un EAN nuevo traen tamaños distintos, no se crea el producto hasta que coincidan; los repuestos, por su marca y su referencia normalizada | RN-02, RN-32, RF51 |
+| DP-27 | ¿Cómo se identifica un mismo producto entre tiendas? | GTIN comparable y presentación exacta; identidad secundaria autorizada hacia un maestro existente para códigos locales; genérico curado por kg para peso variable; repuestos por marca y referencia. Conflictos y ausencia de evidencia no crean maestros | RN-02, RN-32, RF51 |
 | DP-28 | Repuesto sin referencia registrada | No entra en la comparación (por confirmar) | RF55, RN-32 |
-| DP-29 | Nuevo texto de RF50: qué secciones destaca la página de inicio | Pendiente | RF50, HU-03 |
+| DP-29 | Contenido de la página de inicio | Definida: presentación, ejemplos y cifras reales, tiendas, secciones comerciales, beneficios, cómo funciona, quiénes somos, preguntas frecuentes y llamada a la acción; sin testimonios o funciones no implementadas | RF50, HU-03 |
 | DP-30 | Profundidad de la jerarquía de categorías | Dos niveles: dominio (raíz) y categoría (hoja); los productos cuelgan de la hoja, por ejemplo Supermercado › Granos y cereales | RN-05, RF11 |
 | DP-31 | ¿Las tiendas de repuestos permiten comparar? | Se mide antes de construir EP-06 (20 productos por tienda); si menos del 30 % de los repuestos aparece en 2 tiendas o más, EP-06 se replantea como listado con buscador por referencia | RF55, RN-32 |
 | DP-32 | ¿Qué fecha se muestra junto a un precio? | La última vez que la fuente lo confirmó (last_seen_at) | RF10, RN-01 |
-| DP-33 | ¿Qué cumple la “fuente” que exige RN-01? | La tienda del precio, que siempre existe; la página del producto en la tienda (RF57) es evidencia adicional cuando se registró. prices.source guarda el nombre del producto tal como lo publica la tienda, para rastrear de qué oferta salió. Se revisa al llegar EP-08 | RN-01, RF51, RF57 || DP-34 | ¿Qué precio cuenta en el filtro por rango? | El vigente: el más reciente de cada par producto-tienda, nunca uno anterior, y solo en tiendas activas; con tiendas seleccionadas, solo el de esas tiendas; límites inclusivos | RF06, HU-06b |
+| DP-33 | ¿Qué cumple la “fuente” que exige RN-01? | La tienda del precio, que siempre existe; la página del producto en la tienda (RF57) es evidencia adicional cuando se registró. prices.source guarda el nombre del producto tal como lo publica la tienda, para rastrear de qué oferta salió. Se revisa al llegar EP-08 | RN-01, RF51, RF57 |
+| DP-34 | ¿Qué precio cuenta en el filtro por rango? | El vigente: el más reciente de cada par producto-tienda, nunca uno anterior, y solo en tiendas activas; con tiendas seleccionadas, solo el de esas tiendas; límites inclusivos | RF06, HU-06b |
 | DP-35 | Códigos de la búsqueda | 200 también sin resultados; 400 por un precio negativo o un mínimo mayor que el máximo; 404 por una categoría inexistente o una tienda inexistente o inactiva | RF06, RNF08 |
 | DP-36 | Tamaño y orden de las páginas de la búsqueda | 20 resultados por defecto y 50 como máximo, ordenados por mayor ahorro (DP-39) y luego por nombre e id; el usuario no elige el orden. Hasta HT-13 el orden era por nombre | RF05, RF06 |
 | DP-37 | Tiendas inactivas en el comparador y en Seguidos | No se muestran ni cuentan para el precio más bajo, igual que en la búsqueda | RF07, RF08, RF26 |
 | DP-38 | Precio que la tienda dejó de confirmar | Sigue contando como vigente (riesgo aceptado); se resuelve en HU-36 con una ventana según la fecha de la última confirmación | RF07, RF08, RF10 |
 | DP-39 | ¿Cómo se ordena la búsqueda por ahorro? | Ahorro = (precio vigente máximo − mínimo) / máximo entre todas las tiendas activas, en porcentaje, aunque se filtre por algunas; con un solo precio o sin precio es 0 y el producto va al final. Con filtros: lista paginada por ahorro, desempate por nombre e id. Sin filtros: los 5 mejores de cada subcategoría (N provisional), agrupados por sección, en /best-savings | RF05, RF06, RF09, RF11 |
+| DP-40 | EAN esperado de una página | `expected_ean` contiene el código esperado, no un booleano; debe verificarse antes de completar tamaño exacto del target | RF51, RN-02 |
+| DP-41 | Identidad local de BellaPiel | `has_ean=false`: SKU real en ean/store_sku y mapa por tienda/SKU; NULL mantiene interpretación legada. El código publicado anterior queda en CSV; no se promueve una imagen/referencia genérica a EAN | RF51, RF58, RN-02 |
+| DP-42 | Contradicciones dentro de una oferta facial | El scraper asigna CONFLICT, tamaño nulo y reason; CSV por fuente. No entra al procesador ni a la retención automática; la revisión precede a cualquier reapertura | RF51, RN-02, RNF06 |
+| DP-43 | Límite de una corrida | UUID y cierre explícito; menor precio válido por tienda/identidad/corrida, empate por menor ID. Legado sin run_id permanece individual; no se agrupa por una hora supuesta | RF51, RN-01 |
+| DP-44 | Comparación de peso variable | Genérico activo de 1000 G sin EAN/marca/referencia y enlace manual tienda/SKU; peso publicado y precio total verificado para calcular COP/kg. No se inventa peso ni se equiparan cortes/variedades distintos | RF07, RF51, RN-02 |
+| DP-45 | Migraciones y saneamiento histórico | Scripts versionados, respaldo, prueba aislada y preflight. Un override o parche no cambia maestros/precios existentes ni autoriza borrados o reprocesos masivos | RF51, RNF05, RNF06 |
+| DP-46 | Evidencia que entrega facial | sku_offers.csv inventaría ofertas sin EAN comercial; conflictos_tamanos.csv describe medidas por fuente. Ambos acompañan la inserción en staging y se publican en Actions | RF51, RNF06 |
+| DP-47 | Opciones del buscador por sección | Catálogo de raíces activas y categorías/tiendas de la raíz; cambiar sección limpia categoría/tienda/página. Un error de catálogo no lanza búsqueda global | RF06, RF11, HU-29, HU-31 |
+| DP-48 | Cancelaciones de navegación | Conservar AbortController y StrictMode; clasificar desconexiones reconocidas en DEBUG sin otra respuesta, manteniendo ERROR/500 en fallos reales | RNF08, RF05, RF50 |
+| DP-49 | Conflictos entre ofertas y correcciones globales | PENDING/UNCLASSIFIED de corridas elegibles pueden aportar evidencia de tamaño; se omite solo aceptación de rango/unidad del target al evaluar esa evidencia. El override requiere una única identidad física y no cambia un maestro existente | RF51, RN-02 |
+
+### Anexo C. Criterios de aceptación de la ingesta y la navegación
+
+Estos casos concretan RF51, RF06, RF11 y RNF06/RNF08; no crean nuevos requisitos ni cambian sus IDs.
+
+| Caso | Pasa si… |
+| --- | --- |
+| Corrida abierta | Las observaciones permanecen PENDING y no crean productos/precios hasta el cierre; el legado sin run_id conserva su ruta individual. |
+| Duplicados | En una corrida y tienda se usa el menor precio efectivo válido por identidad; las otras aceptadas quedan PROCESSED con motivo de duplicado. En peso variable se compara COP/kg. |
+| EAN esperado | Una página con otro EAN o sin EAN comercial suficiente se rechaza; el esperado no se copia como dato recibido. |
+| Tamaño ausente | Solo se completa desde target exacto con identidad esperada comprobada y datos parciales compatibles; no se convierte G↔ML. |
+| Evidencia contradictoria entre tiendas | Un GTIN nuevo con tamaños distintos no crea maestro aunque una evidencia esté UNCLASSIFIED por no cumplir su target; los rechazos previos conservan motivo. |
+| Conflicto interno facial | Se inserta CONFLICT con tamaño/unidad nulos, reason y CSV de fuentes; no hay precio, relleno automático ni borrado por retención. |
+| Código local | Un SKU con forma de GTIN sigue siendo local si has_ean=false; se consulta la equivalencia y se revalidan atributos. Sin resolución suficiente no se crea maestro. |
+| Mapa incompatible | Se rechaza con motivo específico sin sustituirlo silenciosamente ni bajar el umbral de similitud. |
+| Peso variable | Solo un enlace curado y un peso/base de precio válidos producen precio por kg; un paquete fijo o producto por unidad no se transforma por su categoría. |
+| Reintento | Corregir datos no reabre automáticamente UNCLASSIFIED/CONFLICT ni reprocesa PROCESSED; se revisan IDs concretos o se captura una oferta nueva. |
+| Precios y avisos | Mismo precio refresca el periodo; uno distinto crea otro y emite evento después del commit. El primer precio o una subida no generan por sí solos aviso de baja. |
+| Entrada desde una sección | Landing → sección → buscar conserva sector y carga solo sus filtros; «Todas» mantiene la raíz y un sector desconocido no busca globalmente. |
+| Navegación y errores | Cambiar de vista cancela peticiones obsoletas; la petición vigente carga datos o muestra recuperación visible. Una desconexión del cliente no se confunde con un error de base de datos. |
+
+### Anexo D. Actualización documental del 18-nov-2026
+
+Se preservan los identificadores RF/RN/HU y las fases de IA, proveedores y administración. Se reconcilian RF09/RF50 con la interfaz real, se concreta RF51 y se agregan decisiones DP-40 a DP-49 y criterios verificables. La planificación de una fase no certifica su despliegue; los pendientes de curaduría, publicación de parches y base compartida figuran en DECISIONS.md.
