@@ -41,9 +41,14 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    
     @Column(nullable = false)
     private LocalDateTime registrationDate = LocalDateTime.now();
+
+    @Column(name = "failed_attempts", nullable = false)
+    private Integer failedAttempts = 0;
+
+    @Column(name = "lock_time")
+    private LocalDateTime lockTime;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "auth_provider", nullable = false)

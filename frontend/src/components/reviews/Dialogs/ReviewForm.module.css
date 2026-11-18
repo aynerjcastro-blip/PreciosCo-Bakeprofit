@@ -1,7 +1,10 @@
 /* ============================================================
    FORMULARIOS DE OPINIÓN (opinar, editar, reportar, eliminar)
-   Mismo lenguaje visual que el formulario de login y registro.
+   Los usan también el diálogo de seguimiento y el de eliminar comentario.
+   Mismo lenguaje visual que los formularios de cuenta. Solo tokens del sistema de diseño:
+   funciona igual en claro y oscuro.
    ============================================================ */
+
 .review-form {
     display: flex;
     flex-direction: column;
@@ -30,13 +33,21 @@
     color: var(--text-primary);
     font-family: var(--font-body);
     font-size: 1rem;
+    line-height: 1.5;
     resize: vertical;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+.review-form__textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.8;
 }
 
 .review-form__textarea:focus {
     border-color: var(--color-primary);
+    background: var(--bg-surface);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
 .review-form__meta {
@@ -50,12 +61,19 @@
 .review-form__note,
 .review-form__text {
     font-size: 0.9rem;
+    line-height: 1.5;
     color: var(--text-muted);
 }
 
+/* Error: caja de alerta con los tokens del sistema (antes era solo texto rojo fijo) */
 .review-form__error {
-    color: var(--color-danger, #DC2626);
+    padding: 10px 12px;
+    border: 1px solid var(--alert-error-border);
+    border-radius: var(--radius-sm);
+    background: var(--alert-error-bg);
+    color: var(--badge-reportado-text);
     font-size: 0.9rem;
+    line-height: 1.4;
 }
 
 .review-form__error a {
@@ -64,7 +82,7 @@
     color: inherit;
 }
 
-/* Grupo de opciones (razones de reporte) */
+/* ---------- Grupo de opciones (razones de reporte) ---------- */
 .review-form__options {
     display: flex;
     flex-direction: column;
@@ -90,7 +108,7 @@
     border-radius: var(--radius-sm);
     font-weight: 600;
     cursor: pointer;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, background-color 0.2s;
 }
 
 .review-form__option:hover {
@@ -99,6 +117,7 @@
 
 .review-form__option--selected {
     border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 .review-form__option input {
@@ -108,6 +127,7 @@
     cursor: pointer;
 }
 
+/* ---------- Botones ---------- */
 .review-form__actions {
     display: flex;
     flex-wrap: wrap;
@@ -119,6 +139,7 @@
 .review-form__cancel {
     padding: 12px 18px;
     border: none;
+    border-radius: var(--radius-sm);
     background: none;
     color: var(--text-muted);
     font-family: var(--font-body);
@@ -131,17 +152,18 @@
     color: var(--text-primary);
 }
 
+/* Acción principal: naranja con texto oscuro, igual que el resto de pantallas */
 .review-form__submit {
     padding: 12px 22px;
     border: none;
     border-radius: var(--radius-sm);
-    background: var(--color-dark);
-    color: var(--bg-surface);
+    background: var(--color-primary);
+    color: #0F172A;
     font-family: var(--font-body);
     font-size: 1rem;
-    font-weight: 700;
+    font-weight: 800;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background-color 0.2s;
 }
 
 .review-form__submit:hover:not(:disabled) {
@@ -153,20 +175,21 @@
     cursor: not-allowed;
 }
 
+/* Acción destructiva (eliminar comentario). Antes usaba --color-danger, que no existe en tokens.css */
 .review-form__submit--danger {
-    background: var(--color-danger, #DC2626);
-    color: #FFF;
+    background: var(--state-error-text);
+    color: var(--bg-surface);
 }
 
 .review-form__submit--danger:hover:not(:disabled) {
-    background: var(--color-danger, #DC2626);
+    background: var(--state-error-text);
     filter: brightness(0.9);
 }
 
 .review-form__cancel:focus-visible,
 .review-form__submit:focus-visible,
 .review-form__option:has(input:focus-visible) {
-    outline: 3px solid var(--color-dark);
+    outline: 3px solid var(--focus-ring-color);
     outline-offset: 2px;
 }
 
@@ -178,5 +201,14 @@
     .review-form__submit,
     .review-form__cancel {
         width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .review-form__textarea,
+    .review-form__option,
+    .review-form__submit {
+        transition: none;
     }
 }

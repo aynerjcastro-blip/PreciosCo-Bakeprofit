@@ -9,6 +9,7 @@ repomix-output.xml
 
 # Variables de entorno y credenciales
 .env
+!.env.example
 .env.*
 
 # Sistema y editores

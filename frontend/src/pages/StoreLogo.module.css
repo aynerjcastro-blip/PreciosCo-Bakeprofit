@@ -1,0 +1,40 @@
+.logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    border-radius: .75rem;
+    overflow: hidden;
+    background: #fff;
+    /* los logos oficiales están hechos para fondo claro: no se tiñen con el modo oscuro */
+    border: 1px solid var(--h-border, #e2e7ff);
+}
+
+.md {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: .25rem;
+}
+
+.lg {
+    width: 4rem;
+    height: 4rem;
+    padding: .4rem;
+    border-radius: 1rem;
+}
+
+.logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.initials {
+    font-weight: 800;
+    font-size: .8rem;
+    color: #5b6478;
+}
+
+.lg .initials {
+    font-size: 1.1rem;
+}

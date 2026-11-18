@@ -3,13 +3,8 @@
    Filtros a la izquierda, resultados en filas con foto y precio.
    Solo tokens del sistema de diseño (tokens.css): claro y oscuro.
    ============================================================ */
-/* Fondo de la página: un tono cálido arriba que se funde con el fondo general. Se calcula
-   sobre --bg-main, así en modo oscuro es un tinte cálido oscuro y no un blanco. */
 .search-page {
     min-height: 100vh;
-    background: linear-gradient(180deg,
-            color-mix(in srgb, var(--color-primary) 9%, var(--bg-main)) 0,
-            var(--bg-main) 640px);
 }
 
 .search-page__container {

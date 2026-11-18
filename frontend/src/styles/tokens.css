@@ -11,6 +11,10 @@
     --bg-main: #F8FAFC;
     --bg-surface: #FFFFFF;
 
+    /* Luces del fondo de la página (ver body::before en base.css) */
+    --glow-1: rgb(255 159 28 / 0.16);
+    --glow-2: rgb(80 120 255 / 0.12);
+
     /* Colores oscuros (header/footer/dark sections) */
     --color-dark: #0F172A;
     --color-dark-card: #1E293B;
@@ -37,6 +41,16 @@
 
     /* Bordes */
     --border-color: #E2E8F0;
+
+    /* Header y footer. Son alias: apuntan a los tokens de superficie, borde y texto, así que
+       cambian solos con el tema (claro, oscuro manual y oscuro del sistema) y NO hace falta
+       redefinirlos en los bloques oscuros. Si algún día el header o el footer deben verse
+       distintos al resto, se cambia aquí una sola línea. */
+    --header-bg: var(--bg-surface);
+    --header-border: var(--border-color);
+    --footer-bg: var(--bg-surface);
+    --footer-border: var(--border-color);
+    --footer-text: var(--text-primary);
 
     /* Tipografía */
     --font-heading: 'Hubot Sans', sans-serif;
@@ -93,14 +107,20 @@
 /* ============================================================
    TEMA OSCURO (Fallback OS y Manual)
    Aquí se reescriben las variables para adaptar la UI a modo oscuro.
+   Las dos reglas deben quedar idénticas: la primera sigue al sistema operativo y la segunda
+   al botón del header. Si se cambia una, se cambia la otra.
    ============================================================ */
 
 /* 1. Preferencia del sistema operativo (Se activa si el usuario tiene su OS en modo oscuro) */
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-        /* Fondos generales invertidos */
-        --bg-main: #121212;
-        --bg-surface: #1E1E1E;
+        /* Fondos: página azul noche; superficie (header, footer, tarjetas) más oscura */
+        --bg-main: #121626;
+        --bg-surface: #0e1014;
+
+        /* Luces del fondo de la página (ver body::before en base.css) */
+        --glow-1: rgb(70 110 230 / 0.26);
+        --glow-2: rgb(120 90 230 / 0.16);
 
         /* Ajuste de color oscuro a claro para mantener coherencia en secciones invertidas */
         --color-dark: #F8FAFC;
@@ -110,11 +130,11 @@
         --text-muted: #CBD5E1;
 
         /* Borde atenuado */
-        --border-color: #334155;
+        --border-color: #2b303c;
 
         /* Estrellas */
         --color-star-stroke: #FF9F1C;
-        --color-star-empty: #334155;
+        --color-star-empty: #2b303c;
 
         /* Badges invertidos (Fondo oscuro intenso con texto muy claro - WCAG AA) */
         --badge-pendiente-bg: #78350F;
@@ -139,9 +159,13 @@
 
 /* 2. Switch manual del usuario (Forzado mediante botón en la UI) */
 :root[data-theme="dark"] {
-    /* Fondos generales invertidos */
-    --bg-main: #121212;
-    --bg-surface: #1E1E1E;
+    /* Fondos: página azul noche; superficie (header, footer, tarjetas) más oscura */
+    --bg-main: #121626;
+    --bg-surface: #0e1014;
+
+    /* Luces del fondo de la página (ver body::before en base.css) */
+    --glow-1: rgb(70 110 230 / 0.26);
+    --glow-2: rgb(120 90 230 / 0.16);
 
     /* Ajuste de color oscuro a claro para mantener coherencia en secciones invertidas */
     --color-dark: #F8FAFC;
@@ -151,11 +175,11 @@
     --text-muted: #CBD5E1;
 
     /* Borde atenuado */
-    --border-color: #334155;
+    --border-color: #2b303c;
 
     /* Estrellas */
     --color-star-stroke: #FF9F1C;
-    --color-star-empty: #334155;
+    --color-star-empty: #2b303c;
 
     /* Badges invertidos (Fondo oscuro intenso con texto muy claro - WCAG AA) */
     --badge-pendiente-bg: #78350F;

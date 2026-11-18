@@ -70,127 +70,129 @@ export default function Followed() {
     };
 
     return (
-        <section className={styles.followed}>
-            <header className={styles.followed__header}>
-                <h1 className={styles.followed__title}>Productos seguidos</h1>
-                <p className={styles.followed__subtitle}>
-                    Te avisamos cuando baje el precio de lo que sigues.
-                </p>
-            </header>
+        <div className={styles['followed-shell']}>
+            <section className={styles.followed}>
+                <header className={styles.followed__header}>
+                    <h1 className={styles.followed__title}>Productos seguidos</h1>
+                    <p className={styles.followed__subtitle}>
+                        Te avisamos cuando baje el precio de lo que sigues.
+                    </p>
+                </header>
 
-            {actionError && (
-                <p className={styles.followed__alert} role="alert">{actionError}</p>
-            )}
+                {actionError && (
+                    <p className={styles.followed__alert} role="alert">{actionError}</p>
+                )}
 
-            {status === 'loading' && (
-                <p className={styles.followed__state} role="status">
-                    <span className={styles.followed__spinner} aria-hidden="true" />
-                    Cargando tus seguimientos...
-                </p>
-            )}
+                {status === 'loading' && (
+                    <p className={styles.followed__state} role="status">
+                        <span className={styles.followed__spinner} aria-hidden="true" />
+                        Cargando tus seguimientos...
+                    </p>
+                )}
 
-            {status === 'error' && (
-                <div className={`${styles.followed__state} ${styles['followed__state--error']}`} role="alert">
-                    {loadError?.status === 403 && <p>Solo las cuentas de consumidor pueden seguir productos.</p>}
-                    {loadError?.status === 401 && (
-                        <p>Tu sesión expiró. <Link to="/login">Iniciar sesión</Link></p>
-                    )}
-                    {loadError?.status !== 403 && loadError?.status !== 401 && (
-                        <>
-                            <p>{loadError?.message || 'No se pudieron cargar tus seguimientos.'}</p>
-                            <button type="button" className={styles.followed__button} onClick={handleRetry}>
-                                Reintentar
-                            </button>
-                        </>
-                    )}
-                </div>
-            )}
+                {status === 'error' && (
+                    <div className={`${styles.followed__state} ${styles['followed__state--error']}`} role="alert">
+                        {loadError?.status === 403 && <p>Solo las cuentas de consumidor pueden seguir productos.</p>}
+                        {loadError?.status === 401 && (
+                            <p>Tu sesión expiró. <Link to="/login">Iniciar sesión</Link></p>
+                        )}
+                        {loadError?.status !== 403 && loadError?.status !== 401 && (
+                            <>
+                                <p>{loadError?.message || 'No se pudieron cargar tus seguimientos.'}</p>
+                                <button type="button" className={styles.followed__button} onClick={handleRetry}>
+                                    Reintentar
+                                </button>
+                            </>
+                        )}
+                    </div>
+                )}
 
-            {status === 'success' && follows.length === 0 && (
-                <div className={styles.followed__state}>
-                    <p>Aún no sigues ningún producto.</p>
-                    <p>Entra a la comparación de un producto y pulsa «Seguir».</p>
-                    <Link className={styles.followed__button} to="/buscar">Buscar productos</Link>
-                </div>
-            )}
+                {status === 'success' && follows.length === 0 && (
+                    <div className={styles.followed__state}>
+                        <p>Aún no sigues ningún producto.</p>
+                        <p>Entra a la comparación de un producto y pulsa «Seguir».</p>
+                        <Link className={styles.followed__button} to="/buscar">Buscar productos</Link>
+                    </div>
+                )}
 
-            {status === 'success' && follows.length > 0 && (
-                <ul className={styles['follow-list']}>
-                    {follows.map((follow) => (
-                        <li key={follow.id} className={styles['follow-card']}>
-                            <div className={styles['follow-card__head']}>
-                                <h2 className={styles['follow-card__name']}>
-                                    <Link to={`/comparador?productId=${follow.productId}`}>{follow.productName}</Link>
-                                </h2>
-                                <span
-                                    className={`${styles.badge} ${follow.notificationActive ? styles['badge--active'] : styles['badge--paused']}`}
-                                >
-                                    {follow.notificationActive ? 'Aviso activo' : 'Aviso pausado'}
-                                </span>
-                            </div>
-
-                            <dl className={styles['follow-card__data']}>
-                                <div>
-                                    <dt>Precio más bajo</dt>
-                                    <dd className={styles['follow-card__price']}>
-                                        {follow.lowestPrice != null ? formatPrice(follow.lowestPrice) : 'Sin precios'}
-                                    </dd>
-                                </div>
-                                <div>
-                                    <dt>Aviso</dt>
-                                    <dd>{describeTarget(follow.targetPrice)}</dd>
-                                </div>
-                                <div>
-                                    <dt>Siguiendo desde</dt>
-                                    <dd>{formatDate(follow.registrationDate)}</dd>
-                                </div>
-                            </dl>
-
-                            <div className={styles['follow-card__actions']}>
-                                <button
-                                    type="button"
-                                    role="switch"
-                                    aria-checked={follow.notificationActive}
-                                    aria-label={`Avisarme de ${follow.productName}`}
-                                    className={styles.switch}
-                                    onClick={() => handleToggle(follow)}
-                                    disabled={pendingId === follow.id}
-                                >
-                                    <span className={styles.switch__track} aria-hidden="true">
-                                        <span className={styles.switch__thumb} />
+                {status === 'success' && follows.length > 0 && (
+                    <ul className={styles['follow-list']}>
+                        {follows.map((follow) => (
+                            <li key={follow.id} className={styles['follow-card']}>
+                                <div className={styles['follow-card__head']}>
+                                    <h2 className={styles['follow-card__name']}>
+                                        <Link to={`/comparador?productId=${follow.productId}`}>{follow.productName}</Link>
+                                    </h2>
+                                    <span
+                                        className={`${styles.badge} ${follow.notificationActive ? styles['badge--active'] : styles['badge--paused']}`}
+                                    >
+                                        {follow.notificationActive ? 'Aviso activo' : 'Aviso pausado'}
                                     </span>
-                                    <span>Avisarme</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    className={styles['follow-card__edit']}
-                                    onClick={() => setEditing(follow)}
-                                    aria-haspopup="dialog"
-                                >
-                                    Ajustar
-                                </button>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            )}
+                                </div>
 
-            {editing && (
-                <FollowDialog
-                    productId={editing.productId}
-                    productName={editing.productName}
-                    follow={editing}
-                    onClose={() => setEditing(null)}
-                    onSaved={(saved) => {
-                        replaceFollow(saved);
-                        setEditing(null);
-                    }}
-                    onUnfollowed={() => {
-                        setFollows((current) => current.filter((item) => item.id !== editing.id));
-                        setEditing(null);
-                    }}
-                />
-            )}
-        </section>
+                                <dl className={styles['follow-card__data']}>
+                                    <div>
+                                        <dt>Precio más bajo</dt>
+                                        <dd className={styles['follow-card__price']}>
+                                            {follow.lowestPrice != null ? formatPrice(follow.lowestPrice) : 'Sin precios'}
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt>Aviso</dt>
+                                        <dd>{describeTarget(follow.targetPrice)}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Siguiendo desde</dt>
+                                        <dd>{formatDate(follow.registrationDate)}</dd>
+                                    </div>
+                                </dl>
+
+                                <div className={styles['follow-card__actions']}>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={follow.notificationActive}
+                                        aria-label={`Avisarme de ${follow.productName}`}
+                                        className={styles.switch}
+                                        onClick={() => handleToggle(follow)}
+                                        disabled={pendingId === follow.id}
+                                    >
+                                        <span className={styles.switch__track} aria-hidden="true">
+                                            <span className={styles.switch__thumb} />
+                                        </span>
+                                        <span>Avisarme</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={styles['follow-card__edit']}
+                                        onClick={() => setEditing(follow)}
+                                        aria-haspopup="dialog"
+                                    >
+                                        Ajustar
+                                    </button>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+
+                {editing && (
+                    <FollowDialog
+                        productId={editing.productId}
+                        productName={editing.productName}
+                        follow={editing}
+                        onClose={() => setEditing(null)}
+                        onSaved={(saved) => {
+                            replaceFollow(saved);
+                            setEditing(null);
+                        }}
+                        onUnfollowed={() => {
+                            setFollows((current) => current.filter((item) => item.id !== editing.id));
+                            setEditing(null);
+                        }}
+                    />
+                )}
+            </section>
+        </div>
     );
 }

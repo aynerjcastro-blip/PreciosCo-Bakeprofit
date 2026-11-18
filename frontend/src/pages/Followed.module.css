@@ -1,58 +1,71 @@
 /* ============================================================
    PÁGINA DE PRODUCTOS SEGUIDOS
-   Solo tokens del sistema de diseño: estados vacío/cargando/error, badges y alertas.
+   Mismo lenguaje que el buscador y las pantallas de cuenta: fondo cálido, tarjetas con borde
+   fino, botones en píldora. Solo tokens del sistema de diseño (claro y oscuro).
    Rejilla: 1 columna en móvil, 2 en tablet, 3 en escritorio.
    ============================================================ */
+
+.followed-shell {
+    min-height: 70vh;
+}
+
 .followed {
     max-width: 1100px;
-    margin: 60px auto;
-    padding: 0 24px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
 }
 
 .followed__header {
-    text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 32px;
 }
 
 .followed__title {
-    font-size: 2rem;
+    font-family: var(--font-heading);
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
     font-weight: 800;
+    line-height: 1.15;
 }
 
 .followed__subtitle {
+    margin-top: 6px;
     color: var(--text-muted);
-    margin-top: 8px;
 }
 
 /* Alerta de error de una acción (cambiar el aviso) */
 .followed__alert {
     margin-bottom: 20px;
     padding: 10px 16px;
-    border-left: 4px solid var(--alert-error-border);
+    border: 1px solid var(--alert-error-border);
+    border-left-width: 4px;
     border-radius: var(--radius-sm);
     background: var(--alert-error-bg);
     color: var(--text-primary);
 }
 
-/* Estados vacío, cargando y error */
+/* ---------- Estados: vacío, cargando y error ---------- */
 .followed__state {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 12px;
-    margin-top: 40px;
-    text-align: center;
+    padding: 48px 24px;
+    border: 1.5px dashed var(--border-color);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--bg-surface) 70%, transparent);
     color: var(--state-empty-text);
+    text-align: center;
 }
 
 .followed__state--error {
+    border-color: var(--alert-error-border);
     color: var(--state-error-text);
 }
 
 .followed__state a {
-    font-weight: 700;
     color: inherit;
+    font-weight: 700;
     text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
 .followed__spinner {
@@ -65,7 +78,9 @@
 }
 
 @keyframes followed-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -74,22 +89,27 @@
     }
 }
 
+/* Botón principal: texto oscuro sobre el naranja, igual que la pestaña activa del buscador */
 .followed__button {
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 10px 24px;
     border: none;
     border-radius: 999px;
-    background: var(--color-dark);
-    color: var(--bg-surface);
+    background: var(--color-primary);
+    color: #0F172A;
     font-family: var(--font-body);
     font-size: 1rem;
-    font-weight: 700;
+    font-weight: 800;
     text-decoration: none;
     cursor: pointer;
+    transition: background-color 0.15s;
 }
 
+/* Gana a `.followed__state a`, que subraya los enlaces del estado */
 .followed__state .followed__button {
-    color: var(--bg-surface);
+    color: #0F172A;
     text-decoration: none;
 }
 
@@ -100,7 +120,8 @@
 .followed__button:focus-visible,
 .follow-card__edit:focus-visible,
 .switch:focus-visible,
-.follow-card__name a:focus-visible {
+.follow-card__name a:focus-visible,
+.followed__state a:focus-visible {
     outline: 3px solid var(--focus-ring-color);
     outline-offset: 2px;
 }
@@ -136,6 +157,13 @@
     border-radius: var(--radius-md);
     background: var(--bg-surface);
     box-shadow: var(--shadow-soft);
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.follow-card:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--color-primary) 55%, var(--border-color));
+    box-shadow: var(--shadow-card);
 }
 
 .follow-card__head {
@@ -146,8 +174,10 @@
 }
 
 .follow-card__name {
+    font-family: var(--font-heading);
     font-size: 1.15rem;
     font-weight: 800;
+    line-height: 1.25;
     overflow-wrap: anywhere;
 }
 
@@ -158,6 +188,9 @@
 
 .follow-card__name a:hover {
     text-decoration: underline;
+    text-decoration-color: var(--color-primary);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
 }
 
 /* Badge del estado del aviso (mismos tokens que los badges de estado del sistema) */
@@ -181,24 +214,29 @@
 .follow-card__data {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
     margin: 0;
 }
 
 .follow-card__data dt {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
     color: var(--text-muted);
 }
 
 .follow-card__data dd {
     margin: 2px 0 0;
     color: var(--text-primary);
+    line-height: 1.4;
 }
 
 .follow-card__price {
-    font-size: 1.4rem;
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
     font-weight: 800;
+    line-height: 1.2;
 }
 
 .follow-card__actions {
@@ -221,7 +259,7 @@
     font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: background-color 0.15s;
 }
 
 .follow-card__edit:hover {
@@ -235,6 +273,7 @@
     gap: 10px;
     padding: 0;
     border: none;
+    border-radius: 999px;
     background: none;
     color: var(--text-primary);
     font-family: var(--font-body);
@@ -256,7 +295,7 @@
     border: 2px solid var(--text-muted);
     border-radius: 999px;
     background: transparent;
-    transition: background 0.15s, border-color 0.15s;
+    transition: background-color 0.15s, border-color 0.15s;
 }
 
 .switch__thumb {
@@ -267,22 +306,35 @@
     height: 16px;
     border-radius: 50%;
     background: var(--text-muted);
-    transition: transform 0.15s, background 0.15s;
+    transition: transform 0.15s, background-color 0.15s;
 }
 
+/* Activo: pista naranja y perilla del color base (oscura en claro, clara en oscuro) */
 .switch[aria-checked="true"] .switch__track {
-    background: var(--color-dark);
-    border-color: var(--color-dark);
+    background: var(--color-primary);
+    border-color: var(--color-primary);
 }
 
 .switch[aria-checked="true"] .switch__thumb {
-    background: var(--bg-surface);
+    background: var(--color-dark);
     transform: translateX(18px);
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .switch__track,
-    .switch__thumb {
+    .switch__thumb,
+    .follow-card {
         transition: none;
+    }
+
+    .follow-card:hover {
+        transform: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .followed {
+        padding: 28px 16px 64px;
     }
 }

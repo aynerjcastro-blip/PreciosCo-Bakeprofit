@@ -1,5 +1,7 @@
 package com.comprasco.bakeprofit.auth.service;
 
+import com.comprasco.bakeprofit.auth.dto.ChangePasswordRequest;
+import com.comprasco.bakeprofit.auth.exception.InvalidPasswordChangeException;
 import com.comprasco.bakeprofit.auth.dto.AuthResponse;
 import com.comprasco.bakeprofit.auth.dto.ForgotPasswordRequest;
 import com.comprasco.bakeprofit.auth.dto.GoogleLoginRequest;
@@ -13,6 +15,7 @@ import com.comprasco.bakeprofit.auth.entity.AuthProvider;
 import com.comprasco.bakeprofit.auth.entity.PasswordResetToken;
 import com.comprasco.bakeprofit.auth.entity.Role;
 import com.comprasco.bakeprofit.auth.entity.User;
+import com.comprasco.bakeprofit.auth.exception.AccountLockedException;
 import com.comprasco.bakeprofit.auth.exception.EmailAlreadyExistsException;
 import com.comprasco.bakeprofit.auth.exception.ForbiddenActionException;
 import com.comprasco.bakeprofit.auth.exception.InactiveUserException;
@@ -33,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -51,18 +55,26 @@ public class UserService {
     private final JwtSecurity jwtSecurity;
     private final PasswordResetTokenRepository tokenRepository;
     private final EmailService emailService;
-
+    private final LoginAttemptService loginAttemptService;
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
     @Value("${google.client-id}")
     private String googleClientId;
 
+    @Value("${app.security.max-failed-attempts:5}")
+    private int maxFailedAttempts;
+
+    @Value("${app.security.lock-duration-minutes:15}")
+    private int lockDurationMinutes;
+
     public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, JwtSecurity jwtSecurity,
-            PasswordResetTokenRepository tokenRepository, EmailService emailService) {
+            PasswordResetTokenRepository tokenRepository, EmailService emailService,
+            LoginAttemptService loginAttemptService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtSecurity = jwtSecurity;
         this.tokenRepository = tokenRepository;
         this.emailService = emailService;
+        this.loginAttemptService = loginAttemptService;
     }
 
     /* CONSULTAS */
@@ -147,23 +159,50 @@ public class UserService {
      *
      * @param request DTO con email y password
      * @return AuthResponse con el token generado
+     * @throws AccountLockedException
      */
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(InvalidCredentialsException::new);
 
+        if (isAccountLocked(user)) {
+            throw new AccountLockedException(
+                    "Cuenta bloqueada por multiples intentos fallidos. Intenta en "
+                            + lockDurationMinutes + " minutos.");
+        }
+
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+            loginAttemptService.registerFailedAttempt(user.getId()); // CAMBIADO
             throw new InvalidCredentialsException();
         }
 
-        // RN-10: Rechazar login de cuentas inactivas
         if (!Boolean.TRUE.equals(user.getActive())) {
-            throw new InactiveUserException("La cuenta se encuentra desactivada. Contacte al administrador.");
+            throw new InactiveUserException(
+                    "La cuenta se encuentra desactivada. Contacte al administrador.");
         }
 
+        loginAttemptService.resetAttempts(user.getId()); // CAMBIADO
         String token = jwtSecurity.generateToken(user.getEmail(), user.getRole().name());
-
         return new AuthResponse(token, user.getName(), user.getEmail(), user.getRole());
+    }
+
+    /**
+     * Verifica si la cuenta del usuario está temporalmente bloqueada.
+     * Si el tiempo de bloqueo expiró, resetea el contador.
+     */
+    private boolean isAccountLocked(User user) {
+        if (user.getLockTime() == null) {
+            return false;
+        }
+        boolean expired = LocalDateTime.now()
+                .isAfter(user.getLockTime().plusMinutes(lockDurationMinutes));
+        if (expired) {
+            user.setLockTime(null);
+            user.setFailedAttempts(0); // 0, no null — la columna es NOT NULL
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -337,5 +376,37 @@ public class UserService {
         user.setName(request.name());
         userRepository.save(user);
         return getProfile(userId);
+    }
+
+    /**
+     * Cambia la contraseña del usuario autenticado.
+     * <p>
+     * Exige la contraseña actual: así, quien tenga un token robado o una sesión
+     * abierta en un equipo ajeno no puede apropiarse de la cuenta.
+     * Las cuentas de Google no entran aquí: su contraseña es un valor aleatorio
+     * que nadie conoce, por eso no pueden aportar la actual.
+     *
+     * @param userId  usuario autenticado (viene del token, nunca del cuerpo)
+     * @param request contraseña actual y contraseña nueva
+     * @throws ForbiddenActionException       si la cuenta es de Google (403)
+     * @throws InvalidPasswordChangeException si la actual no coincide o la nueva es
+     *                                        igual (400)
+     */
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        User user = findById(userId);
+
+        if (user.getAuthProvider() != AuthProvider.LOCAL) {
+            throw new ForbiddenActionException("Las cuentas creadas con Google no tienen contraseña propia.");
+        }
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw new InvalidPasswordChangeException("La contraseña actual es incorrecta");
+        }
+        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+            throw new InvalidPasswordChangeException("La nueva contraseña debe ser distinta de la actual");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
     }
 }

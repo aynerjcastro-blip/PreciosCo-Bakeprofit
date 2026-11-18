@@ -1,118 +1,575 @@
 /* ============================================================
-   LAYOUT PRINCIPAL (2 Columnas)
+   LOGIN Y REGISTRO
+   Tarjeta dividida: panel informativo oscuro (izquierda) + panel del formulario (derecha).
+   El panel del formulario usa solo tokens del sistema de diseño (tokens.css), así que cambia
+   solo entre claro y oscuro; el panel informativo es oscuro en ambos modos a propósito: es el
+   contraste que separa lo informativo del formulario.
    ============================================================ */
-.auth-page {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 40px;
-    max-width: 1100px;
-    margin: 60px auto;
-    padding: 0 24px;
+
+/* ---------- Marco de la página ---------- */
+.auth-shell {
+    display: flex;
     align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+    padding: 48px 16px;
 }
+
+.auth-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    width: 100%;
+    max-width: 980px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-radius: 28px;
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-card);
+}
+
 
 /* ============================================================
-   COLUMNA IZQUIERDA: HERO Y PROPUESTA DE VALOR
+   PANEL INFORMATIVO (izquierda)
    ============================================================ */
+
 .auth-hero {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    justify-content: center;
+    gap: 32px;
+    padding: 48px 40px;
+    color: var(--color-dark);
+    /* Aurora en las dos esquinas de arriba, con las MISMAS luces y posiciones del fondo de la
+       página (body::before en base.css; colores --glow-1 y --glow-2 en tokens.css) */
+    background:
+        radial-gradient(70% 45% at 12% -5%, var(--glow-1), transparent 70%),
+        radial-gradient(65% 40% at 92% 5%, var(--hero-glow-b), transparent 70%),
+        linear-gradient(165deg, var(--hero-from) 0%, var(--hero-to) 100%);
+
+    /* Paleta del panel en tema claro: marfil cálido */
+    --hero-from: #FFE6C4;
+    --hero-to: #FFEFD9;
+    /* Luz derecha: en claro, el azul del fondo a la mitad (más fuerte se enturbia sobre el marfil) */
+    --hero-glow-b: color-mix(in srgb, var(--glow-2) 50%, transparent);
 }
 
-.auth-hero__title {
-    font-size: clamp(2.5rem, 4vw, 3.5rem);
-    font-weight: 900;
-    line-height: 1.1;
+/* Tema oscuro: azul noche, cercano al fondo. Son dos reglas porque el tema puede venir del botón
+   del header (data-theme) o del sistema operativo; las dos deben quedar idénticas. */
+:root[data-theme="dark"] .auth-hero {
+    --hero-from: #161D33;
+    --hero-to: #1B2745;
+    --hero-glow-b: var(--glow-2);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .auth-hero {
+        --hero-from: #161D33;
+        --hero-to: #1B2745;
+        --hero-glow-b: var(--glow-2);
+    }
+}
+
+.auth-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    width: fit-content;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+}
+
+.auth-brand:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 4px;
+}
+
+.auth-brand__text {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.6rem;
     color: var(--color-dark);
 }
 
-.auth-hero__highlight {
-    color: var(--color-primary);
+.auth-brand__co {
+    height: 26px;
+    width: auto;
 }
 
-.auth-hero__subtitle {
-    font-size: 1.1rem;
+/* Los dos textos (login y registro) comparten la MISMA celda: la tarjeta no cambia de altura */
+.hero-stack {
+    display: grid;
+}
+
+.hero-copy {
+    grid-area: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    opacity: 0;
+    transform: translateY(10px);
+    /* No se ve, no recibe foco y los lectores de pantalla lo ignoran; se oculta al terminar de desvanecerse */
+    visibility: hidden;
+    transition: opacity 0.35s ease, transform 0.35s ease, visibility 0s linear 0.35s;
+}
+
+.hero-copy[data-active='true'] {
+    opacity: 1;
+    transform: none;
+    visibility: visible;
+    /* Entra un instante después de que sale el otro texto (retrasos: opacidad, desplazamiento, visibilidad) */
+    transition-delay: 0.12s, 0.12s, 0s;
+}
+
+.hero-title {
+    margin: 0;
+    font-family: var(--font-heading);
+    font-size: clamp(1.8rem, 3vw, 2.3rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--color-dark);
+}
+
+.hero-subtitle {
+    margin: 0;
     color: var(--text-muted);
-    margin-bottom: 10px;
 }
 
-.auth-hero__features {
+.hero-features {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin: 8px 0 0;
+    padding: 0;
     list-style: none;
+}
+
+.hero-features li {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.hero-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgb(255 159 28 / 0.16);
+    color: var(--color-primary, #ff9f1c);
+}
+
+.hero-features strong {
+    display: block;
+    font-size: 0.98rem;
+}
+
+.hero-features p {
+    margin: 2px 0 0;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+}
+
+/* ============================================================
+   PANEL DEL FORMULARIO (derecha)
+   ============================================================ */
+.auth-panel {
     display: flex;
     flex-direction: column;
     gap: 24px;
-    margin-bottom: 30px;
+    min-width: 0;
+    padding: 32px 40px 36px;
 }
 
-.auth-hero__features li {
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-}
-
-.feature-icon {
+/* ---------- Selector Iniciar sesión | Registrarse ---------- */
+.mode-switch {
+    position: relative;
     display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--color-primary-soft);
-    color: var(--color-primary);
-    font-size: 1.2rem;
-    flex-shrink: 0;
+    grid-template-columns: 1fr 1fr;
+    padding: 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--bg-main);
 }
 
-.auth-hero__features strong {
-    display: block;
-    font-size: 1rem;
+/* Píldora que se desliza bajo la opción activa */
+.mode-switch__pill {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    border-radius: 999px;
+    background: var(--bg-surface);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.18);
+    transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.mode-switch[data-mode='register'] .mode-switch__pill {
+    transform: translateX(100%);
+}
+
+.mode-switch__link {
+    position: relative;
+    z-index: 1;
+    padding: 10px 12px;
+    border-radius: 999px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.mode-switch__link[aria-current='page'] {
+    color: var(--text-primary);
+}
+
+.mode-switch__link:hover {
+    color: var(--text-primary);
+}
+
+.mode-switch__link:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+/* ---------- Pista deslizante ---------- */
+/* El margen negativo + relleno deja sitio al aro de foco, que el overflow recortaría en el borde */
+.form-viewport {
+    overflow: hidden;
+    margin: -6px;
+    padding: 6px;
+}
+
+/* Dos columnas del 100% del ancho: al mover la pista -100% se ve el segundo formulario */
+.form-track {
+    display: grid;
+    grid-template-columns: 100% 100%;
+    transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.form-track[data-mode='register'] {
+    transform: translateX(-100%);
+}
+
+/* El formulario de la izquierda y el de la derecha miden distinto; el corto queda centrado */
+.form-pane {
+    align-self: center;
+    min-width: 0;
+}
+
+/* El formulario fuera de vista no se puede enfocar con Tab ni lo leen los lectores de pantalla.
+   visibility (y no display) mantiene el tamaño del formulario, necesario para el botón de Google.
+   Se oculta al terminar de deslizar; se muestra de inmediato al volverse el activo. */
+.form-pane[data-active='false'] {
+    visibility: hidden;
+    transition: visibility 0s linear 0.5s;
+}
+
+.form-pane[data-active='true'] {
+    visibility: visible;
+    transition: visibility 0s linear 0s;
+}
+
+/* ---------- Formulario ---------- */
+.auth-form__header {
+    margin-bottom: 20px;
+}
+
+.auth-form__header h1 {
+    margin: 0;
+    font-family: var(--font-heading);
+    font-size: 1.7rem;
+    font-weight: 800;
     color: var(--color-dark);
 }
 
-.auth-hero__features p {
-    font-size: 0.9rem;
+.auth-form__header p {
+    margin: 4px 0 0;
+    font-size: 0.95rem;
     color: var(--text-muted);
-    margin: 4px 0 0 0;
+}
+
+.auth-form__google {
+    display: flex;
+    justify-content: center;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    margin: 18px 0;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.auth-divider span {
+    padding: 0 12px;
+}
+
+/* ---------- Campos ---------- */
+.auth-form__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.auth-form__label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-dark);
+}
+
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 14px;
+    display: flex;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.auth-form__input {
+    width: 100%;
+    padding: 13px 16px 13px 44px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-main);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+.auth-form__input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
+.auth-form__input:focus {
+    border-color: var(--color-primary);
+    background: var(--bg-surface);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+/* Evita el fondo amarillo del autocompletado del navegador */
+.auth-form__input:-webkit-autofill {
+    -webkit-text-fill-color: var(--text-primary);
+    box-shadow: 0 0 0 1000px var(--bg-main) inset;
+}
+
+/* Deja sitio al botón de mostrar contraseña */
+.input-with-icon--password .auth-form__input {
+    padding-right: 52px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 6px;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.password-toggle:hover {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+}
+
+.password-toggle:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 1px;
+}
+
+.auth-form__hint {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.auth-form__forgot {
+    margin-top: 2px;
+    text-align: right;
+    font-size: 0.85rem;
+}
+
+/* Enlaces SIN subrayado. Se distinguen del texto que los rodea por el peso (negrita) y el
+   contraste (color de texto principal frente al gris del texto normal); al pasar el cursor
+   cambian de color y al enfocarlos con teclado muestran el aro de foco. */
+.auth-form__forgot a,
+.auth-form__terms a,
+.auth-form__switch a {
+    color: var(--text-primary);
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 2px;
+    transition: color 0.2s;
+}
+
+.auth-form__forgot a:hover,
+.auth-form__terms a:hover,
+.auth-form__switch a:hover {
+    color: var(--color-star-stroke);
+}
+
+.auth-form__forgot a:focus-visible,
+.auth-form__terms a:focus-visible,
+.auth-form__switch a:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+/* ---------- Términos (registro) ---------- */
+.auth-form__terms {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 4px 0 18px;
+}
+
+.auth-form__terms input {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
+.auth-form__terms label {
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+}
+
+/* ---------- Errores y botón principal ---------- */
+.auth-form__error {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border: 1px solid var(--alert-error-border);
+    border-radius: var(--radius-sm);
+    background: var(--alert-error-bg);
+    color: var(--badge-reportado-text);
+    font-size: 0.88rem;
+    line-height: 1.4;
+}
+
+.auth-form__field+.auth-form__error,
+.auth-form__terms+.auth-form__error {
+    margin: 0 0 16px;
+}
+
+.auth-form__submit {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--color-primary);
+    /* Texto oscuro sobre el naranja: igual que la pestaña activa del buscador */
+    color: #0F172A;
+    font: inherit;
+    font-size: 1.02rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 8px 18px -6px color-mix(in srgb, var(--color-primary) 60%, transparent);
+    transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+}
+
+.auth-form__submit:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+    transform: translateY(-1px);
+}
+
+.auth-form__submit:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 3px;
+}
+
+.auth-form__submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.auth-form__switch {
+    margin: 20px 0 0;
+    font-size: 0.92rem;
+    color: var(--text-muted);
+    text-align: center;
 }
 
 /* ============================================================
-   TARJETA DINÁMICA DE AHORRO EN VIVO
+   TARJETA DE AHORRO EN VIVO
+   Ya no se usa en esta pantalla, pero SavingsCard importa estas clases de este archivo:
+   se conservan tal cual para que ese componente no pierda sus estilos donde se use.
    ============================================================ */
 .savings-card {
     position: relative;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 20px;
-    box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
     gap: 16px;
-    text-decoration: none;
-    color: inherit;
-    transition: transform 0.2s, box-shadow 0.2s;
     max-width: 450px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-card);
+    color: inherit;
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .savings-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15);
+}
+
+.savings-card:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 3px;
 }
 
 .savings-card__badge {
     position: absolute;
     top: -15px;
     right: 20px;
-    background: #10B981;
-    /* Verde positivo */
-    color: white;
     padding: 8px 16px;
     border-radius: var(--radius-md);
+    background: var(--color-secondary);
+    /* Texto oscuro: el blanco sobre este verde no llega a contraste AA */
+    color: #0F172A;
     font-weight: 800;
-    text-align: center;
     line-height: 1.2;
+    text-align: center;
     transform: rotate(3deg);
-    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 4px 10px color-mix(in srgb, var(--color-secondary) 35%, transparent);
 }
 
 .savings-card__product {
@@ -130,8 +587,8 @@
 .savings-card__img-placeholder {
     width: 60px;
     height: 60px;
-    background: var(--border-color);
     border-radius: var(--radius-sm);
+    background: var(--border-color);
 }
 
 .savings-card__name {
@@ -144,9 +601,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: var(--bg-main);
     padding: 12px 16px;
     border-radius: var(--radius-sm);
+    background: var(--bg-main);
 }
 
 .savings-card__price-box {
@@ -157,7 +614,7 @@
 .savings-card__price--best {
     font-size: 1.4rem;
     font-weight: 800;
-    color: var(--color-primary);
+    color: var(--color-star-stroke);
 }
 
 .savings-card__price--worst {
@@ -177,275 +634,42 @@
 }
 
 /* ============================================================
-   COLUMNA DERECHA: FORMULARIO
-   ============================================================ */
-.auth-form-wrapper {
-    width: 100%;
-    max-width: 480px;
-    justify-self: center;
-}
-
-.auth-form-wrapper--centered {
-    grid-column: 1 / -1;
-    /* Centra el form de login si no hay hero */
-    margin: 0 auto;
-}
-
-.auth-form {
-    background: var(--bg-surface);
-    padding: 40px 32px;
-    border-radius: var(--radius-lg);
-    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
-    border: 1px solid var(--border-color);
-}
-
-.auth-form__header {
-    margin-bottom: 24px;
-}
-
-.auth-form__header h2 {
-    font-size: 1.6rem;
-    font-weight: 800;
-    color: var(--color-dark);
-}
-
-.auth-form__header p {
-    color: var(--text-muted);
-    font-size: 0.95rem;
-    margin-top: 4px;
-}
-
-.auth-form__field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 20px;
-}
-
-.auth-form__label {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--color-dark);
-}
-
-.input-with-icon {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.input-icon {
-    position: absolute;
-    left: 14px;
-    color: var(--text-muted);
-    font-size: 1.1rem;
-    pointer-events: none;
-}
-
-.auth-form input[type="text"],
-.auth-form input[type="email"],
-.auth-form input[type="password"] {
-    width: 100%;
-    padding: 14px 16px 14px 44px;
-    border: 1.5px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    background: var(--bg-main);
-    font-size: 1rem;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.auth-form input:focus {
-    border-color: var(--color-primary);
-    background: #FFF;
-    box-shadow: 0 0 0 3px var(--color-primary-soft);
-}
-
-.password-toggle {
-    position: absolute;
-    right: 14px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.1rem;
-    opacity: 0.6;
-}
-
-.password-toggle:hover {
-    opacity: 1;
-}
-
-.auth-form__hint {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-}
-
-.auth-form__terms {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    margin: 24px 0;
-}
-
-.auth-form__terms input {
-    margin-top: 4px;
-    width: 18px;
-    height: 18px;
-    accent-color: var(--color-primary);
-    cursor: pointer;
-}
-
-.auth-form__terms label {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    line-height: 1.4;
-}
-
-.auth-form__terms a {
-    color: var(--color-primary);
-    font-weight: 600;
-    text-decoration: underline;
-}
-
-.auth-form__submit {
-    width: 100%;
-    background: var(--color-primary);
-    /* Naranja del mockup */
-    color: #FFF;
-    border: none;
-    padding: 16px;
-    border-radius: var(--radius-sm);
-    font-size: 1.05rem;
-    font-weight: 800;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
-    box-shadow: 0 8px 15px rgba(255, 159, 28, 0.2);
-}
-
-.auth-form__submit:hover:not(:disabled) {
-    background: var(--color-primary-hover);
-    transform: translateY(-1px);
-}
-
-.auth-form__error {
-    color: #DC2626;
-    background: #FEE2E2;
-    padding: 10px;
-    border-radius: var(--radius-sm);
-    font-size: 0.85rem;
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.auth-form__switch {
-    text-align: center;
-    margin-top: 24px;
-    font-size: 0.95rem;
-    color: var(--text-muted);
-}
-
-.auth-form__switch a {
-    color: var(--color-primary);
-    font-weight: 700;
-}
-
-.auth-form__trust {
-    margin-top: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-/* ============================================================
    RESPONSIVE
+   En pantallas angostas queda solo el formulario (el panel informativo se oculta).
    ============================================================ */
 @media (max-width: 900px) {
-    .auth-page {
-        grid-template-columns: 1fr;
-        gap: 60px;
-        margin: 40px auto;
+    .auth-shell {
+        padding: 24px 16px 40px;
+    }
+
+    .auth-card {
+        grid-template-columns: minmax(0, 1fr);
+        max-width: 520px;
     }
 
     .auth-hero {
-        text-align: center;
-        align-items: center;
+        display: none;
     }
 
-    .auth-hero__features li {
-        text-align: left;
+    .auth-panel {
+        padding: 24px 20px 28px;
     }
 }
 
-/* ============================================================
-   ESTILOS ESPECIFICOS PARA EL LOGIN
-   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
 
-/* Enlace "Olvidaste tu contraseña" alineado a la derecha */
-.auth-form__forgot {
-    text-align: right;
-    margin-top: 8px;
-    font-size: 0.85rem;
-}
+    .mode-switch__pill,
+    .form-track,
+    .hero-copy,
+    .form-pane,
+    .savings-card,
+    .auth-form__submit,
+    .auth-form__input {
+        transition: none;
+    }
 
-.auth-form__forgot a {
-    color: var(--color-primary);
-    font-weight: 600;
-}
-
-.auth-form__forgot a:hover {
-    text-decoration: underline;
-}
-
-
-
-/* Separador "o continúa con" */
-.auth-divider {
-    display: flex;
-    align-items: center;
-    text-align: center;
-    margin: 24px 0;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-}
-
-.auth-divider::before,
-.auth-divider::after {
-    content: '';
-    flex: 1;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.auth-divider span {
-    padding: 0 10px;
-}
-
-/* Boton de Google Adaptable */
-.auth-google-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    padding: 14px;
-    background: transparent;
-    /* Se adapta al fondo */
-    border: 1.5px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    /* Texto inteligente (negro en luz, blanco en sombra) */
-    cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
-}
-
-.auth-google-btn:hover {
-    background: var(--bg-main);
-    /* Efecto hover sutil */
-    border-color: var(--color-primary);
-}
-
-/* Ajuste del icono del escudo en el Footer */
-.auth-form__trust svg {
-    vertical-align: text-bottom;
-    margin-right: 4px;
+    .savings-card:hover,
+    .auth-form__submit:hover:not(:disabled) {
+        transform: none;
+    }
 }

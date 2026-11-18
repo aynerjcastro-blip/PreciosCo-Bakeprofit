@@ -31,7 +31,7 @@ Registro de decisiones de equipo: desviaciones deliberadas del MVP y acuerdos to
 - **Scraper con la API VTEX**: D1, Éxito, Jumbo y Olímpica usan VTEX y exponen una API pública de catálogo en JSON (`/api/catalog_system/pub/products/search`; Éxito con el prefijo `/io/`; D1 en su dominio nuevo, `www.d1.com.co`). Reemplaza a Selenium: un solo cliente con la URL base de cada tienda, pausas entre peticiones y un User-Agent que identifica al proyecto. Riesgos aceptados: es una API pública sin acuerdo con las tiendas, y el precio puede depender de la región (se verifica contra la web con ubicación en Valledupar antes de confiar en él).
 
 - **Precios regionales (Valledupar)**: la búsqueda de VTEX devuelve el precio del vendedor por defecto, que no siempre es el de Valledupar (en una muestra de 22 productos, 6 tenían otro precio, hasta 6,6 % en Jumbo, y varios marcados como disponibles no se vendían en Valledupar). Por eso, en las tiendas con vendedores por ciudad (Éxito, Jumbo y Olímpica), el scraper busca el vendedor que atiende las coordenadas de Valledupar (`/api/checkout/pub/regions`) y toma el precio de venta y la disponibilidad de una simulación de compra con ese vendedor (`/api/checkout/pub/orderForms/simulation`, una petición por target con todos sus productos). Si ese vendedor no tiene el producto, prueba el vendedor de la búsqueda (marketplace) con entrega en Valledupar; si ninguno lo vende, la oferta no se guarda. producto que ese vendedor no vende no se guarda. D1 no vende en línea en Valledupar (solo atiende
-domicilios en otras ciudades): se usa el precio nacional de la búsqueda. Si una tienda regional no devuelve vendedor para Valledupar, sus targets fallan y se dispara la alerta de cero resultados: no se cae al precio nacional sin avisar.
+  domicilios en otras ciudades): se usa el precio nacional de la búsqueda. Si una tienda regional no devuelve vendedor para Valledupar, sus targets fallan y se dispara la alerta de cero resultados: no se cae al precio nacional sin avisar.
 
 - **Alerta de cero resultados**: si una tienda no inserta ninguna oferta en toda la corrida, el scraper termina con código 1 y GitHub Actions marca la corrida como fallida. Un target vacío no basta, porque un producto agotado es normal.
 - **Tabla de staging**: el scraper en Python solo escribe datos crudos en `scraped_offers`. Un proceso `@Scheduled` en Java normaliza, empareja por EAN, crea productos, inserta precios y conecta el detector de bajas. Resuelve que no hubiera un punto en Java donde enganchar el aviso.
@@ -55,6 +55,7 @@ domicilios en otras ciudades): se usa el precio nacional de la búsqueda. Si una
   ```
 
   `unit` es la etiqueta que se muestra y debe escribirse igual que la genera `NetContentLabel`. Solo vale para ofertas que todavía no borró la retención (7 días). Cuando exista el panel administrativo (EP-09), esta corrección pasa a ser una acción del administrador.
+
 - **Repuestos en el procesador**: hasta que `scraped_offers` tenga la referencia del fabricante (Sprint 3), toda oferta de repuestos queda UNCLASSIFIED con "identidad por referencia pendiente (Sprint 3)". La regla de marcas existentes y la identidad pendiente son dos propiedades separadas (`existing-brands-only-domains` e `identity-pending-domains`, con el nombre de la categoría raíz); en el Sprint 3 basta con quitar Repuestos de la segunda. Al arrancar se advierte en el log si un dominio configurado no coincide con ninguna categoría raíz.
 - **Activación del procesador**: apagado por defecto (`STAGING_ENABLED=false`) y siempre apagado en la prueba de integración, que llama a `processOffers` directamente. Contra la base compartida lo activa una sola persona del equipo a la vez. Por ahora corre 3 veces al día: una corrida poco después de arrancar la aplicación (`initial-delay` de 1 minuto) y luego cada 8 horas (`fixed-delay` de 8 horas, configurable). Se prefirió un intervalo fijo a horas fijas (cron) porque, mientras no haya despliegue, el backend corre en el equipo de un integrante y no está encendido a horas fijas: con el intervalo, cada arranque procesa lo pendiente. Al desplegar se revisa si conviene pasar a horas fijas, alineadas con las corridas del scraper.
 - **`scrape_targets` y filtros anti-basura**: el diccionario `PRODUCTOS` pasa a una tabla (término, categoría de la tienda, unidad esperada, rango de tamaño, activo). Un producto entra al catálogo solo si viene de la categoría correcta de la tienda, tiene la unidad esperada, su tamaño está en el rango y su precio es mayor que 0; lo demás queda "sin clasificar".
@@ -86,30 +87,35 @@ verificado. Este análisis no es asesoría legal.
 ### Resultado por tienda
 
 **Drogas La Rebaja** (droguería · riesgo bajo-medio)
+
 - Plataforma: **VTEX** (la API responde).
 - robots.txt: API de catálogo **permitida**; prohíbe `/busca/*`, cuenta y pago.
 - EAN: **sí**.
 - Datos útiles: `Producto OTC` (SI/NO), `Presentacionunidadmedida` ("BLISTER X 10"), `Principio activo`, `Kit`; marca.
 
 **Farmatodo - Droguería** (droguería · riesgo medio)
+
 - Plataforma: aplicación propia (Angular).
 - robots.txt: páginas `/producto/…` y sitemaps **permitidos**; prohíbe `/buscar*`, `/busqueda*`, cuenta y pago; bloquea por nombre a "Scrapy 2.7.1/2.8.0".
-- EAN: **no** (el `gtin` del JSON-LD es el id interno de la URL).
-- Datos útiles: JSON-LD con nombre, marca y precio.
+- EAN: **sí**, en el estado de la página (`barcode`); el `gtin` del JSON-LD es el id interno de la URL (corregido el 14-nov, ver "Scrapers de droguería").
+- Datos útiles: nombre, marca, precio e imagen en el estado de Angular que trae el HTML; JSON-LD con nombre, marca y precio.
 
 **Farmanorte** (droguería · riesgo medio)
+
 - Plataforma: **VTEX**.
 - robots.txt: **API (`/api/`) y búsquedas `map=ft` PROHIBIDAS**; permitidos páginas de producto `/…/p` y sitemap.
-- EAN: **no** (vacío; marca "Generica").
-- Datos útiles: presentación en el nombre ("* 10 TAB") y `Cantidad de unidades`.
+- EAN: **sí**, en el campo `mpn` del JSON-LD; el `gtin` es el código interno de la tienda. Marca: solo "Generica" (corregido el 14-nov, ver "Scrapers de droguería").
+- Datos útiles: presentación en el nombre ("\* 10 TAB") y `Cantidad de unidades`.
 
 **Cruz Verde** (droguería · riesgo **alto**, ver términos)
+
 - Plataforma: aplicación de una sola página (Angular).
 - robots.txt: prohíbe `/search`, bolsa, cuenta y pago; productos y sitemap permitidos.
 - EAN: PENDIENTE.
 - Datos útiles: el HTML llega vacío sin JavaScript; los datos vienen de una API interna sin documentar.
 
 **Droguería La Economía (Eticos SAS)** (droguería · riesgo **alto**)
+
 - Plataforma: sin determinar (el sitemap vive en `/sitemaps/la_economia/`).
 - robots.txt: páginas de producto `/p/…` y sitemap **permitidos**; prohíbe `/search`, cuenta, checkout y pasos del pedido; **`Crawl-delay: 3600`** para todos los agentes (Googlebot tiene acceso libre).
 - EAN: PENDIENTE.
@@ -117,22 +123,26 @@ verificado. Este análisis no es asesoría legal.
 - Riesgo: una petición por hora hace inviable un ciclo diario (ver hallazgo 13).
 
 **Cutis** (cuidado facial · riesgo bajo)
+
 - Plataforma: **VTEX**.
 - robots.txt: API **permitida**; prohíbe `/busca/*`, `/img/*`, cuenta y pago.
 - EAN: **sí**.
 - Datos útiles: `Tipo de presentación` ("30 ML"), marca, categoría `/Rostro/`.
 
 **Farmatodo - Cuidado facial** (cuidado facial · riesgo medio)
+
 - Igual que Farmatodo - Droguería en plataforma, robots.txt y datos útiles.
-- EAN: **no**.
+- EAN: igual que Farmatodo - Droguería (`barcode`); sin probar en esta tienda.
 
 **Ánimus Lab** (cuidado facial, marca propia · riesgo medio)
+
 - Plataforma: **Shopify**.
 - robots.txt: `/products.json` y `/collections/all` permitidos.
 - EAN: **no** (`/products.json` no expone código de barras).
 - Datos útiles: 44 productos (10 kits); SKU en 43; marca consistente; `compare_at_price` (precio de lista) en 57 variantes; **27 variantes agotadas**.
 
 **Botanikalia** (cuidado facial, marca propia · riesgo medio)
+
 - Plataforma: **Shopify**.
 - robots.txt: `/products.json` y `/collections/all` permitidos.
 - EAN: **no**.
@@ -140,8 +150,8 @@ verificado. Este análisis no es asesoría legal.
 
 ### Hallazgos que cambian el diseño
 
-1. **El EAN solo está en La Rebaja y Cutis.** ADR-01 (emparejar por EAN) no alcanza a Farmanorte, Farmatodo, Ánimus Lab ni
-   Botanikalia. Hace falta emparejar por marca normalizada + nombre o principio activo + contenido neto (ADR-03), o la vista de
+1. **El EAN solo está en La Rebaja y Cutis.** *(Corregido el 14-nov: Farmatodo y Farmanorte también lo traen en la página del
+   producto; ver "Scrapers de droguería".)* ADR-01 (emparejar por EAN) no alcanza a Ánimus Lab ni Botanikalia. Hace falta emparejar por marca normalizada + nombre o principio activo + contenido neto (ADR-03), o la vista de
    equivalentes de ADR-04. En droguería, los productos genéricos del catálogo ya se definen sin marca ("Acetaminofén 500 mg").
 2. **Los kits de La Rebaja comparten el EAN de la unidad con otro precio**: el blíster x10 cuesta $2.600 y el kit de caja x100
    ($18.820) trae el mismo EAN. Hay que excluir los listados con `Kit = Refkit`.
@@ -157,8 +167,8 @@ verificado. Este análisis no es asesoría legal.
 6. **Descargo de precios**: Cruz Verde declara que no responde por los precios que se muestren en otros sitios o buscadores;
    La Rebaja y La Economía se reservan cambiarlos en cualquier momento. El comparador debe mostrar la fecha de captura del precio
    (`prices.registration_date`) y el enlace a la tienda (`prices.product_url`), sin presentarlos como precio garantizado.
-7. **Farmanorte**: su robots.txt prohíbe la API. Respetarlo implica usar solo sitemap y HTML, y aun así no trae EAN ni marca real:
-   aporta poco. Tampoco sirve para cuidado facial en la API consultada (0 resultados de niacinamida y retinol). Decisión del equipo:
+7. **Farmanorte**: su robots.txt prohíbe la API. Respetarlo implica usar solo sitemap y HTML, y aun así no trae marca real:
+   aporta poco. *(Corregido el 14-nov: el EAN sí está, en `mpn`.)* Tampoco sirve para cuidado facial en la API consultada (0 resultados de niacinamida y retinol). Decisión del equipo:
    segunda ola solo por HTML, o excluirla.
 8. **Farmatodo**: no usar las APIs ni las claves que aparecen en el código de la página (Algolia, `api-transactional`): no están
    documentadas para terceros. La ruta limpia es `sitemap-products.xml` + página de producto (JSON-LD), con ritmo bajo. Que bloquee
@@ -262,7 +272,23 @@ verificado. Este análisis no es asesoría legal.
 
 1. Autorización escrita de Ánimus Lab; decidir si se solicita también a Cruz Verde o se excluye.
 2. Cambiar el `UA` de `verificar_tiendas.py` por el User-Agent real del scraper, con contacto del proyecto.
-3. Decisión del equipo sobre Farmanorte (solo HTML o excluir) y sobre ADR-04.
+3. Decisión del equipo sobre ADR-04. La parte de Farmanorte (solo HTML o excluir) quedó resuelta en el scraper: entra por HTML, con URL curada (ver "Scrapers de droguería").
+
+## Scrapers de droguería (EP-04, 14-nov-2026)
+
+Estado: implementado en `feature/scrapper-droguerías`, pendiente de fusionar. Lo siguiente completa y corrige "Selección de tiendas de droguería y cuidado facial".
+
+- **Qué tiendas y cómo**: Drogas La Rebaja por la API de VTEX (búsqueda por término, como los supermercados). Farmatodo - Droguería y Farmanorte por la página de producto, con **una URL curada por `scrape_target`** (`scrape_targets.target_url`), porque sus robots.txt prohíben la búsqueda. Una tienda sin `scrape_targets` activos no se consulta. La columna `target_url` la agrega `scripts/2026-11-droguerias-categorias-tiendas.sql`; si cuidado facial ya la usa, la reversión no debe borrarla.
+- **El EAN sí llega de Farmatodo y Farmanorte** (corrige los hallazgos 1 y 7): Farmatodo lo trae en `barcode` del estado de la página (`barcodeList` son ids internos); Farmanorte, en `mpn` del JSON-LD (su `gtin` es un código interno). Verificado con una página de producto de cada tienda. Farmanorte sigue sin marca real: "Generica" se guarda como sin marca, para no crear una marca falsa. Para que haya comparación (HU-28), la URL debe ser del **mismo producto y el mismo tamaño** que ya trae La Rebaja: el procesador empareja por EAN y rechaza la oferta si el tamaño difiere.
+- **Venta libre (`EXCLUIR_FORMULA`)**: constante en `scraper_droguerias.py`. `True` (valor actual) deja solo medicamentos de venta libre; `False` incluye los de fórmula. La leen La Rebaja (`Producto OTC`) y Farmatodo. **Farmanorte no marca la fórmula médica**: allí el único filtro es la lista curada de URLs, y quien la arme no debe incluir medicamentos de fórmula. Con respuestas guardadas de La Rebaja, `True` dio 275 ofertas y `False`, 455.
+- **Kits**: los listados marcados como kit en La Rebaja se descartan (comparten el EAN de la unidad con otro precio, hallazgo 2).
+- **Precio de Farmatodo**: se usa `fullPrice`, no `offerPrice` (en la página probada era un precio "Exclusivo 1ra compra"). Si Valledupar no aparece entre las ciudades del producto, no se guarda y se avisa; no se cae al precio nacional (misma regla que los supermercados). **Sin confirmar**: que el código `VUP` sea Valledupar (la página lista a Valledupar con su teléfono, pero ninguna tabla de la tienda lo confirma).
+- **Limitaciones aceptadas**: la página de Farmatodo trae solo los ids de las tiendas con stock, no su ciudad, así que un producto se guarda si hay stock en alguna tienda del país. El precio de Farmanorte es el predeterminado, sin ciudad; verificarlo contra la web con ubicación en Valledupar antes de mostrarlo como precio de Valledupar (DP-38).
+- **robots.txt y ritmo**: antes de cada página se consulta el robots.txt de la tienda, con soporte de `*` y `$` (el analizador de Python no entiende `*` dentro de una ruta, y Farmatodo prohíbe `/producto/*/review`). Pausa por defecto de 5 s entre páginas; si el robots.txt declara `Crawl-delay`, se usa ese valor. Una página que cambió de estructura da error visible; un 404 queda como producto retirado. **Pendiente**: las pruebas se hicieron con robots.txt reconstruidos desde este archivo, no con los reales; el primer log real de cada tienda lo confirma.
+- **Tamaño**: un lector de presentaciones (`comun/presentacion.py`) interpreta tabletas, ml y g desde el nombre. Si el nombre trae dos tamaños distintos, la oferta queda sin tamaño en vez de adivinar, y el procesador la rechaza ("no trae el contenido neto").
+- **Procesador sin cambios**: no tiene reglas propias de droguería (`existing-brands-only-domains` e `identity-pending-domains` solo contienen Repuestos). Una oferta sin EAN o sin tamaño se rechaza con motivo; una marca nueva de droguería se crea desde el campo de marca de la tienda, como en supermercado. **Pendiente**: ninguna prueba del backend usa una tienda de droguería; falta una prueba de integración de `processOffers` con ofertas de La Rebaja y Farmatodo del mismo EAN. Si Farmatodo llega antes que La Rebaja con un producto nuevo, el producto toma el nombre de Farmatodo.
+- **Workflow**: `scrape-precios.yml` reemplaza a `scrape-supermercados.yml`. Una matriz `[supermercados, droguerias]` corre un scraper tras otro en jobs separados (`fail-fast: false`: si falla uno, el otro corre igual). Entradas manuales: `dominios` (todos, supermercados o droguerias), `tiendas_supermercados` (vacío = `d1,jumbo,olimpica`, Éxito sigue en pausa) y `tiendas_droguerias` (vacío = todas las que tengan objetivos activos). El `cron` sigue comentado hasta que el equipo decida. El botón "Run workflow" solo aparece si el archivo está en la rama por defecto (`main`); mientras tanto se prueba con un `push:` temporal en la rama.
+- **Antes de encender las tiendas**: las tres siguen con `stores.active = false` y sus objetivos inactivos hasta cargar y probar las URLs (`SOLO_TIENDAS=farmatodo`, luego `farmanorte`, con un solo objetivo activo). Una corrida sin objetivos activos termina en 0 sin haber probado nada.
 
 ## Búsqueda de productos (HU-06a, HU-06b)
 
@@ -283,8 +309,26 @@ verificado. Este análisis no es asesoría legal.
 - **Vista `product_savings`** (`scripts/2026-11-ht13-ahorro.sql`): calcula el ahorro en SQL y la búsqueda ordena por ella con un `LEFT JOIN` desde `Product` (`@OneToOne` de solo lectura con `ProductSavings`), así que los filtros y la paginación siguen resueltos en SQL. Se revoca a `PUBLIC`, `anon` y `authenticated` (regla de SCRUM-304). **Orden de despliegue obligatorio**: con `ddl-auto=validate`, un backend con HT-13 no arranca sin la vista, así que el script se corre primero en la base de pruebas (la consulta del final debe dar `false, false`), se avisa al equipo y luego se corre en la compartida, antes de que alguien levante `develop`.
 - **Sin filtros: `GET /api/products/best-savings`** (contrato propio): los `limit` productos de mayor ahorro de cada subcategoría (por defecto 5, de 1 a 20), agrupados por sección y subcategoría (`[{ sectionId, sectionName, categoryId, categoryName, products: [{ id, name, minPrice, maxPrice, savingsPct, storeCount }] }]`), con `sectionId` opcional. Entra todo producto activo con precio en al menos una tienda activa: los de ahorro 0 completan la subcategoría al final. Es SQL nativo porque necesita `ROW_NUMBER` por subcategoría. N = 5 es provisional.
 - **Códigos (DP-35)**: `200` también vacío; `400` por `sort` desconocido o `limit` fuera de rango o no numérico (`InvalidSearchFilterException` y el manejador de parámetros mal formados); `404` por una sección inexistente o que no es raíz (`CategoryNotFoundException`). Antes de cerrar HT-13 estos dos casos respondían `500`, porque lanzaban `ResponseStatusException` e `IllegalArgumentException`, que el `GlobalExceptionHandler` no maneja.
-- **Frontend**: la capa `api/products.js` manda `sort=SAVINGS` en la búsqueda con filtros y expone `findBestSavings` para la vista sin filtros. Conectarlas en `Search.jsx` (y traducir el sector de la URL al id de la sección) queda en HT-16, dueña de esa pantalla.
+- **Frontend**: la capa `api/products.js` manda `sort=SAVINGS` en la búsqueda con filtros y expone `findBestSavings` para la vista sin filtros. La traducción del sector de la URL al `sectionId` y su envío desde `Search.jsx` se hicieron en HT-15 (ver "Landing y páginas de sección"); conectar `findBestSavings` (la vista agrupada por subcategoría, sin filtros) a la pantalla sigue pendiente.
 - **Riesgo aceptado (DP-38)**: un precio viejo de una tienda que dejó de vender el producto puede inflar el ahorro. Se mitiga mostrando la fecha de la última confirmación; se resuelve con HU-36.
+
+## Landing y páginas de sección (HT-15)
+
+- **Regla de la landing**: toda cifra, tienda, producto, imagen o precio que muestra sale del backend. Si un dato falla o no existe, su bloque se oculta; nunca se rellena con un valor de respaldo. Los textos fijos solo describen funciones que existen hoy, y los que dependen de la cobertura (lista de tiendas, número de tiendas, respuesta sobre qué se compara hoy) se arman con los datos, para que no queden desactualizados cuando entren nuevas tiendas o secciones.
+- **`GET /api/landing/stats`** (público; `SecurityConfig` lo permite solo para GET en `/api/landing/**`): `{ totalProducts, totalStores, lastUpdate, sections: [{ id, name, productCount, storeCount }] }`. Una sección es una categoría raíz. `productCount` cuenta los productos activos con precio en al menos una tienda activa de ese dominio (DP-26), una vez cada uno; `totalProducts` cuenta cada producto una sola vez aunque tenga precio en dos dominios; `lastUpdate` es la última vez que una tienda activa confirmó un precio. Es una sola petición y una sola transacción de solo lectura, o sea una conexión del pool (RP-04). Sin caché en el backend por ahora (cuatro consultas por visita): si el catálogo crece, cachear unos minutos.
+- **"Próximamente" se calcula, no se escribe**: una sección con `productCount` 0, o cuya categoría raíz no existe en la base, se muestra como "Próximamente", sin enlace a una búsqueda vacía. Si falla `GET /api/landing/stats`, el bloque de secciones desaparece: mostrar las cuatro como "Próximamente" sería falso.
+- **Slug de la sección**: la URL usa un slug (`/secciones/droguerias`, `?sector=droguerias`). `config/sections.js` es la única fuente de slugs, textos y avisos; las pestañas de `Search.jsx` (`SECTORS`) y el menú del header deben usar los mismos. Se eligió `droguerias` (con "s") para coincidir con el que ya usaba el buscador. Los ids y los conteos nunca se escriben a mano: vienen del backend. La relación slug → categoría raíz se hace por nombre normalizado (sin tildes, en minúsculas y sin "s" final), que es frágil: si alguien renombra la categoría, la sección pasa a "Próximamente". Lo robusto es una columna `slug` en `categories` (mejora futura).
+- **Un solo componente de presentación**: `SectionPresentation` sirve a las cuatro secciones (`/secciones/:slug`) y cubre los estados cargando, error con reintento, sección inexistente, "Próximamente" y disponible. Muestra los avisos de negocio de cada sección: precios informativos (RN-04) en todas, orientativo y sin sustituir a un profesional de la salud (RN-17) en droguería y cuidado facial, y sin verificar compatibilidad (DP-20) en repuestos. La fecha de "última actualización" es la global, no la de cada sección: hay que devolverla por sección cuando entren las otras.
+- **Contrato con el buscador**: "Buscar y comparar" abre `/buscar?sector=<slug>`. `Search.jsx` traduce el slug a `sectionId` con `useSectionBySlug` y lo envía a `searchProducts` (contrato de HT-13). No busca mientras no conoce el id (si no, mostraría un instante resultados sin filtrar), y si fallan las secciones muestra un error en vez de buscar sin filtro bajo una pestaña elegida. Un sector desconocido (enlace viejo o valor guardado en `sessionStorage`) se ignora: no cuenta como filtro. `SECTORS.available` queda como guarda optimista; la verdad la decide el backend (sección sin productos = "llega pronto"). Las pestañas del buscador siguen sin escribir `?sector=` en la URL (limitación que ya existía).
+- **`useSections` / `useSectionBySlug`**: la landing, la página de sección y el buscador comparten una sola petición (caché de módulo de 5 minutos). Un fallo no se guarda, así que el siguiente intento vuelve a pedir.
+- **Cliente HTTP compartido** (`api/http.js`): un solo lugar para la URL base (`VITE_API_URL`) y el manejo de errores. `api/products.js` y la carga de categorías de `Search.jsx` aún usan la URL fija; migrarlas queda pendiente.
+- **Contenido de la landing**: hero con las fotos y los precios de los productos de mayor ahorro (la búsqueda sin filtros, ya ordenada por ahorro, de la que se descartan los de una sola tienda o con el mismo precio en todas; se piden 12 candidatos y se muestran 4); comparador de ejemplo con el precio y la fecha de confirmación de cada tienda, y su titular ("$X de diferencia.") calculado con los precios del producto elegido; cifras reales y tiendas activas; secciones; beneficios; cómo funciona; quiénes somos; preguntas frecuentes y llamada a la acción. **Se quitó** lo que no existe o no tiene respaldo: los testimonios (no hay opiniones reales que mostrar en la portada), el paso "Consulta a la IA" (Fase 4), las categorías Belleza y Tecnología y las cifras sin respaldo ("miles de productos", "al instante"). Del boceto de Stitch no se incluyeron la calculadora de ahorro mensual ni la comparación contra otros comparadores (afirmaciones sin respaldo), ni "kilo y litro" ni WCAG AAA (no está construido ni certificado).
+- **Logos de tienda**: `StoreLogo`. Los archivos oficiales (kit de prensa de cada marca) van en `public/assets/stores/` (`d1`, `exito`, `jumbo` y `olimpica`, en `.png`) y se reconocen por un fragmento del nombre de la tienda, sin tildes ni mayúsculas. Si falta el archivo o no carga, se muestran las iniciales. Solo se muestran las tiendas activas de la base, con el aviso "marcas registradas de sus titulares; PreciosCo no está afiliada". Cada tienda nueva exige su archivo y una línea en la lista `LOGOS`; una columna `logo_url` en `stores` queda como mejora si el número de tiendas crece.
+- **Imágenes de producto**: se enlazan desde la tienda (`referrerPolicy="no-referrer"`), no se copian ni se guardan, igual que ya pedía la nota de los términos de las tiendas; si no cargan se muestra un marcador.
+- **Modo oscuro de la portada**: las variables `--h-*` de `Home.module.css` toman los tokens del tema (`--bg-surface`, `--bg-main`, `--text-primary`, `--color-primary`...), así que siguen el mismo mecanismo del resto de la aplicación. El texto sobre el ámbar de la marca es siempre oscuro (`#0f172a`), como en el header, y la banda de cifras y tiendas es oscura en los dos modos. Antes la portada mezclaba tokens con fondos propios y en modo oscuro quedaba texto claro sobre fondo claro.
+- **Header de una sola fila**: logo, menú de secciones en píldora (centro) y acciones (derecha). El menú sale de `SECTIONS` y enlaza a `/secciones/:slug`; queda marcado en esa ruta o en `/buscar?sector=`. El buscador de texto del header se reemplazó por un atajo a `/buscar` (oculto en `/`, `/buscar`, login y registro), porque con el menú en la misma fila no cabe sin abrir una segunda. Por debajo de 960 px el menú pasa al botón hamburguesa. `Header.module.css` se reescribió: tenía bloques completos repetidos que se pisaban entre sí (por ejemplo, el botón "Ingresa" del panel perdía su estilo).
+- **Riesgos y límites aceptados**: el conteo de tiendas incluye las activas aunque su scraper esté en pausa (Éxito desde el 11-nov), y su precio muestra una fecha vieja, no una vigencia (DP-38, HU-36). Los enlaces del pie (Quiénes somos, Cómo funciona, Contáctanos) y "Contáctanos" sin destino no son de HT-15.
+- **Pendiente de reflejar en el documento de análisis**: RF50 y HU-03 describen las 8 secciones acordadas de la landing, y la portada ya no las tiene tal cual (se quitaron los testimonios); hay que actualizarlos y cerrar DP-29 con las secciones que de verdad tiene la página. Anotar también los textos de las secciones (RN-04, RN-17, DP-20).
 
 ## Fase 2 — Calificaciones y comentarios
 
@@ -301,7 +345,7 @@ verificado. Este análisis no es asesoría legal.
 - **Reglas del reporte**: un reporte por usuario y comentario (repetirlo no crea otro); no se puede reportar el propio comentario; un reporte nuevo pasa el comentario a `REPORTADO` (o lo reabre si estaba `CONSERVADO`) y sigue visible; un comentario `OCULTO` o `ELIMINADO` no se puede reportar.
 - **Visibilidad y listado**: se listan los comentarios `PUBLICADO`, `REPORTADO` y `CONSERVADO`; `OCULTO` y `ELIMINADO` no se muestran. El listado es paginado (10 por página por defecto, máximo 50), de más reciente a más antiguo, y el cliente no elige el orden. La respuesta pública no incluye el estado ni el correo del autor.
 - **Rutas de la API**: todo bajo `/api/reviews`: `POST` (calificar y comentar), `PUT /{id}` (editar), `DELETE /{id}/comment` (eliminar el comentario), `GET` (lista), `GET /summary` (promedio y cantidad de un producto, una tienda o un producto en una tienda), `GET /me` (mi opinión) y `POST /{id}/report`. El id de una opinión es el de su calificación. La lista y el resumen son públicos; el resto exige sesión. Los controllers obtienen el usuario autenticado con `@CurrentUser` (Ayner); el usuario temporal fue transitorio y no se mergea a main.
-- **Códigos de estado** *(por confirmar con el equipo; las pruebas automáticas y la colección de Postman se escriben contra esto)*: `201` al crear; `400` por datos inválidos, por razón `OTRO` sin detalle o por reportar el propio comentario; `401` sin sesión; `403` por rol no permitido o por no ser el autor; `404` por producto, tienda u opinión inexistentes, por un par sin precio o por reportar un comentario oculto o eliminado; `409` por opinión repetida (también después de eliminar el comentario), producto o tienda inactivos, plazo de edición vencido, comentario no editable o eliminación de un comentario `OCULTO`; `204` al eliminar el comentario, al reportar (repetir cualquiera de los dos también responde `204`) y en `GET /me` cuando aún no hay opinión.
+- **Códigos de estado** _(por confirmar con el equipo; las pruebas automáticas y la colección de Postman se escriben contra esto)_: `201` al crear; `400` por datos inválidos, por razón `OTRO` sin detalle o por reportar el propio comentario; `401` sin sesión; `403` por rol no permitido o por no ser el autor; `404` por producto, tienda u opinión inexistentes, por un par sin precio o por reportar un comentario oculto o eliminado; `409` por opinión repetida (también después de eliminar el comentario), producto o tienda inactivos, plazo de edición vencido, comentario no editable o eliminación de un comentario `OCULTO`; `204` al eliminar el comentario, al reportar (repetir cualquiera de los dos también responde `204`) y en `GET /me` cuando aún no hay opinión.
 - **Productos de proveedor** (acordado con Darwin, aplica desde la Fase 5): moderación posterior, no previa. Un producto se publica y se muestra de inmediato; luego aparece en el panel del administrador para decidir si se conserva o se da de baja. Esperar la aprobación previa sería lento para el proveedor y dispendioso para el administrador.
 
 ### Pendientes de confirmar con el equipo (Fase 2)

@@ -16,9 +16,18 @@ import SearchPagination from '../components/search/SearchPagination/SearchPagina
 
 
 /**
- * Configuracion estatica de los sectores.
- * Se define fuera del componente para evitar recrear el arreglo en cada render.
- * El campo 'available' controla si el sector hace peticiones o muestra la pantalla "Llega pronto".
+ * Sectores que muestran las pestañas. Se define fuera del componente para no recrear el
+ * arreglo en cada render.
+ *
+ * IMPORTANTE: el `id` de cada sector es un slug que también existe en config/sections.js, y es
+ * el mismo que viaja en la URL (?sector=supermercados). Si un slug cambia en un archivo y no
+ * en el otro, useSectionBySlug no encuentra la sección y el sector queda como "llega pronto".
+ * Aquí viven solo los datos de presentación (ícono, textos); el id numérico de la sección en
+ * la base de datos NO se escribe aquí: se obtiene del backend con useSectionBySlug.
+ *
+ * `available` es una guarda optimista: evita pedir datos de un sector que sabemos que no existe
+ * todavía. La verdad la decide el backend (ver `sectionUnavailable` más abajo): si una sección
+ * marcada como disponible llega sin productos, también se trata como "llega pronto".
  */
 const SECTORS = [
     {
@@ -84,9 +93,11 @@ function setOrDelete(params, key, value) {
 
 /**
  * Recupera el estado de busqueda anterior de la sesion del navegador.
- * Por que: Mejora la experiencia del usuario al mantener sus filtros 
+ * Por que: Mejora la experiencia del usuario al mantener sus filtros
  * si navega a otra pagina (como el comparador) y luego regresa.
  * Se usa try/catch porque algunos navegadores bloquean sessionStorage en modo incognito.
+ * Ojo: lo guardado puede estar desactualizado (por ejemplo, un sector que ya no existe),
+ * por eso el componente nunca lo da por válido sin comprobarlo (ver `knownSectorId`).
  */
 function loadSaved() {
     try {
@@ -102,6 +113,8 @@ const formatCop = (value) => `$${Number(value).toLocaleString('es-CO')}`;
  * Ahorro posible de un producto: lo que se paga de más en la tienda más cara frente a la más barata.
  * Los campos minPrice y maxPrice los entrega el backend (HT-16: contrato del buscador); si no
  * vienen, el producto se muestra sin precio y no hay ahorro que calcular.
+ * Es la diferencia absoluta en pesos; el backend ordena por el porcentaje (DP-39), así que lo
+ * que se muestra aquí y el orden de la lista no siempre coinciden en cuál producto ahorra "más".
  */
 function savingOf(product) {
     if (product.minPrice == null || product.maxPrice == null) return 0;
@@ -174,9 +187,7 @@ function OfferRow({ offer, cheapestValue, compare, entering }) {
             isCheapest ? styles['offer--best'] : '',
             entering ? styles['offer--enter'] : '',
         ].join(' ')}>
-            <span className={styles.offer__avatar} aria-hidden="true">
-                {offer.storeName.charAt(0).toUpperCase()}
-            </span>
+            <StoreLogo name={offer.storeName} />
 
             <div className={styles.offer__store}>
                 <p className={styles.offer__name}>
@@ -357,8 +368,11 @@ export default function Search() {
     const saved = loadSaved();
     const [searchParams, setSearchParams] = useSearchParams();
 
+    // =========================================================================
     // 1. FUENTES DE VERDAD EXTERNAS (URL)
-    // Extraemos parametros de la URL para habilitar navegacion directa (ej. links desde el Header).
+    // =========================================================================
+    // Extraemos parametros de la URL para habilitar navegacion directa (ej. links desde el Header
+    // o el boton "Buscar y comparar" de la pagina de una seccion, que abre /buscar?sector=<slug>).
     const urlQuery = searchParams.get('q');
     const urlSector = searchParams.get('sector');
 
@@ -369,7 +383,9 @@ export default function Search() {
     const maxPrice = searchParams.get(PARAM_MAX_PRICE) ?? '';
     const pageNumber = parsePage(searchParams.get(PARAM_PAGE));
 
+    // =========================================================================
     // 2. ESTADOS LOCALES
+    // =========================================================================
     // Inicializacion inteligente: La prioridad es 1. URL, 2. Sesion guardada, 3. Valor por defecto.
     // Por que: Garantiza que un link externo siempre sobreescriba una busqueda vieja guardada.
     const [searchTerm, setSearchTerm] = useState(urlQuery ?? saved.searchTerm ?? '');
@@ -396,9 +412,14 @@ export default function Search() {
     // =========================================================================
     // SINCRONIZACION CON LA URL
     // =========================================================================
-    // Por que: Si el usuario usa los botones "Atras" o "Adelante" del navegador, 
-    // la URL cambiara, pero el componente no se recargara. Este efecto detecta esos 
-    // cambios y actualiza el estado local para que la UI refleje la URL.
+    // Por que: Si el usuario usa los botones "Atras" o "Adelante" del navegador,
+    // la URL cambiara, pero el componente no se recargara. Estos bloques detectan esos
+    // cambios y actualizan el estado local para que la UI refleje la URL.
+    //
+    // Se hace durante el render (comparando con el valor anterior) y no en un useEffect:
+    // es el patrón que React documenta para ajustar estado cuando cambia una prop o la URL.
+    // Evita un render intermedio con datos viejos y cumple la regla de lint que prohíbe llamar
+    // a setState de forma síncrona dentro de un efecto.
     const [prevUrlQuery, setPrevUrlQuery] = useState(urlQuery);
     const [prevUrlSector, setPrevUrlSector] = useState(urlSector);
 
@@ -450,7 +471,7 @@ export default function Search() {
     // =========================================================================
     // VARIABLES DERIVADAS
     // =========================================================================
-    // Por que: Se calculan en cada render en lugar de usar estados adicionales 
+    // Por que: Se calculan en cada render en lugar de usar estados adicionales
     // para evitar problemas de sincronizacion ("React anti-pattern: derived state").
     const selectedSector = SECTORS.find((sector) => sector.id === selectedSectorId) || null;
     const catalog = useSearchCatalog(selectedSector?.rootName ?? selectedSectorId ?? null);
@@ -467,7 +488,8 @@ export default function Search() {
     ]);
     const hasTerm = searchTerm.trim() !== '';
     const hasPriceFilter = storeKey !== '' || minPrice !== '' || maxPrice !== '';
-    const hasFilter = selectedCategoryId !== null || selectedSectorId !== null || showAll || hasPriceFilter;
+    // Se usa knownSectorId (no selectedSectorId): un sector invalido no cuenta como filtro.
+    const hasFilter = selectedCategoryId !== null || knownSectorId !== null || showAll || hasPriceFilter;
 
     // isIdle: Evita hacer peticiones a la API cuando el usuario no ha pedido nada.
     const isIdle = !hasTerm && !hasFilter;
@@ -484,7 +506,7 @@ export default function Search() {
     // =========================================================================
     // PERSISTENCIA DE SESION
     // =========================================================================
-    // Por que: Guarda silenciosamente los filtros activos. Si el usuario hace clic 
+    // Por que: Guarda silenciosamente los filtros activos. Si el usuario hace clic
     // en un producto y luego decide volver atras, la pagina estara exactamente como la dejo.
     useEffect(() => {
         sessionStorage.setItem(
@@ -512,9 +534,9 @@ export default function Search() {
     useEffect(() => {
         if (isIdle || isSoon || isComposing || !catalogReady || storeKey !== validStoreKey) return;
 
-        // Por que AbortController: Si el usuario escribe "caf" y luego "cafe" rapidamente, 
-        // habra 2 peticiones en vuelo. Si "caf" responde mas lento que "cafe", los 
-        // resultados en pantalla seran incorrectos (Condicion de carrera). 
+        // Por que AbortController: Si el usuario escribe "caf" y luego "cafe" rapidamente,
+        // habra 2 peticiones en vuelo. Si "caf" responde mas lento que "cafe", los
+        // resultados en pantalla seran incorrectos (Condicion de carrera).
         // AbortController cancela peticiones antiguas instantaneamente.
         const controller = new AbortController();
 
@@ -561,7 +583,7 @@ export default function Search() {
             }
         };
 
-        // Por que Debounce (400ms): Evita que se dispare una llamada a la base de datos 
+        // Por que Debounce (400ms): Evita que se dispare una llamada a la base de datos
         // por cada letra que el usuario teclea, reduciendo enormemente los costos del servidor.
         const debounceTimer = setTimeout(fetchProducts, hasTerm ? SEARCH_DEBOUNCE_MS : 0);
 
@@ -584,6 +606,8 @@ export default function Search() {
         changeFilters((next) => next.delete('sector'));
     }
 
+    // Ojo: las pestañas cambian el estado local pero NO escriben ?sector= en la URL. Por eso un
+    // enlace copiado despues de cambiar de pestaña apunta al sector con el que se entro a la pagina.
     function toggleSector(id) {
         setShowAll(false);
         const nextSectorId = selectedSectorId === id ? null : id;
