@@ -14,6 +14,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.comprasco.bakeprofit.core.filter.RateLimitFilter;
+
 /**
  * Configuración central de seguridad: filtros HTTP, codificación de
  * contraseñas y política CORS.
@@ -29,9 +31,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
         private final JwtAuthFilter jwtAuthFilter;
+        private final RateLimitFilter rateLimitFilter;
 
-        public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+        public SecurityConfig(JwtAuthFilter jwtAuthFilter, RateLimitFilter rateLimitFilter) {
                 this.jwtAuthFilter = jwtAuthFilter;
+                this.rateLimitFilter = rateLimitFilter;
         }
 
         /**
@@ -82,6 +86,7 @@ public class SecurityConfig {
                                                 .requestMatchers(HttpMethod.GET, "/api/reviews", "/api/reviews/summary")
                                                 .permitAll()
                                                 .anyRequest().authenticated())
+                                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
                 return http.build();

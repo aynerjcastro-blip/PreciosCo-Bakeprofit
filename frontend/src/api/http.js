@@ -16,7 +16,7 @@ export async function getJson(url, { signal, fallbackMessage = 'Error en la peti
     try {
         response = await fetch(url, { signal });
     } catch (error) {
-        if (error.name === 'AbortError') throw error; // cancelar no es un fallo
+        if (error.name === 'AbortError') throw error;
         const connectionError = new Error('No se pudo conectar con el servidor');
         connectionError.status = 0;
         throw connectionError;
@@ -26,6 +26,7 @@ export async function getJson(url, { signal, fallbackMessage = 'Error en la peti
         const body = await response.json().catch(() => null);
         const error = new Error(body?.message ?? fallbackMessage);
         error.status = response.status;
+        error.retryAfter = response.headers.get("Retry-After");
         throw error;
     }
     return response.json();

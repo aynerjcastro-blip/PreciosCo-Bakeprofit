@@ -1,5 +1,6 @@
 package com.comprasco.bakeprofit.core.handler;
 
+import com.comprasco.bakeprofit.auth.exception.AccountLockedException;
 import com.comprasco.bakeprofit.auth.exception.EmailAlreadyExistsException;
 import com.comprasco.bakeprofit.auth.exception.ForbiddenActionException;
 import com.comprasco.bakeprofit.auth.exception.InactiveParentException;
@@ -521,7 +522,7 @@ public class GlobalExceptionHandler {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
         }
 
-                /**
+        /**
          * Maneja un cambio de contraseña no válido: la actual no coincide o la
          * nueva es igual a la actual. Se responde 400 y no 401 para que el
          * frontend no lo confunda con una sesión vencida.
@@ -544,5 +545,21 @@ public class GlobalExceptionHandler {
                                 .build();
 
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        @ExceptionHandler(AccountLockedException.class)
+        public ResponseEntity<ErrorResponse> handleAccountLocked(
+                        AccountLockedException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.TOO_MANY_REQUESTS.value()) // 429
+                                .error("Too Many Requests")
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(error);
         }
 }
