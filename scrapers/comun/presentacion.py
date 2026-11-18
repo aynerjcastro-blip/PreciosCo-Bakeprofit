@@ -18,7 +18,8 @@ _UNIDADES_CONTEO = (r"tabletas?|tabs?|capsulas?|caps?|comprimidos?|sobres?|ampol
                     r"curas?|gasas?|tapabocas|bandas?|frascos?|viales?|vial|dosis")
 _RE_CONTEO = re.compile(rf"(?<![\d/.,])(\d{{1,4}})\s*(?:{_UNIDADES_CONTEO})\b")
 _RE_X_NUMERO = re.compile(r"(?:^|\s)[x*]\s*(\d{1,4})\b(?!\s*(?:mg|mcg|ml|cc|g|gr|kg|l|lt|ui|iu|%|cm|mm))")
-_RE_MEDIDA = re.compile(r"(?<![\d/.,])(\d{1,5}(?:[.,]\d{1,2})?)\s*(ml|cc|lts?|litros?|l|kg|kilos?|gramos?|grs?|g)\b")
+# La "X" pegada al final ("* 50 GRX") es un resto del formato de Farmanorte, no parte de la unidad
+_RE_MEDIDA = re.compile(r"(?<![\d/.,])(\d{1,5}(?:[.,]\d{1,2})?)\s*(ml|cc|lts?|litros?|l|kg|kilos?|gramos?|grs?|g)x?\b")
 _FACTORES = {"ml": ("ML", 1), "cc": ("ML", 1), "l": ("ML", 1000), "lt": ("ML", 1000), "lts": ("ML", 1000),
              "litro": ("ML", 1000), "litros": ("ML", 1000),
              "g": ("G", 1), "gr": ("G", 1), "grs": ("G", 1), "gramo": ("G", 1), "gramos": ("G", 1),

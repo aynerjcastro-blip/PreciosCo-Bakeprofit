@@ -56,6 +56,9 @@ public class ScrapeTarget {
     @Column(nullable = false, length = 100)
     private String searchTerm;
 
+    @Column(length = 14)
+    private String expectedEan;
+
     // Filtro de categoría propio de la tienda (parámetro fq de VTEX)
     @Column(length = 200)
     private String storeCategoryFq;

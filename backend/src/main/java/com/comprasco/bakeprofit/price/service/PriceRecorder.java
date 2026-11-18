@@ -1,5 +1,6 @@
 package com.comprasco.bakeprofit.price.service;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
@@ -28,16 +29,20 @@ public class PriceRecorder {
      * @return el precio insertado, o vacío si solo se refrescó el periodo vigente
      */
     public Optional<Price> record(Product product, ScrapedOffer offer) {
+        return record(product, offer, offer.getPrice());
+    }
+
+    public Optional<Price> record(Product product, ScrapedOffer offer, BigDecimal value) {
         Optional<Price> latest = priceRepository
                 .findFirstByProductIdAndStoreIdOrderByRegistrationDateDescIdDesc(
                         product.getId(), offer.getStore().getId());
-        if (latest.isPresent() && latest.get().hasValue(offer.getPrice())) {
+        if (latest.isPresent() && latest.get().hasValue(value)) {
             latest.get().refreshSighting(offer.getProductUrl(), offer.getImageUrl());
             return Optional.empty();
         }
         // source es el nombre de la oferta en la tienda: es la convención de las filas existentes
         return Optional.of(priceRepository.save(Price.observed(
-                product, offer.getStore(), offer.getPrice(), offer.getName(),
+                product, offer.getStore(), value, offer.getName(),
                 offer.getProductUrl(), offer.getImageUrl())));
     }
 }

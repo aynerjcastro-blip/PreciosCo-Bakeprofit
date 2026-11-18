@@ -114,11 +114,16 @@ def parsear_tamano(nombre, unidad_esperada=None):
         return None, None
 
     if base != "UN":
-        pack = None
+        # Sin ficha, "500 G X16 Unds" no distingue piezas de un multipack.
+        # Solo un pack explícito permite interpretar esas unidades como empaques.
+        explicit_pack = re.search(r"\b(?:six\s*pack|pack)\b", texto)
+        if not explicit_pack and re.search(r"[x*]\s*\d{1,3}\s*(?:" + _ALT_UN + r")(?![a-z])", texto[elegido.end():]):
+            return None, None
+        pack = 6 if re.search(r"\bsix\s*pack\b", texto) else None
         m = _RE_PACK_ANTES.search(texto[:elegido.start()])
         if m:
             pack = int(m.group(1))
-        else:
+        elif pack is None:
             m = _RE_PACK_DESPUES.match(texto[elegido.end():])
             if m:
                 pack = int(m.group(1))

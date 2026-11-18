@@ -9,34 +9,21 @@ import {
 } from '../components/ui/icons/Sectoricons.jsx';
 import { Link, useSearchParams } from 'react-router-dom';
 import { searchProducts } from '../api/products';
-import { findActiveStores } from '../api/stores';
-import StoreFilter from '@/components/search/StoreFilter/StoreFilter';
-import PriceRangeFilter from '@/components/search/PriceRangeFilter/PriceRangeFilter';
-import SearchPagination from '@/components/search/SearchPagination/SearchPagination';
-import { useSectionBySlug } from '@/hooks/useSectionsBySlug';
-import StoreLogo from './StoreLogo';
+import StoreLogo from './StoreLogo.jsx';
+import useSearchCatalog from '../hooks/useSearchCatalog';
+import StoreFilter from '../components/search/StoreFilter/StoreFilter.jsx';
+import PriceRangeFilter from '../components/search/PriceRangeFilter/PriceRangeFilter.jsx';
+import SearchPagination from '../components/search/SearchPagination/SearchPagination.jsx';
 
-// TODO: la carga de categorías de abajo debería pasar a la capa api/ (como products.js y stores.js)
-// y usar la URL base central de api/http.js, en lugar de repetir esta constante.
-const API_BASE = 'http://localhost:8080/api';
 
 /**
- * Sectores que muestran las pestañas. Se define fuera del componente para no recrear el
- * arreglo en cada render.
- *
- * IMPORTANTE: el `id` de cada sector es un slug que también existe en config/sections.js, y es
- * el mismo que viaja en la URL (?sector=supermercados). Si un slug cambia en un archivo y no
- * en el otro, useSectionBySlug no encuentra la sección y el sector queda como "llega pronto".
- * Aquí viven solo los datos de presentación (ícono, textos); el id numérico de la sección en
- * la base de datos NO se escribe aquí: se obtiene del backend con useSectionBySlug.
- *
- * `available` es una guarda optimista: evita pedir datos de un sector que sabemos que no existe
- * todavía. La verdad la decide el backend (ver `sectionUnavailable` más abajo): si una sección
- * marcada como disponible llega sin productos, también se trata como "llega pronto".
+ * Los slugs viajan en ?sector= y rootName identifica la raíz que resuelve useSearchCatalog.
+ * Los IDs de la base y los filtros disponibles se obtienen del catálogo de esa sección.
  */
 const SECTORS = [
     {
         id: 'supermercados',
+        rootName: 'Supermercado',
         label: 'Supermercados',
         subtitle: 'Compara precios y ahorra',
         Icon: CartIcon,
@@ -44,20 +31,23 @@ const SECTORS = [
     },
     {
         id: 'droguerias',
-        label: 'Droguerias',
+        rootName: 'Droguería',
+        label: 'Droguerías',
         subtitle: 'Encuentra mejores precios',
         Icon: PillIcon,
-        available: false,
+        available: true,
     },
     {
         id: 'cuidado-facial',
+        rootName: 'Cuidado facial',
         label: 'Cuidado Facial',
         subtitle: 'Encuentra el cuidado que mereces',
         Icon: FaceIcon,
-        available: false,
+        available: true,
     },
     {
         id: 'repuestos',
+        rootName: 'Repuestos',
         label: 'Repuestos',
         subtitle: 'Encuentra la pieza que necesitas',
         Icon: GearIcon,
@@ -75,6 +65,7 @@ const PARAM_MAX_PRICE = 'max';
 const PARAM_PAGE = 'pagina';
 const PAGE_SIZE = 20;
 const STORE_SEPARATOR = ',';
+const SEARCH_DEBOUNCE_MS = 400;
 
 /** Página de la URL; cualquier valor que no sea un entero desde 1 es la primera. */
 function parsePage(value) {
@@ -97,7 +88,7 @@ function setOrDelete(params, key, value) {
  * si navega a otra pagina (como el comparador) y luego regresa.
  * Se usa try/catch porque algunos navegadores bloquean sessionStorage en modo incognito.
  * Ojo: lo guardado puede estar desactualizado (por ejemplo, un sector que ya no existe),
- * por eso el componente nunca lo da por válido sin comprobarlo (ver `knownSectorId`).
+ * por eso useSearchCatalog comprueba que exista la raíz antes de permitir la búsqueda.
  */
 function loadSaved() {
     try {
@@ -391,38 +382,13 @@ export default function Search() {
     const [searchTerm, setSearchTerm] = useState(urlQuery ?? saved.searchTerm ?? '');
     const [selectedSectorId, setSelectedSectorId] = useState(urlSector ?? saved.selectedSectorId ?? null);
 
-    // -------------------------------------------------------------------------
-    // Sector -> sección real de la base de datos (HT-15 + contrato de HT-13)
-    // -------------------------------------------------------------------------
-    // El backend filtra por `sectionId` (id numérico de la categoría raíz), pero la interfaz
-    // trabaja con slugs ("supermercados"). useSectionBySlug traduce uno al otro con los datos
-    // reales del backend, así que ningún id numérico está escrito a mano en este archivo.
-    //
-    // `selectedSector` sale de SECTORS, así que es null si el slug no existe. Un slug desconocido
-    // puede venir de un enlace viejo, de ?sector=xyz o de lo guardado en sessionStorage.
-    // `knownSectorId` es el sector solo si es válido: de ahí en adelante, un sector inexistente
-    // se trata como si no hubiera sector (no filtra, no consulta y no bloquea la búsqueda).
-    const selectedSector = SECTORS.find((s) => s.id === selectedSectorId) || null;
-    const knownSectorId = selectedSector ? selectedSectorId : null;
-
-    const { status: sectionsStatus, section } = useSectionBySlug(knownSectorId);
-    const sectionId = section?.id ?? null;
-
-    // Mientras llegan las secciones todavía no conocemos el id. Buscar en ese momento mostraría
-    // primero resultados SIN filtrar de sección y luego los cambiaría de golpe (condición de
-    // carrera visual), así que la búsqueda espera: `waitingSection`.
-    const waitingSection = knownSectorId !== null && sectionsStatus === 'loading';
-    // Si fallan las secciones no se busca sin filtro: la pestaña dice "Supermercados" y los
-    // resultados serían de todo el catálogo. Es preferible un error claro a datos engañosos.
-    const sectionFailed = knownSectorId !== null && sectionsStatus === 'error';
-
-    const [categories, setCategories] = useState([]);
     const [selectedCategoryId, setSelectedCategoryId] = useState(saved.selectedCategoryId ?? null);
     const [showAll, setShowAll] = useState(saved.showAll ?? false);
 
-    const [stores, setStores] = useState([]);
     // Al cambiar de pagina se vuelve al inicio de los filtros, no al inicio de la pagina
     const refineRef = useRef(null);
+    const searchInputRef = useRef(null);
+    const [isComposing, setIsComposing] = useState(false);
 
     const [fetchedProducts, setFetchedProducts] = useState([]);
     const [pageInfo, setPageInfo] = useState({ totalElements: 0, totalPages: 0 });
@@ -430,6 +396,7 @@ export default function Search() {
     // 'stores-unavailable' = una tienda de la URL ya no existe o se desactivo (404),
     // 'invalid-filters' = el backend rechazo el rango de precio (400)
     const [fetchStatus, setFetchStatus] = useState('idle');
+    const [resultScope, setResultScope] = useState(null);
     // Solo en pantallas angostas: el panel de filtros se abre y se cierra
     const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -455,6 +422,7 @@ export default function Search() {
     if (urlSector !== prevUrlSector) {
         setPrevUrlSector(urlSector);
         setSelectedSectorId(urlSector ?? null);
+        setSelectedCategoryId(null);
     }
 
     /**
@@ -486,6 +454,7 @@ export default function Search() {
         setSearchTerm(newValue);
 
         if (urlQuery || searchParams.has(PARAM_PAGE)) {
+            if (urlQuery) setPrevUrlQuery(null);
             changeFilters((next) => next.delete('q'));
         }
     };
@@ -495,31 +464,35 @@ export default function Search() {
     // =========================================================================
     // Por que: Se calculan en cada render en lugar de usar estados adicionales
     // para evitar problemas de sincronizacion ("React anti-pattern: derived state").
+    const selectedSector = SECTORS.find((sector) => sector.id === selectedSectorId) || null;
+    const catalog = useSearchCatalog(selectedSector?.rootName ?? selectedSectorId ?? null);
+    const { categories, stores, sectionId } = catalog;
+    const catalogReady = catalog.status === 'ready';
+    const categoryId = categories.some((category) => category.id === selectedCategoryId)
+        ? selectedCategoryId : null;
+    const validStoreKey = selectedStoreIds
+        .filter((selectedId) => stores.some((store) => String(store.id) === selectedId))
+        .join(STORE_SEPARATOR);
+    const requestScope = JSON.stringify([
+        selectedSectorId, sectionId, categoryId, validStoreKey, searchTerm,
+        minPrice, maxPrice, pageNumber,
+    ]);
     const hasTerm = searchTerm.trim() !== '';
     const hasPriceFilter = storeKey !== '' || minPrice !== '' || maxPrice !== '';
-    // Se usa knownSectorId (no selectedSectorId): un sector invalido no cuenta como filtro.
-    const hasFilter = selectedCategoryId !== null || knownSectorId !== null || showAll || hasPriceFilter;
+    // Mantener el sector solicitado permite mostrar su indisponibilidad sin buscar globalmente.
+    const hasFilter = selectedCategoryId !== null || selectedSectorId !== null || showAll || hasPriceFilter;
 
     // isIdle: Evita hacer peticiones a la API cuando el usuario no ha pedido nada.
     const isIdle = !hasTerm && !hasFilter;
-
-    // Ademas de la marca fija `available` de SECTORS, el sector queda "pronto" si el backend dice
-    // que su categoria raiz no existe o no tiene productos con precio. Solo se evalua con las
-    // secciones ya cargadas: mientras cargan, `section` es undefined y todo parecería inexistente.
-    const sectionUnavailable = sectionsStatus === 'ready' && (!section || !section.available);
     // isSoon: Intercepta sectores en desarrollo para no enviar peticiones basura al backend.
-    const isSoon = !isIdle && selectedSector !== null && (!selectedSector.available || sectionUnavailable);
+    const isSoon = !isIdle && selectedSector !== null
+        && (!selectedSector.available || catalog.status === 'unavailable');
 
-    // Estado que ve el usuario. El ORDEN de esta cadena es una prioridad: gana la primera
-    // condición que se cumple. `fetchStatus` empieza en 'idle', así que sin la rama de
-    // `waitingSection` se vería un instante "Empieza tu búsqueda" al entrar por un enlace con
-    // sector, antes de que lleguen las secciones.
-    const status = isIdle ? 'idle'
-        : isSoon ? 'soon'
-            : sectionFailed ? 'error'
-                : waitingSection ? 'loading'
-                    : fetchStatus;
-    const products = isIdle || isSoon ? [] : fetchedProducts;
+    const status = isIdle ? 'idle' : isSoon ? 'soon'
+        : catalog.status === 'unavailable' ? 'unknown-section'
+        : catalog.status === 'error' ? 'filters-error'
+        : !catalogReady || resultScope !== requestScope ? 'loading' : fetchStatus;
+    const products = status === 'success' ? fetchedProducts : [];
 
     // =========================================================================
     // PERSISTENCIA DE SESION
@@ -533,44 +506,24 @@ export default function Search() {
         );
     }, [searchTerm, selectedCategoryId, selectedSectorId, showAll]);
 
-    // =========================================================================
-    // CARGA INICIAL: CATEGORIAS
-    // =========================================================================
+    // Una URL de otra sección no debe mantener tiendas que ya no pertenecen al filtro.
     useEffect(() => {
-        async function fetchCategories() {
-            try {
-                const response = await fetch(`${API_BASE}/categories/active`);
-                if (!response.ok) throw new Error('Error al cargar categorias');
-                const data = await response.json();
-                setCategories(data);
-            } catch (error) {
-                console.error(error);
-                // Por que: Falla silenciosamente porque la app aun es usable mediante
-                // busqueda por texto libre, no queremos bloquear al usuario entero.
-            }
-        }
-        fetchCategories();
-    }, []);
-
-    // =========================================================================
-    // CARGA INICIAL: TIENDAS ACTIVAS (selector de HU-06b)
-    // =========================================================================
-    useEffect(() => {
-        findActiveStores()
-            .then(setStores)
-            .catch((error) => {
-                // Igual que las categorias: sin tiendas la busqueda sigue funcionando
-                console.error(error);
-            });
-    }, []);
+        if (!catalogReady || storeKey === validStoreKey) return;
+        setSearchParams((current) => {
+            const next = new URLSearchParams(current);
+            next.delete(PARAM_STORE);
+            validStoreKey.split(STORE_SEPARATOR).filter(Boolean)
+                .forEach((storeId) => next.append(PARAM_STORE, storeId));
+            next.delete(PARAM_PAGE);
+            return next;
+        }, { replace: true });
+    }, [catalogReady, storeKey, validStoreKey, setSearchParams]);
 
     // =========================================================================
     // MOTOR DE BUSQUEDA (DEBOUNCE + ABORT CONTROLLER)
     // =========================================================================
     useEffect(() => {
-        // No se consulta si no hay nada que buscar, si el sector es "pronto", si fallaron las
-        // secciones o si todavia no se conoce el id de la seccion (ver `waitingSection`).
-        if (isIdle || isSoon || sectionFailed || waitingSection) return;
+        if (isIdle || isSoon || isComposing || !catalogReady || storeKey !== validStoreKey) return;
 
         // Por que AbortController: Si el usuario escribe "caf" y luego "cafe" rapidamente,
         // habra 2 peticiones en vuelo. Si "caf" responde mas lento que "cafe", los
@@ -581,16 +534,14 @@ export default function Search() {
         const fetchProducts = async () => {
             setFetchStatus('loading');
             // Se reconstruye desde storeKey: un arreglo nuevo en cada render dispararia el efecto sin fin
-            const storeIds = storeKey ? storeKey.split(STORE_SEPARATOR) : [];
+            const storeIds = validStoreKey ? validStoreKey.split(STORE_SEPARATOR) : [];
 
             try {
                 const result = await searchProducts(
                     {
                         name: hasTerm ? searchTerm.trim() : undefined,
-                        // Contrato de HT-13: id de la categoria raiz. null = sin filtro de seccion.
-                        // El backend lo combina con el resto: se deben cumplir todos los filtros.
+                        categoryId,
                         sectionId,
-                        categoryId: selectedCategoryId,
                         storeIds,
                         minPrice,
                         maxPrice,
@@ -599,6 +550,8 @@ export default function Search() {
                     },
                     { signal: controller.signal },
                 );
+                if (controller.signal.aborted) return;
+                setResultScope(requestScope);
                 setFetchedProducts(result.content);
                 setPageInfo({
                     totalElements: result.page.totalElements,
@@ -608,6 +561,8 @@ export default function Search() {
             } catch (error) {
                 // Se ignora el AbortError porque es el comportamiento esperado al seguir escribiendo
                 if (error.name === 'AbortError') return;
+                if (controller.signal.aborted) return;
+                setResultScope(requestScope);
                 console.error(error);
                 if (error.status === 404 && storeIds.length > 0) {
                     setFetchStatus('stores-unavailable');
@@ -621,7 +576,7 @@ export default function Search() {
 
         // Por que Debounce (400ms): Evita que se dispare una llamada a la base de datos
         // por cada letra que el usuario teclea, reduciendo enormemente los costos del servidor.
-        const debounceTimer = setTimeout(fetchProducts, 400);
+        const debounceTimer = setTimeout(fetchProducts, hasTerm ? SEARCH_DEBOUNCE_MS : 0);
 
         // Funcion de limpieza: Se ejecuta si las dependencias cambian ANTES de los 400ms,
         // cancelando el timer actual y la peticion HTTP en vuelo.
@@ -629,10 +584,8 @@ export default function Search() {
             clearTimeout(debounceTimer);
             controller.abort();
         };
-        // Todo valor que el efecto lee debe estar aqui: si faltara `sectionId`, al cambiar de
-        // pestaña se seguiria buscando con la seccion anterior (valor "viejo" de una render previa).
-    }, [isIdle, isSoon, sectionFailed, waitingSection, sectionId, hasTerm, searchTerm,
-        selectedCategoryId, storeKey, minPrice, maxPrice, pageNumber]);
+    }, [isIdle, isSoon, isComposing, catalogReady, hasTerm, searchTerm, categoryId, sectionId,
+        storeKey, validStoreKey, minPrice, maxPrice, pageNumber, requestScope]);
 
     // =========================================================================
     // MANEJADORES DE UI
@@ -641,15 +594,19 @@ export default function Search() {
         setSelectedCategoryId(null);
         setSelectedSectorId(null);
         setShowAll(true);
-        backToFirstPage();
+        changeFilters((next) => next.delete('sector'));
     }
 
-    // Ojo: las pestañas cambian el estado local pero NO escriben ?sector= en la URL. Por eso un
-    // enlace copiado despues de cambiar de pestaña apunta al sector con el que se entro a la pagina.
+    // La URL conserva el sector activo y cambiarlo limpia las tiendas y la página anteriores.
     function toggleSector(id) {
         setShowAll(false);
-        setSelectedSectorId((current) => (current === id ? null : id));
-        backToFirstPage();
+        const nextSectorId = selectedSectorId === id ? null : id;
+        setSelectedSectorId(nextSectorId);
+        setSelectedCategoryId(null);
+        changeFilters((next) => {
+            setOrDelete(next, 'sector', nextSectorId);
+            next.delete(PARAM_STORE);
+        });
     }
 
     function toggleCategory(id) {
@@ -690,7 +647,9 @@ export default function Search() {
     }
 
     const activeFilterCount =
-        (selectedCategoryId !== null ? 1 : 0) + selectedStoreIds.length + (minPrice !== '' || maxPrice !== '' ? 1 : 0);
+        (categoryId !== null ? 1 : 0)
+        + (validStoreKey ? validStoreKey.split(STORE_SEPARATOR).length : 0)
+        + (minPrice !== '' || maxPrice !== '' ? 1 : 0);
 
     // "Limpiar todo": quita categoría, tiendas y precio; el sector es navegación y se conserva
     function clearAllFilters() {
@@ -703,11 +662,22 @@ export default function Search() {
         });
     }
 
-    // "Todas" en el filtro de categoria: marcada cuando no hay categoria ni sector VALIDO elegido
-    const noFilters = selectedCategoryId === null && knownSectorId === null;
+    const noFilters = categoryId === null;
+
+    function clearCategory() {
+        setSelectedCategoryId(null);
+        setShowAll(true);
+        backToFirstPage();
+    }
+
+    function clearSearch() {
+        setSearchTerm('');
+        changeFilters((next) => next.delete('q'));
+        searchInputRef.current?.focus();
+    }
 
     return (
-        <main className={styles['search-page']}>
+        <div className={styles['search-page']}>
             <div className={styles['search-page__container']}>
                 <header className={styles['search-head']}>
                     <h1 className={styles['search-head__title']}>Busca tu producto</h1>
@@ -722,13 +692,22 @@ export default function Search() {
                         <SearchIcon />
                     </span>
                     <input
+                        ref={searchInputRef}
                         type="search"
                         className={styles['search-bar__input']}
                         placeholder="Ej. Arroz, Leche, Chocolatina..."
                         value={searchTerm}
                         onChange={handleSearchChange}
+                        onCompositionStart={() => setIsComposing(true)}
+                        onCompositionEnd={() => setIsComposing(false)}
                         aria-label="Buscar producto por nombre"
                     />
+                    {searchTerm && (
+                        <button type="button" onClick={clearSearch} aria-label="Limpiar búsqueda"
+                            className={styles['search-clear']}>
+                            ×
+                        </button>
+                    )}
                 </div>
 
                 {/* SECTORES: pestañas compactas, ya no tarjetas que empujan los resultados fuera de la pantalla */}
@@ -778,6 +757,15 @@ export default function Search() {
                                 )}
                             </div>
 
+                            {catalog.status === 'loading' && <p role="status">Cargando filtros…</p>}
+                            {catalog.status === 'error' && (
+                                <div role="alert">
+                                    <p>No pudimos cargar los filtros de esta sección.</p>
+                                    <button type="button" onClick={catalog.retry}>Reintentar</button>
+                                </div>
+                            )}
+                            {catalogReady && categories.length === 0 && <p>No hay categorías activas disponibles.</p>}
+                            {catalogReady && stores.length === 0 && <p>No hay tiendas activas disponibles.</p>}
                             {categories.length > 0 && (
                                 <div className={styles['filter-card']} role="radiogroup" aria-labelledby="categoria-label">
                                     <span id="categoria-label" className={styles['filter-card__title']}>Categoría</span>
@@ -786,7 +774,7 @@ export default function Search() {
                                             type="radio"
                                             name="categoria"
                                             checked={noFilters}
-                                            onChange={showAllProducts}
+                                            onChange={clearCategory}
                                         />
                                         <span>Todas</span>
                                     </label>
@@ -795,7 +783,7 @@ export default function Search() {
                                             <input
                                                 type="radio"
                                                 name="categoria"
-                                                checked={selectedCategoryId === cat.id}
+                                                checked={categoryId === cat.id}
                                                 onChange={() => toggleCategory(cat.id)}
                                             />
                                             <span>{cat.name}</span>
@@ -894,6 +882,19 @@ export default function Search() {
                                 </div>
                             )}
 
+                            {status === 'filters-error' && (
+                                <div className={styles['search-state']} role="alert">
+                                    <p>No pudimos cargar esta sección. Reintenta desde los filtros.</p>
+                                </div>
+                            )}
+
+                            {status === 'unknown-section' && (
+                                <div className={styles['search-state']} role="alert">
+                                    <p>Esta sección no está disponible.</p>
+                                    <button type="button" onClick={showAllProducts}>Ver todas las secciones</button>
+                                </div>
+                            )}
+
                             {status === 'error' && (
                                 <div className={styles['search-state']}>
                                     <p className={styles['search-state__title']}>Algo salió mal</p>
@@ -912,6 +913,6 @@ export default function Search() {
                     </section>
                 </div>
             </div>
-        </main>
+        </div>
     );
 }

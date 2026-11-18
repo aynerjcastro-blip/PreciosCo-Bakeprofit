@@ -1,2 +1,22 @@
+﻿# Python / Scrapers
+__pycache__/
+*.py[cod]
+*.class
+.venv/
+venv/
+salida_urls/
+repomix-output.xml
+
+# Variables de entorno y credenciales
 .env
 !.env.example
+.env.*
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Diagnósticos regenerables del scraper facial
+scrapers/facial/sku_offers.csv
+scrapers/facial/conflictos_tamanos.csv

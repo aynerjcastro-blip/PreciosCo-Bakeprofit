@@ -11,6 +11,7 @@ ninguna oferta (alerta de cero resultados); 2 si no hay conexión, configuració
 import logging
 import os
 import time
+from uuid import uuid4
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -21,7 +22,7 @@ import psycopg2
 from .ciudad import CIUDAD, HORA_COLOMBIA, ahora_colombia
 from .http import PAUSA, nueva_sesion
 from .staging import (POS_NET_CONTENT, DominioInexistente, conectar, filtrar_targets,
-                      insertar_ofertas, leer_targets)
+                      insertar_ofertas, leer_targets, iniciar_corrida, terminar_corrida)
 
 BLOQUEOS_SEGUIDOS_MAX = 3   # 403/429 seguidos en una tienda -> se omite el resto de sus targets
 
@@ -53,7 +54,7 @@ class TiendaStrategy(ABC):
         """
 
 
-def procesar_target(conn, session, target, estrategia_para):
+def procesar_target(conn, session, target, estrategia_para, run_id=None):
     """Devuelve (Resumen, hubo_peticion)."""
     r = Resumen(target["store_name"], target["search_term"])
     estrategia = estrategia_para(target["store_name"])
@@ -74,7 +75,7 @@ def procesar_target(conn, session, target, estrategia_para):
 
     if filas:
         try:
-            insertar_ofertas(conn, filas)
+            insertar_ofertas(conn, filas, run_id)
             r.insertados = len(filas)
         except Exception as e:
             conn.rollback()
@@ -146,6 +147,11 @@ def ejecutar(dominio, estrategia_para):
             targets = filtrar_targets(targets, solo)
             log.info("SOLO_TIENDAS=%r: %d de %d scrape_targets", solo, len(targets), todos)
         log.info("%d scrape_targets activos de %s; precios de %s", len(targets), dominio, CIUDAD)
+        if not targets:
+            log.error("No hay scrape_targets activos para el dominio y las tiendas seleccionadas")
+            return 2
+        run_id = uuid4()
+        iniciar_corrida(conn, run_id)
         bloqueos = {}          # store_id -> 403/429 seguidos
         tiendas_omitidas = set()
         for i, target in enumerate(targets):
@@ -154,7 +160,7 @@ def ejecutar(dominio, estrategia_para):
                                          error="omitido: la tienda bloqueó las peticiones (403/429)"))
                 continue
             try:
-                resumen, hubo_peticion = procesar_target(conn, session, target, estrategia_para)
+                resumen, hubo_peticion = procesar_target(conn, session, target, estrategia_para, run_id)
             except Exception as e:      # ninguna falla de un target detiene a los demás
                 conn.rollback()
                 resumen = Resumen(target["store_name"], target["search_term"], error=f"inesperado: {e}")
@@ -173,7 +179,9 @@ def ejecutar(dominio, estrategia_para):
                 bloqueos[sid] = 0
             if hubo_peticion and i < len(targets) - 1:
                 time.sleep(getattr(estrategia_para(target["store_name"]), "pausa", None) or PAUSA)
+        terminar_corrida(conn, run_id)
     finally:
+        session.close()
         conn.close()
 
     imprimir_resumen(resumenes)

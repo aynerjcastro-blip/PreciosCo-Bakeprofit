@@ -50,8 +50,15 @@ public class CategoryController {
     @Operation(summary = "Listar categorías activas", description = "Filtra categorías por su estado (solo subcategorías)")
     @ApiResponse(responseCode = "200", description = "Lista de categorías activas")
     @GetMapping("/active")
-    public ResponseEntity<List<CategoryResponse>> findActive() {
-        return ResponseEntity.ok(categoryService.findActive());
+    public ResponseEntity<List<CategoryResponse>> findActive(
+            @RequestParam(required = false) Long sectionId) {
+        return ResponseEntity.ok(categoryService.findActive(sectionId));
+    }
+
+    @Operation(summary = "Listar secciones activas", description = "Solo categorías raíz activas")
+    @GetMapping("/roots")
+    public ResponseEntity<List<CategoryResponse>> findActiveRoots() {
+        return ResponseEntity.ok(categoryService.findActiveRoots());
     }
 
 

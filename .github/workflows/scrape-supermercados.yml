@@ -1,4 +1,4 @@
-name: Scraping de precios - Supermercados
+name: Scraping de precios
 
 on:
   # schedule:
@@ -7,18 +7,21 @@ on:
   workflow_dispatch:
     inputs:
       tiendas:
-        description: "Tiendas separadas por coma (d1, jumbo, olimpica, exito). Vacío = d1,jumbo,olimpica"
+        description: "Tiendas separadas por coma (d1, jumbo, olimpica, exito, la rebaja, farmatodo, farmanorte, cutis, medipiel, bellapiel). Vacío = todas (excepto exito)"
         required: false
-        default: "d1,jumbo,olimpica"
+        default: ""
 
 concurrency:
   group: scraper-supermercados
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      # Que cada print salga al log apenas ocurre, no de golpe al final
+      PYTHONUNBUFFERED: "1"
 
     steps:
       - name: Clonar repositorio
@@ -29,13 +32,19 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: scrapers/supermercados/requirements.txt
+          cache-dependency-path: scrapers/requirements.txt
 
       - name: Instalar dependencias
-        working-directory: scrapers/supermercados
+        working-directory: scrapers
         run: pip install -r requirements.txt
 
-      - name: Ejecutar scraper
+      - name: Correr scraper de supermercados
+        if: |
+          contains(github.event.inputs.tiendas, 'd1') ||
+          contains(github.event.inputs.tiendas, 'jumbo') ||
+          contains(github.event.inputs.tiendas, 'olimpica') ||
+          contains(github.event.inputs.tiendas, 'exito') ||
+          github.event.inputs.tiendas == ''
         working-directory: scrapers/supermercados
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
@@ -47,7 +56,15 @@ jobs:
           SOLO_TIENDAS: ${{ github.event.inputs.tiendas || 'd1,jumbo,olimpica' }}
         run: python scraper_supermercados.py
 
-      - name: Correr scraper de droguerías (La Rebaja)
+      # !cancelled(): si un scraper termina con código 1 (alerta de cero resultados), los
+      # siguientes igual corren. Sin esto Actions los saltaría.
+      - name: Correr scraper de droguerías
+        if: >-
+          ${{ !cancelled() && (
+          contains(github.event.inputs.tiendas, 'la rebaja') ||
+          contains(github.event.inputs.tiendas, 'farmatodo') ||
+          contains(github.event.inputs.tiendas, 'farmanorte') ||
+          github.event.inputs.tiendas == '') }}
         working-directory: scrapers/droguerias
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
@@ -56,5 +73,42 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_SSLMODE: require
-          SOLO_TIENDAS: ${{ inputs.solo_tiendas }}
+          SOLO_TIENDAS: ${{ github.event.inputs.tiendas || 'la rebaja,farmatodo,farmanorte' }}
         run: python scraper_droguerias.py
+
+      - name: Correr scraper de cuidado facial
+        if: >-
+          ${{ !cancelled() && (
+          contains(github.event.inputs.tiendas, 'cutis') ||
+          contains(github.event.inputs.tiendas, 'medipiel') ||
+          contains(github.event.inputs.tiendas, 'bellapiel') ||
+          github.event.inputs.tiendas == '') }}
+        working-directory: scrapers/facial
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_SSLMODE: require
+          SOLO_TIENDAS: ${{ github.event.inputs.tiendas || 'cutis,medipiel,bellapiel' }}
+          SKU_OFFERS_PATH: sku_offers.csv
+          CONFLICTOS_TAMANOS_PATH: conflictos_tamanos.csv
+          MOSTRAR_DESCARTES: "1"
+          DESCARTADOS_PATH: descartados_facial.csv
+          SIN_TAMANO_PATH: sin_tamano_facial.csv
+        run: python scraper_cuidado_facial.py
+
+      - name: Subir descartados y sin tamaño
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: csv-cuidado-facial
+          path: |
+            scrapers/facial/descartados_facial.csv
+            scrapers/facial/sin_tamano_facial.csv
+            scrapers/facial/ean_diagnostico.json
+            scrapers/facial/sku_offers.csv
+            scrapers/facial/conflictos_tamanos.csv
+          if-no-files-found: warn
+          retention-days: 7

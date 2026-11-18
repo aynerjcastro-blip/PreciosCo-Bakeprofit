@@ -61,8 +61,21 @@ public class ScrapedOffer {
         foreignKey = @ForeignKey(name = "fk_scraped_offers_scrape_targets"))
     private ScrapeTarget scrapeTarget;
 
+    @Column
+    private java.util.UUID runId;
+
+    @Column(length = 100)
+    private String storeSku;
+
+    @Column(precision = 12, scale = 6)
+    private BigDecimal saleWeightKg;
+
     @Column(length = 20)
     private String ean;
+
+    // NULL conserva la interpretación del staging legado.
+    @Column
+    private Boolean hasEan;
 
     @Column(nullable = false, columnDefinition = "text")
     private String name;
@@ -102,6 +115,10 @@ public class ScrapedOffer {
     @Column
     private LocalDateTime processedAt;
 
+    public boolean usesSkuIdentity() {
+        return Boolean.FALSE.equals(hasEan);
+    }
+
     public boolean isPending() {
         return status == OfferStatus.PENDING;
     }
@@ -112,6 +129,11 @@ public class ScrapedOffer {
         this.status = OfferStatus.PROCESSED;
         this.reason = null;
         this.processedAt = LocalDateTime.now();
+    }
+
+    public void markDuplicate() {
+        markProcessed();
+        this.reason = "duplicada en la corrida";
     }
 
     /** La oferta no pasó los filtros; {@code reason} queda para revisarla después. */

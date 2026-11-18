@@ -18,7 +18,10 @@ import com.comprasco.bakeprofit.staging.entity.ScrapedOffer;
 
 class OfferScreeningTest {
 
-    private final OfferScreening screening = new OfferScreening(StagingFixtures.domainPolicy());
+    private final OfferScreening screening = new OfferScreening(StagingFixtures.domainPolicy(),
+            org.mockito.Mockito.mock(com.comprasco.bakeprofit.staging.repository.EanSizeOverrideRepository.class),
+            org.mockito.Mockito.mock(com.comprasco.bakeprofit.staging.repository.StoreProductLinkRepository.class),
+            org.mockito.Mockito.mock(com.comprasco.bakeprofit.staging.identity.SecondaryIdentityResolver.class));
 
     @Test
     void aceptaUnaOfertaValidaConElEanNormalizadoYLaUnidadInterpretada() {
@@ -41,9 +44,7 @@ class OfferScreeningTest {
     @ParameterizedTest
     @CsvSource({
         "7702552000142,  INVALID",
-        "0000000000000,  PLACEHOLDER",
-        "2000123456782,  STORE_INTERNAL",
-        "90012345678908, VARIABLE_MEASURE"
+        "0000000000000,  PLACEHOLDER"
     })
     void cadaVeredictoGtinDistintoDeComparableDejaSuMensaje(String ean, GtinVerdict verdict) {
         ScrapedOffer offer = offer(SUPERMARKET);

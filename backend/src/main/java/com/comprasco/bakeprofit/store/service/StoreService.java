@@ -62,6 +62,15 @@ public class StoreService {
                 .toList();
     }
 
+    public List<StoreResponse> findActive(Long sectionId) {
+        if (sectionId == null) {
+            return findActive();
+        }
+        categoryService.requireActiveRoot(sectionId);
+        return storeRepository.findByActiveTrueAndCategoryId(sectionId).stream()
+                .map(StoreResponse::from).toList();
+    }
+
     /**
      * Comprueba que todas las tiendas existen y están activas; si no, 404 con los ids que
      * fallan. Para un visitante, una tienda inactiva no existe: por eso no responde 409.

@@ -45,6 +45,28 @@ public class CategoryService {
                 .toList();
     }
 
+    public List<CategoryResponse> findActive(Long sectionId) {
+        if (sectionId == null) {
+            return findActive();
+        }
+        requireActiveRoot(sectionId);
+        return categoryRepository.findByParentIdAndActiveTrue(sectionId).stream()
+                .map(CategoryResponse::from).toList();
+    }
+
+    public List<CategoryResponse> findActiveRoots() {
+        return categoryRepository.findByParentIsNullAndActiveTrue().stream()
+                .map(CategoryResponse::from).toList();
+    }
+
+    public Category requireActiveRoot(Long sectionId) {
+        Category section = findById(sectionId);
+        if (section.getParent() != null || !Boolean.TRUE.equals(section.getActive())) {
+            throw new CategoryNotFoundException("No existe una sección activa con id: " + sectionId);
+        }
+        return section;
+    }
+
     public List<CategoryResponse> findInactive () {
         return categoryRepository.findByActiveFalseAndParentIsNotNull().stream()
                 .map(CategoryResponse::from)
