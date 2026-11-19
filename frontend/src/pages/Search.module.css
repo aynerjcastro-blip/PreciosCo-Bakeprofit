@@ -396,6 +396,22 @@
     border-radius: var(--radius-sm);
 }
 
+/* Botón transparente que envuelve la imagen para abrir el lightbox */
+.product-card__zoom {
+    all: unset;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    cursor: zoom-in;
+    border-radius: var(--radius-sm);
+}
+
+.product-card__zoom:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
 .product-card__info {
     min-width: 0;
 }
@@ -693,6 +709,63 @@
     font-size: 1.2rem;
     color: var(--text-primary);
     margin-bottom: 8px;
+}
+
+/* ============================================================
+   LIGHTBOX
+   ============================================================ */
+.lightboxOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    cursor: pointer;
+    animation: lightboxFadeIn 0.2s ease-out;
+}
+
+.lightboxClose {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 50%;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+
+.lightboxClose:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.lightboxImage {
+    max-width: 90vw;
+    max-height: 85vh;
+    border-radius: var(--radius-md, 12px);
+    object-fit: contain;
+    cursor: default;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes lightboxFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 /* ============================================================

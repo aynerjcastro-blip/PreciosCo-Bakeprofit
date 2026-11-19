@@ -436,3 +436,69 @@
         font-size: 1.8rem;
     }
 }
+
+/* ============================================================
+   ZOOM BUTTON — botón transparente que envuelve la imagen
+   ============================================================ */
+.zoom-button {
+    all: unset;
+    cursor: zoom-in;
+    display: inline-block;
+    border-radius: var(--radius-sm, 6px);
+}
+
+.zoom-button:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+/* ============================================================
+   LIGHTBOX — vista ampliada de la imagen
+   ============================================================ */
+.lightboxOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.85);
+    cursor: zoom-out;
+    animation: lightboxFadeIn 0.2s ease-out;
+}
+
+.lightboxClose {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm, 6px);
+}
+
+.lightboxClose:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.lightboxImage {
+    max-width: 90vw;
+    max-height: 85vh;
+    object-fit: contain;
+    border-radius: var(--radius-md, 10px);
+    cursor: default;
+}
+
+@keyframes lightboxFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
