@@ -42,7 +42,6 @@ const HERO_SLIDES = [
         titleAccent: 'al mejor precio',
         description: 'Arroz, aceite, leche, aseo — el mismo producto en D1, Éxito, Olímpica y Jumbo. Compara al instante.',
         cta: 'Comparar supermercados',
-        theme: 'light',
     },
     {
         slug: 'droguerias',
@@ -51,7 +50,6 @@ const HERO_SLIDES = [
         titleAccent: 'sin pagar de más',
         description: 'Medicamentos y cuidado personal entre Farmatodo, La Rebaja y más. El mismo producto, distinto precio.',
         cta: 'Comparar droguerías',
-        theme: 'dark',
     },
     {
         slug: 'cuidado-facial',
@@ -60,7 +58,6 @@ const HERO_SLIDES = [
         titleAccent: 'mejor inversión',
         description: 'Cremas, sueros y protectores solares. Compara precios entre tiendas especializadas.',
         cta: 'Comparar cuidado facial',
-        theme: 'light',
     },
     {
         slug: 'repuestos',
@@ -69,7 +66,6 @@ const HERO_SLIDES = [
         titleAccent: 'al precio justo',
         description: 'Busca por referencia del fabricante y compara entre distribuidores autorizados.',
         cta: 'Comparar repuestos',
-        theme: 'dark',
     },
 ];
 
@@ -77,7 +73,7 @@ const HERO_SLIDES = [
 const CAROUSEL_INTERVAL = 6000;
 
 /* ═══════════════════════ HERO CAROUSEL ═══════════════════════ */
-function HeroCarousel({ sections }) {
+function HeroCarousel({ sections, savingsBySection }) {
     const [current, setCurrent] = useState(0);
     const timerRef = useRef(null);
 
@@ -114,9 +110,15 @@ function HeroCarousel({ sections }) {
     const slide = slides[current];
     const Icon = SECTION_ICONS[slide.slug] ?? CartIcon;
 
+    // Productos destacados de esta sección para el visual
+    const matchSection = sections.find((s) => s.slug === slide.slug);
+    const slideProducts = matchSection
+        ? (savingsBySection.get(matchSection.id) ?? []).slice(0, 4)
+        : [];
+
     return (
         <section
-            className={`${styles.carousel} ${slide.theme === 'dark' ? styles.carouselDark : ''}`}
+            className={styles.carousel}
             aria-roledescription="carousel"
             aria-label="Secciones destacadas"
         >
@@ -144,9 +146,27 @@ function HeroCarousel({ sections }) {
                 </div>
 
                 <div className={styles.carouselVisual}>
-                    <div className={styles.carouselIconLarge}>
-                        <Icon />
-                    </div>
+                    {slideProducts.length > 0 ? (
+                        <div className={styles.carouselProducts}>
+                            {slideProducts.map((p, i) => (
+                                <div
+                                    key={p.id}
+                                    className={styles.carouselProductCard}
+                                    style={{ '--card-i': i }}
+                                >
+                                    <ProductImage
+                                        src={p.imageUrl}
+                                        alt={p.name}
+                                        className={styles.carouselProductImg}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className={styles.carouselIconLarge}>
+                            <Icon />
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -400,7 +420,7 @@ export default function Explore() {
     return (
         <div className={styles.page}>
             {/* ═══════════ HERO CAROUSEL ═══════════ */}
-            <HeroCarousel sections={activeSections} />
+            <HeroCarousel sections={activeSections} savingsBySection={savingsBySection} />
 
             {/* ═══════════ BUSCADOR ═══════════ */}
             <section className={styles.searchSection}>

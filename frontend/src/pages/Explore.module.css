@@ -12,46 +12,44 @@
 /* ============================================================
    HERO CAROUSEL — diapositivas por sección
    ============================================================ */
+/* ─── Carousel: sigue el tema del sistema ─── */
 .carousel {
     position: relative;
     border-radius: var(--radius-xl, 20px);
     overflow: hidden;
     margin: 24px 0 0;
-    background: var(--surface-secondary);
+    background: var(--color-primary-soft, #FFF7ED);
     border: 1px solid var(--border-color);
     min-height: 340px;
-    transition: background 0.4s, color 0.4s;
 }
 
-.carouselDark {
-    background: var(--text-primary);
-    color: var(--surface-primary);
+/* Aurora — modo claro: peach / naranja cálido */
+.carousel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 55% 70% at 72% 45%, rgba(255, 159, 28, 0.14) 0%, transparent 70%),
+        radial-gradient(ellipse 45% 55% at 25% 75%, rgba(255, 159, 28, 0.08) 0%, transparent 60%);
 }
 
-.carouselDark .carouselDesc {
-    color: rgba(255, 255, 255, 0.65);
+/* ─── Dark mode override con selector del sistema ─── */
+:root[data-theme="dark"] .carousel {
+    background: var(--bg-main, #121626);
 }
 
-.carouselDark .carouselBadge {
-    background: rgba(255, 255, 255, 0.12);
-    color: #fff;
-}
-
-.carouselDark .carouselCta {
-    background: var(--accent);
-    color: var(--on-accent, #000);
-}
-
-.carouselDark .carouselArrow {
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
-}
-
-.carouselDark .carouselArrow:hover {
-    background: rgba(255, 255, 255, 0.25);
+:root[data-theme="dark"] .carousel::before {
+    background:
+        radial-gradient(ellipse 55% 70% at 68% 40%, rgba(255, 159, 28, 0.18) 0%, transparent 65%),
+        radial-gradient(ellipse 40% 50% at 30% 70%, rgba(139, 92, 246, 0.12) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(236, 72, 153, 0.08) 0%, transparent 50%);
 }
 
 .carouselSlide {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -83,7 +81,7 @@
     gap: 6px;
     padding: 6px 14px;
     border-radius: var(--radius-full, 999px);
-    background: var(--surface-primary);
+    background: var(--bg-surface);
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--text-primary);
@@ -107,10 +105,11 @@
     font-weight: 900;
     line-height: 1.1;
     margin: 0 0 16px;
+    color: var(--text-primary);
 }
 
 .carouselAccent {
-    color: var(--accent);
+    color: var(--color-primary);
 }
 
 .carouselDesc {
@@ -125,11 +124,12 @@
     display: inline-block;
     padding: 12px 28px;
     border-radius: var(--radius-full, 999px);
-    background: var(--accent);
-    color: var(--on-accent, #000);
+    background: var(--color-primary);
+    color: #fff;
     font-weight: 700;
     font-size: 0.95rem;
     text-decoration: none;
+    border: 2px solid var(--color-primary);
     transition: opacity 0.15s, transform 0.15s;
 }
 
@@ -138,7 +138,14 @@
     transform: translateY(-1px);
 }
 
-/* Visual derecho — ícono grande decorativo */
+/* Dark mode: relleno naranja con texto blanco */
+:root[data-theme="dark"] .carouselCta {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+}
+
+/* Visual derecho — productos destacados o ícono fallback */
 .carouselVisual {
     display: flex;
     align-items: center;
@@ -146,12 +153,67 @@
     flex-shrink: 0;
 }
 
+/* ─── Collage de productos reales ─── */
+.carouselProducts {
+    position: relative;
+    width: 320px;
+    height: 260px;
+}
+
+.carouselProductCard {
+    position: absolute;
+    width: 140px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 10px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+    transition: transform 0.35s ease;
+}
+
+/* Posiciones escalonadas tipo "abanico" */
+.carouselProductCard:nth-child(1) {
+    top: 30%;
+    left: 0;
+    transform: rotate(-6deg);
+    z-index: 1;
+}
+
+.carouselProductCard:nth-child(2) {
+    top: 2%;
+    left: 28%;
+    transform: rotate(2deg) scale(1.05);
+    z-index: 3;
+}
+
+.carouselProductCard:nth-child(3) {
+    top: 10%;
+    left: 56%;
+    transform: rotate(5deg);
+    z-index: 2;
+}
+
+.carouselProductCard:nth-child(4) {
+    top: 48%;
+    left: 20%;
+    transform: rotate(-2deg);
+    z-index: 0;
+}
+
+.carouselProductImg {
+    width: 100%;
+    height: 110px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #fafafa;
+}
+
+/* ─── Fallback ícono si no hay productos ─── */
 .carouselIconLarge {
     width: 180px;
     height: 180px;
     border-radius: 50%;
-    background: var(--accent);
-    color: var(--on-accent, #000);
+    background: var(--color-primary);
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -172,7 +234,7 @@
     height: 44px;
     border-radius: 50%;
     border: none;
-    background: var(--surface-primary);
+    background: var(--bg-surface);
     color: var(--text-primary);
     font-size: 1.8rem;
     line-height: 1;
@@ -180,13 +242,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
     transition: background 0.15s;
     z-index: 2;
 }
 
 .carouselArrow:hover {
-    background: var(--surface-secondary);
+    opacity: 0.8;
 }
 
 .carouselArrowLeft {
@@ -199,6 +261,8 @@
 
 /* Dots */
 .carouselDots {
+    position: relative;
+    z-index: 1;
     display: flex;
     justify-content: center;
     gap: 8px;
@@ -219,15 +283,27 @@
 .dotActive {
     width: 28px;
     border-radius: 5px;
-    background: var(--accent);
+    background: var(--color-primary);
 }
 
-.carouselDark .dot {
-    background: rgba(255, 255, 255, 0.3);
-}
+/* Dark mode automático (prefers-color-scheme) si no hay toggle */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .carousel {
+        background: var(--bg-main, #121626);
+    }
 
-.carouselDark .dotActive {
-    background: var(--accent);
+    :root:not([data-theme="light"]) .carousel::before {
+        background:
+            radial-gradient(ellipse 55% 70% at 68% 40%, rgba(255, 159, 28, 0.18) 0%, transparent 65%),
+            radial-gradient(ellipse 40% 50% at 30% 70%, rgba(139, 92, 246, 0.12) 0%, transparent 55%),
+            radial-gradient(ellipse 60% 40% at 80% 80%, rgba(236, 72, 153, 0.08) 0%, transparent 50%);
+    }
+
+    :root:not([data-theme="light"]) .carouselCta {
+        background: var(--color-primary);
+        color: #fff;
+        border-color: var(--color-primary);
+    }
 }
 
 /* ============================================================
@@ -250,7 +326,7 @@
 }
 
 .searchForm:focus-within {
-    border-color: var(--accent);
+    border-color: var(--color-primary);
 }
 
 .searchIcon {
@@ -279,8 +355,8 @@
     padding: 12px 28px;
     border: none;
     border-radius: var(--radius-full, 999px);
-    background: var(--accent);
-    color: var(--on-accent, #000);
+    background: var(--color-primary);
+    color: #fff;
     font-weight: 700;
     font-size: 0.95rem;
     font-family: var(--font-body);
@@ -325,7 +401,7 @@
 }
 
 .pill:hover {
-    border-color: var(--accent);
+    border-color: var(--color-primary);
     transform: translateY(-2px);
 }
 
@@ -333,17 +409,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    background: var(--accent);
-    color: var(--on-accent, #000);
+    background: var(--color-primary);
+    color: #fff;
     flex-shrink: 0;
 }
 
 .pillIcon svg {
-    width: 18px;
-    height: 18px;
+    width: 24px;
+    height: 24px;
 }
 
 .pillLabel {
@@ -372,7 +448,7 @@
     display: block;
     font-size: 0.8rem;
     font-weight: 700;
-    color: var(--accent);
+    color: var(--color-primary);
     letter-spacing: 0.08em;
     margin-bottom: 4px;
 }
@@ -428,7 +504,7 @@
 }
 
 .storeRowLink:hover {
-    color: var(--accent);
+    color: var(--color-primary);
 }
 
 /* Grid de productos por tienda */
@@ -450,7 +526,7 @@
 }
 
 .storeProduct:hover {
-    border-color: var(--accent);
+    border-color: var(--color-primary);
 }
 
 .storeProductImage {
@@ -473,7 +549,6 @@
     color: var(--text-primary);
     text-decoration: none;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
     line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
@@ -492,7 +567,7 @@
 }
 
 .storeProductCompare:hover {
-    color: var(--accent);
+    color: var(--color-primary);
 }
 
 /* ============================================================
@@ -530,13 +605,13 @@
 }
 
 .tabActive {
-    background: var(--accent);
-    color: var(--on-accent, #000);
-    border-color: var(--accent);
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
 }
 
 .tabActive:hover {
-    color: var(--on-accent, #000);
+    color: #fff;
 }
 
 /* ============================================================
@@ -583,7 +658,7 @@
 }
 
 .savingsCard:hover {
-    border-color: var(--accent);
+    border-color: var(--color-primary);
     transform: translateY(-2px);
 }
 
@@ -624,7 +699,6 @@
     color: var(--text-primary);
     text-decoration: none;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
     line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
@@ -709,23 +783,23 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    background: var(--accent);
-    color: var(--on-accent, #000);
+    background: var(--color-primary);
+    color: #fff;
     flex-shrink: 0;
 }
 
 .sectionRowIcon svg {
-    width: 16px;
-    height: 16px;
+    width: 22px;
+    height: 22px;
 }
 
 .sectionRowLink {
     font-size: 0.9rem;
     font-weight: 600;
-    color: var(--accent);
+    color: var(--color-primary);
     text-decoration: none;
     white-space: nowrap;
 }
@@ -769,7 +843,7 @@
 }
 
 .scrollCard:hover {
-    border-color: var(--accent);
+    border-color: var(--color-primary);
 }
 
 .scrollCardImage {
@@ -786,7 +860,6 @@
     color: var(--text-primary);
     text-decoration: none;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
     line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
@@ -830,7 +903,7 @@
     width: 36px;
     height: 36px;
     border: 3px solid var(--border-color);
-    border-top-color: var(--accent);
+    border-top-color: var(--color-primary);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
@@ -918,6 +991,10 @@
     }
 
     .carouselVisual {
+        display: none;
+    }
+
+    .carouselProducts {
         display: none;
     }
 
