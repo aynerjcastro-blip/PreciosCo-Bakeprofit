@@ -75,14 +75,15 @@ public class ProductService {
      */
     public static final int MAX_PAGE_SIZE = 50;
 
-    /** Productos por subcategoría en /best-savings: por defecto y máximo (DP-39). */
+    /**
+     * Productos por subcategoría en /best-savings: por defecto y máximo (DP-39).
+     */
     public static final int DEFAULT_BEST_SAVINGS_LIMIT = 5;
     public static final int MAX_BEST_SAVINGS_LIMIT = 20;
 
     private static final Sort BY_NAME = Sort.by(Sort.Order.asc("name"), Sort.Order.asc("id"));
     private static final Sort BY_SAVINGS = Sort.by(
             Sort.Order.desc("savings.savingsPct"), Sort.Order.asc("name"), Sort.Order.asc("id"));
-
 
     private final ProductRepository productRepository;
     private final CategoryService categoryService;
@@ -140,13 +141,17 @@ public class ProductService {
      * está completa y el total es exacto.
      *
      * <p>
-     * Orden: sección inexistente o que no es raíz (404) -> categoría inexistente (404)
-     * -> tienda inexistente o inactiva (404) -> consulta. El rango ya llega validado
+     * Orden: sección inexistente o que no es raíz (404) -> categoría inexistente
+     * (404)
+     * -> tienda inexistente o inactiva (404) -> consulta. El rango ya llega
+     * validado
      * en los filtros (400).
      *
      * <p>
-     * Sin {@code sort} ordena por mayor ahorro (DP-39); el usuario no lo elige (DP-36).
-     * El ahorro siempre se calcula con todas las tiendas activas, aunque se filtre por
+     * Sin {@code sort} ordena por mayor ahorro (DP-39); el usuario no lo elige
+     * (DP-36).
+     * El ahorro siempre se calcula con todas las tiendas activas, aunque se filtre
+     * por
      * algunas. Los empates van por nombre y luego por id, para que las páginas no
      * repitan ni salten productos.
      * </p>
@@ -441,9 +446,12 @@ public class ProductService {
     }
 
     /**
-     * Los mejores ahorros de cada subcategoría, agrupados por sección y subcategoría: lo que
-     * muestra la búsqueda sin filtros (DP-39). Orden: límite fuera de rango (400) -> sección
-     * inexistente o que no es raíz (404) -> consulta. Sin resultados responde una lista vacía.
+     * Los mejores ahorros de cada subcategoría, agrupados por sección y
+     * subcategoría: lo que
+     * muestra la búsqueda sin filtros (DP-39). Orden: límite fuera de rango (400)
+     * -> sección
+     * inexistente o que no es raíz (404) -> consulta. Sin resultados responde una
+     * lista vacía.
      */
     public List<BestSavingsGroup> bestSavings(Long sectionId, int limit) {
         if (limit < 1 || limit > MAX_BEST_SAVINGS_LIMIT) {
@@ -461,10 +469,24 @@ public class ProductService {
                     .products().add(new BestSavingsItem(row.getId(), row.getName(),
                             row.getMinPrice(), row.getMaxPrice(), row.getSavingsPct(), row.getStoreCount()));
         }
+        // Inyectar imagen de producto (una consulta extra para toda la página)
+        List<Long> productIds = groups.values().stream()
+                .flatMap(g -> g.products().stream())
+                .map(BestSavingsItem::id)
+                .toList();
+        Map<Long, String> images = imagesOf(productIds);
+        for (BestSavingsGroup group : groups.values()) {
+            group.products().replaceAll(item -> {
+                String url = images.get(item.id());
+                return url != null ? item.withImage(url) : item;
+            });
+        }
+
         return List.copyOf(groups.values());
     }
 
-    // Una sección es una categoría raíz; una inexistente o una subcategoría responden 404 (DP-35)
+    // Una sección es una categoría raíz; una inexistente o una subcategoría
+    // responden 404 (DP-35)
     private void requireSection(Long sectionId) {
         Category section = categoryService.findById(sectionId);
         if (section.getParent() != null) {
