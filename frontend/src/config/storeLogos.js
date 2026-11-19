@@ -17,11 +17,11 @@ const STORE_LOGOS = {
     jumbo: '/assets/stores/jumbo.png',
     'la rebaja': '/assets/stores/larebaja.png',
     larebaja: '/assets/stores/larebaja.png',
-    farmanorte: '/assets/stores/farmanorte.png',
     farmatodo: '/assets/stores/farmatodo.png',
-    bellapiel: '/assets/stores/bellapiel.png',
-    cutis: '/assets/stores/cutis.png',
+    farmanorte: '/assets/stores/farmanorte.png',
     medipiel: '/assets/stores/medipiel.png',
+    cutis: '/assets/stores/cutis.png',
+    bellapiel: '/assets/stores/bellapiel.png',
 };
 
 /**

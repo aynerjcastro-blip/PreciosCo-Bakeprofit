@@ -10,6 +10,7 @@ import ForgotPassword from '@/components/password/ForgotPassword';
 import ResetPassword from '@/components/password/ResetPassword';
 import Profile from '@/components/profile/Profile';
 import SectionPresentation from './pages/SectionPresentation';
+import Explore from './pages/Explore';
 import { AuthProvider } from '@/context/AuthContext';
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/secciones/:slug" element={<SectionPresentation />} />
+            <Route path="explorar" element={<Explore />} />
 
             {/* Rutas Protegidas (Requieren Login) */}
             <Route element={<ProtectedRoute />}>
