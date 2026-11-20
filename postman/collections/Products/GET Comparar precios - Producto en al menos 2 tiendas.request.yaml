@@ -1,0 +1,18 @@
+$kind: http-request
+name: GET Comparar precios - Producto en >= 2 tiendas
+description: "HU-30. Define productId de un producto con precios en al menos 2 tiendas activas. Esperado: 200."
+url: http://localhost:8080/api/prices/compare?productId=102
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code es 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Compara al menos 2 tiendas", function () {
+          const arr = pm.response.json();
+          pm.expect(arr).to.be.an("array");
+          pm.expect(arr.length).to.be.at.least(2);
+      });
+    language: text/javascript
+order: 4002
