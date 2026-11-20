@@ -1,0 +1,17 @@
+$kind: http-request
+name: GET Droguerias - Busqueda exitosa
+description: "HU-28. Caso de éxito de droguerías. Esperado: 200 y resultados en content."
+url: http://localhost:8080/api/products/search?sectionId=16&page=0&size=20
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code es 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Devuelve elementos en content", function () {
+          const j = pm.response.json();
+          pm.expect(j.content).to.be.an("array").that.is.not.empty;
+      });
+    language: text/javascript
+order: 5001

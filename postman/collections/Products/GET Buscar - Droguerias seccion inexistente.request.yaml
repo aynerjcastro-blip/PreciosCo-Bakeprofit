@@ -1,0 +1,13 @@
+$kind: http-request
+name: GET Droguerias - Seccion inexistente
+description: "HU-28. Caso de error ante sección o filtro inválido. Esperado: 404."
+url: http://localhost:8080/api/products/search?sectionId=999999&page=0&size=20
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status code es 404", function () {
+          pm.response.to.have.status(404);
+      });
+    language: text/javascript
+order: 5002
