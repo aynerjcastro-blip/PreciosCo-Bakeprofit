@@ -1,7 +1,6 @@
 /* ============================================================
-   PÁGINA DE SECTOR (/secciones/:slug)
-   Solo tokens del sistema de diseño (tokens.css): sirve en claro y oscuro. La página no pinta
-   fondo propio: se ve el fondo de toda la app (body::before en base.css).
+   PÁGINA DE SECTOR (/secciones/:slug) — Rediseño v2
+   Solo tokens del sistema de diseño (tokens.css): sirve en claro y oscuro.
    ============================================================ */
 .page {
     max-width: 58rem;
@@ -17,7 +16,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem;
+    gap: 0.75rem;
 }
 
 /* Estado de la sección: pastilla verde si ya tiene tiendas, ámbar si viene pronto */
@@ -61,56 +60,311 @@
 .description {
     margin: 0;
     max-width: 40rem;
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     line-height: 1.55;
     color: var(--text-muted);
 }
 
-/* ---------- Cifras ---------- */
+/* ---------- Tarjeta de stats + tiendas ---------- */
+.infoCard {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    box-shadow: var(--shadow-soft);
+}
+
 .stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
     margin: 0;
 }
 
 .stat {
-    flex: 1 1 12rem;
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
-    padding: 1.25rem 1.5rem;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-soft);
+    gap: 0.25rem;
+    padding: 0.85rem 1rem;
+    background: var(--bg-main);
+    border-radius: var(--radius-sm);
 }
 
 .stat dt {
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 600;
     color: var(--text-muted);
 }
 
 .stat dd {
     margin: 0;
     font-family: var(--font-heading);
-    font-size: 2.25rem;
+    font-size: 1.5rem;
     font-weight: 800;
-    line-height: 1.1;
+    line-height: 1.2;
     color: var(--text-primary);
 }
 
-/* La fecha es texto largo: tarjeta más ancha y letra más pequeña para que no se parta en dos líneas */
-.stat--date {
-    flex: 1.7 1 17rem;
+/* La fecha es texto largo: letra más pequeña para que no se parta */
+.stat--date dd {
+    font-size: 0.95rem;
+    font-weight: 600;
 }
 
-.stat--date dd {
-    font-size: 1.35rem;
-    line-height: 1.5;
+/* Fila de chips de tiendas debajo de los stats */
+.storesRow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    margin-top: 0.75rem;
+    border-top: 1px solid var(--border-color);
+    flex-wrap: wrap;
+}
+
+.storesLabel {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.storeChips {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.storeChip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.storeLogo {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border-color);
+    background: var(--bg-main);
+}
+
+/* Inicial como fallback si no hay logo */
+.storeInitial {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-size: 1.1rem;
+    font-weight: 800;
+    border: 2px solid var(--border-color);
+}
+
+/* Botón transparente que envuelve la imagen para hacerla clickeable */
+.imageButton {
+    all: unset;
+    cursor: zoom-in;
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+/* ---------- Ahorro destacado ---------- */
+.savingSection {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.savingHeading {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.savingCard {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-soft);
+}
+
+/* Imagen del producto destacado — reutiliza ProductImage con tamaño fijo */
+.savingImage {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.savingInfo {
+    flex: 1;
+    min-width: 0;
+}
+
+.savingName {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.savingMeta {
+    margin: 0.15rem 0 0;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.savingPrices {
+    display: flex;
+    gap: 0.75rem;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.priceTag {
+    text-align: center;
+}
+
+.priceTag--low .priceLabel,
+.priceTag--low .priceValue {
+    color: var(--color-secondary);
+}
+
+.priceLabel {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.priceValue {
+    display: block;
+    margin-top: 0.1rem;
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.priceDivider {
+    width: 1px;
+    height: 1.75rem;
+    background: var(--border-color);
+}
+
+.savingBadge {
+    margin: 0.35rem 0 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* ---------- Productos populares ---------- */
+.popularSection {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.popularHeading {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.popularGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.65rem;
+}
+
+.popularCard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.popularCard:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-soft);
+}
+
+/* Imagen del producto popular */
+.popularCardImage {
+    width: 4.5rem;
+    height: 4.5rem;
+    border-radius: var(--radius-sm);
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+/* Link que envuelve el texto del producto */
+.popularCardLink {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    text-align: center;
+    text-decoration: none;
+    color: inherit;
+    width: 100%;
+}
+
+.popularCardLink:focus-visible {
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+.popularCardName {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    /* Truncar a 2 líneas */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.popularCardPrice {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-secondary);
+}
+
+.popularCardStores {
+    margin: 0;
+    font-size: 0.72rem;
+    color: var(--text-muted);
 }
 
 /* ---------- Acción y aviso ---------- */
@@ -129,7 +383,7 @@
     border: 0;
     border-radius: 999px;
     background: var(--color-primary);
-    color: var(--color-on-primary);
+    color: var(--color-on-primary, #fff);
     font: inherit;
     font-weight: 800;
     text-decoration: none;
@@ -158,10 +412,10 @@
 
 .notice {
     margin: 0;
-    max-width: 34rem;
-    padding-left: 1rem;
-    border-left: 3px solid var(--border-color);
-    font-size: 0.85rem;
+    max-width: 22rem;
+    padding-left: 0.85rem;
+    border-left: 2px solid var(--border-color);
+    font-size: 0.78rem;
     line-height: 1.5;
     color: var(--text-muted);
 }
@@ -192,11 +446,68 @@
     }
 }
 
+/* ---------- Lightbox ---------- */
+.lightboxOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    cursor: pointer;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.lightboxClose {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 50%;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+
+.lightboxClose:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.lightboxImage {
+    max-width: 90vw;
+    max-height: 85vh;
+    border-radius: var(--radius-md);
+    object-fit: contain;
+    cursor: default;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* ---------- Responsive ---------- */
 @media (prefers-reduced-motion: reduce) {
 
     .skeleton,
     .button,
-    .button svg {
+    .button svg,
+    .popularCard {
         animation: none;
         transition: none;
     }
@@ -210,6 +521,24 @@
 @media (max-width: 600px) {
     .page {
         padding: 2.5rem 1rem 3.5rem;
+    }
+
+    .stats {
+        grid-template-columns: 1fr;
+    }
+
+    .savingCard {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .savingPrices {
+        width: 100%;
+        justify-content: space-around;
+    }
+
+    .popularGrid {
+        grid-template-columns: repeat(2, 1fr);
     }
 
     .button {

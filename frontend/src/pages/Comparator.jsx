@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import styles from '@/pages/Comparator.module.css';
 import ProductRating from '@/components/reviews/ProductRating';
@@ -24,14 +24,16 @@ function ExternalIcon() {
     );
 }
 
-// Imagen del producto; si no existe o no carga se muestra un marcador
-function Thumb({ src, alt, className, placeholderClassName }) {
+// Imagen del producto; si no existe o no carga se muestra un marcador.
+// Si recibe onZoom, envuelve la imagen en un botón que abre el lightbox.
+function Thumb({ src, alt, className, placeholderClassName, onZoom }) {
     const [failed, setFailed] = useState(false);
 
     if (!src || failed) {
         return <span className={placeholderClassName} aria-hidden="true">🛒</span>;
     }
-    return (
+
+    const img = (
         <img
             className={className}
             src={src}
@@ -41,6 +43,18 @@ function Thumb({ src, alt, className, placeholderClassName }) {
             onError={() => setFailed(true)}
         />
     );
+
+    if (onZoom) {
+        return (
+            <button type="button" className={styles['zoom-button']}
+                onClick={() => onZoom(src, alt)}
+                aria-label={`Ver imagen de ${alt} en grande`}>
+                {img}
+            </button>
+        );
+    }
+
+    return img;
 }
 
 // Resumen superior: cuánto cuesta lo mejor y cuánto se ahorra frente a la tienda más cara
@@ -77,7 +91,7 @@ function Summary({ prices }) {
 }
 
 // Fila de precio: posición | imagen y tienda | precio y diferencia | acción
-function PriceCard({ item, rank, isBest, bestValue, productId, onShowReviews, onReviewsChanged }) {
+function PriceCard({ item, rank, isBest, bestValue, productId, onShowReviews, onReviewsChanged, onZoom }) {
     const extra = Number(item.value) - bestValue;
 
     return (
@@ -91,6 +105,7 @@ function PriceCard({ item, rank, isBest, bestValue, productId, onShowReviews, on
                         alt={item.source || item.productName}
                         className={styles['price-card__image']}
                         placeholderClassName={styles['price-card__placeholder']}
+                        onZoom={onZoom}
                     />
                 </div>
 
@@ -152,6 +167,20 @@ export default function Comparator() {
     const [selectedStoreId, setSelectedStoreId] = useState(null);
     const [reviewsVersion, setReviewsVersion] = useState(0);
 
+    // Lightbox: imagen ampliada al tocar la foto de un producto
+    const [lightbox, setLightbox] = useState(null);
+    const openLightbox = useCallback((src, alt) => {
+        if (src) setLightbox({ src, alt });
+    }, []);
+    const closeLightbox = useCallback(() => setLightbox(null), []);
+
+    useEffect(() => {
+        if (!lightbox) return;
+        const handleKey = (e) => { if (e.key === 'Escape') closeLightbox(); };
+        window.addEventListener('keydown', handleKey);
+        return () => window.removeEventListener('keydown', handleKey);
+    }, [lightbox, closeLightbox]);
+
     useEffect(() => {
         if (!productId) return;
 
@@ -203,6 +232,7 @@ export default function Comparator() {
                                 alt={productName}
                                 className={styles.product__image}
                                 placeholderClassName={styles.product__placeholder}
+                                onZoom={openLightbox}
                             />
                         </div>
                         <div className={styles.product__info}>
@@ -231,6 +261,7 @@ export default function Comparator() {
                                     productId={productId}
                                     onShowReviews={handleShowReviews}
                                     onReviewsChanged={() => setReviewsVersion((version) => version + 1)}
+                                    onZoom={openLightbox}
                                 />
                             ))}
                         </ol>
@@ -249,6 +280,20 @@ export default function Comparator() {
                         refreshKey={reviewsVersion}
                     />
                 </>
+            )}
+
+            {/* Lightbox — clic en cualquier imagen del comparador */}
+            {lightbox && (
+                <div className={styles.lightboxOverlay} onClick={closeLightbox}
+                    role="dialog" aria-modal="true" aria-label={lightbox.alt}>
+                    <button type="button" className={styles.lightboxClose}
+                        onClick={closeLightbox} aria-label="Cerrar">
+                        ✕
+                    </button>
+                    <img src={lightbox.src} alt={lightbox.alt}
+                        className={styles.lightboxImage}
+                        onClick={(e) => e.stopPropagation()} />
+                </div>
             )}
         </main>
     );

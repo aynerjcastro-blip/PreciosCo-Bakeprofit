@@ -179,6 +179,16 @@ export default function Header() {
                     aria-label="Secciones"
                 >
                     <ul className={styles['site-nav__list']}>
+                        <li>
+                            <Link
+                                to="/explorar"
+                                className={`${styles['site-nav__link']} ${styles['site-nav__link--explore']} ${location.pathname === '/explorar' ? styles['site-nav__link--active'] : ''}`}
+                                aria-current={location.pathname === '/explorar' ? 'page' : undefined}
+                                onClick={closeMenus}
+                            >
+                                    Explorar
+                            </Link>
+                        </li>
                         {NAV_ITEMS.map((item) => {
                             const active = activeSlug === item.slug;
                             return (

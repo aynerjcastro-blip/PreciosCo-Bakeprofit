@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './Search.module.css';
 import {
     CartIcon,
@@ -112,14 +112,16 @@ function savingOf(product) {
     return Math.max(0, Number(product.maxPrice) - Number(product.minPrice));
 }
 
-// Foto del producto; sin imagen (o si no carga) se muestra un marcador
-function Thumb({ src, alt }) {
+// Foto del producto; sin imagen (o si no carga) se muestra un marcador.
+// Si tiene onClick, se envuelve en un botón para abrir el lightbox.
+function Thumb({ src, alt, onZoom }) {
     const [failed, setFailed] = useState(false);
 
     if (!src || failed) {
         return <span className={styles['product-card__placeholder']} aria-hidden="true">🛒</span>;
     }
-    return (
+
+    const img = (
         <img
             className={styles['product-card__image']}
             src={src}
@@ -129,6 +131,20 @@ function Thumb({ src, alt }) {
             onError={() => setFailed(true)}
         />
     );
+
+    if (onZoom) {
+        return (
+            <button
+                type="button"
+                className={styles['product-card__zoom']}
+                onClick={() => onZoom(src, alt)}
+                aria-label={`Ver imagen de ${alt} en grande`}
+            >
+                {img}
+            </button>
+        );
+    }
+    return img;
 }
 
 // Cuántas tiendas se ven de entrada; el resto se despliega con "Ver N tiendas más"
@@ -215,7 +231,7 @@ function OfferRow({ offer, cheapestValue, compare, entering }) {
  * el resto se despliega). El título es el enlace principal al comparador y "Comparar precios"
  * es un enlace aparte: no se anidan enlaces dentro de otro enlace.
  */
-function ProductCard({ product, index = 0 }) {
+function ProductCard({ product, index = 0, onZoom }) {
     const [expanded, setExpanded] = useState(false);
 
     const offers = product.offers ?? [];
@@ -236,7 +252,7 @@ function ProductCard({ product, index = 0 }) {
         >
             <header className={styles['product-card__head']}>
                 <div className={styles['product-card__media']}>
-                    <Thumb src={product.imageUrl} alt="" />
+                    <Thumb src={product.imageUrl} alt={product.name} onZoom={onZoom} />
                 </div>
 
                 <div className={styles['product-card__info']}>
@@ -400,6 +416,19 @@ export default function Search() {
     // Solo en pantallas angostas: el panel de filtros se abre y se cierra
     const [filtersOpen, setFiltersOpen] = useState(false);
 
+    // Lightbox: ver imagen del producto en grande
+    const [lightbox, setLightbox] = useState(null);
+    const openLightbox = useCallback((src, alt) => {
+        if (src) setLightbox({ src, alt });
+    }, []);
+    const closeLightbox = useCallback(() => setLightbox(null), []);
+    useEffect(() => {
+        if (!lightbox) return;
+        const handleKey = (e) => { if (e.key === 'Escape') closeLightbox(); };
+        document.addEventListener('keydown', handleKey);
+        return () => document.removeEventListener('keydown', handleKey);
+    }, [lightbox, closeLightbox]);
+
     // =========================================================================
     // SINCRONIZACION CON LA URL
     // =========================================================================
@@ -490,8 +519,8 @@ export default function Search() {
 
     const status = isIdle ? 'idle' : isSoon ? 'soon'
         : catalog.status === 'unavailable' ? 'unknown-section'
-        : catalog.status === 'error' ? 'filters-error'
-        : !catalogReady || resultScope !== requestScope ? 'loading' : fetchStatus;
+            : catalog.status === 'error' ? 'filters-error'
+                : !catalogReady || resultScope !== requestScope ? 'loading' : fetchStatus;
     const products = status === 'success' ? fetchedProducts : [];
 
     // =========================================================================
@@ -903,7 +932,7 @@ export default function Search() {
                             )}
 
                             {status === 'success' && products.map((product, index) => (
-                                <ProductCard key={product.id} product={product} index={index} />
+                                <ProductCard key={product.id} product={product} index={index} onZoom={openLightbox} />
                             ))}
                         </div>
 
@@ -913,6 +942,21 @@ export default function Search() {
                     </section>
                 </div>
             </div>
+
+            {/* ── Lightbox: imagen del producto en grande ── */}
+            {lightbox && (
+                <div className={styles.lightboxOverlay} onClick={closeLightbox}
+                    role="dialog" aria-modal="true" aria-label={lightbox.alt}>
+                    <button type="button" className={styles.lightboxClose}
+                        onClick={closeLightbox} aria-label="Cerrar">
+                        ✕
+                    </button>
+                    <img src={lightbox.src} alt={lightbox.alt}
+                        className={styles.lightboxImage}
+                        onClick={(e) => e.stopPropagation()}
+                        referrerPolicy="no-referrer" />
+                </div>
+            )}
         </div>
     );
 }

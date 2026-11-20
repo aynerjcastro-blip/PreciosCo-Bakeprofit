@@ -15,7 +15,12 @@ const LOGOS = [
     { match: 'exito', src: '/assets/stores/exito.png' },
     { match: 'jumbo', src: '/assets/stores/jumbo.png' },
     { match: 'olimpica', src: '/assets/stores/olimpica.png' },
-    { match:'larebaja' , src: '/assets/stores/larebaja.png'}
+    { match: 'rebaja', src: '/assets/stores/larebaja.png' },
+    { match: 'farmatodo', src: '/assets/stores/farmatodo.png' },
+    { match: 'farmanorte', src: '/assets/stores/farmanorte.png' },
+    { match: 'medipiel', src: '/assets/stores/medipiel.png' },
+    { match: 'cutis', src: '/assets/stores/cutis.png' },
+    { match: 'bellapiel', src: '/assets/stores/bellapiel.png' },
 ];
 
 function normalize(text) {
