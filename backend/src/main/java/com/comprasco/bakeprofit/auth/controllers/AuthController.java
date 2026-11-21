@@ -11,11 +11,14 @@ import com.comprasco.bakeprofit.auth.dto.ResetPasswordRequest;
 import com.comprasco.bakeprofit.auth.entity.User;
 import com.comprasco.bakeprofit.auth.security.CurrentUser;
 import com.comprasco.bakeprofit.auth.service.UserService;
+
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
+@Tag(name="Autenticacion")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {

@@ -17,8 +17,8 @@ public class GeminiClient {
     private final RestClient restClient;
     private final AiProperties properties;
 
-    public GeminiClient(RestClient.Builder builder, AiProperties properties) {
-        this.restClient = builder.build();
+    public GeminiClient(AiProperties properties) {
+        this.restClient = RestClient.create();
         this.properties = properties;
     }
 

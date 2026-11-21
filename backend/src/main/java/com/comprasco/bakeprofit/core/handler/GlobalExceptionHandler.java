@@ -1,5 +1,6 @@
 package com.comprasco.bakeprofit.core.handler;
 
+import com.comprasco.bakeprofit.ai.exception.AiEmptyResponseException;
 import com.comprasco.bakeprofit.auth.exception.AccountLockedException;
 import com.comprasco.bakeprofit.auth.exception.EmailAlreadyExistsException;
 import com.comprasco.bakeprofit.auth.exception.ForbiddenActionException;
@@ -569,5 +570,12 @@ public class GlobalExceptionHandler {
                                 .build();
 
                 return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(error);
+        }
+
+        @ExceptionHandler(AiEmptyResponseException.class)
+        public ResponseEntity<Map<String, String>> handleAiEmpty(AiEmptyResponseException ex) {
+                return ResponseEntity
+                                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                                .body(Map.of("error", ex.getMessage()));
         }
 }

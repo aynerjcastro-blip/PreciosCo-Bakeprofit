@@ -52,7 +52,8 @@ public class SecurityConfig {
                                 "/api/categories/**",
                                 "/api/stores/**",
                                 "/api/products/**",
-                                "/api/landing/**"
+                                "/api/landing/**",
+                                "/api/ai/**"
                 };
 
                 http
