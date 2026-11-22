@@ -6,6 +6,7 @@ import Header from '../components/layout/Header/Header';
 import Footer from '../components/layout/Footer/Footer';
 import AiDock from '@/components/ai/AiDock';
 import AiChatDrawer from '@/components/ai/AiChatDrawer';
+import AiFab from '@/components/ai/AiFab';
 import { AuthContext } from '@/context/AuthContext';
 /**
  * Lleva la ventana al inicio al entrar a otra página.
@@ -39,12 +40,11 @@ export default function MainLayout() {
             <ScrollToTopOnNavigate />
             <Header />
             <div className="layout-content">
-                <main>
-                    <Outlet />
-                </main>
+                <main><Outlet /></main>
             </div>
 
             {user && <AiDock onOpenChat={setChatSection} />}
+            {user && <AiFab onOpenChat={setChatSection} />}   {/* ← nuevo */}
 
             {chatSection && (
                 <AiChatDrawer
@@ -52,8 +52,10 @@ export default function MainLayout() {
                     onClose={() => setChatSection(null)}
                 />
             )}
-
             <Footer />
         </>
     );
 }
+// TODO (SCRUM-347): Verificar límite de consultas antes de enviar.
+// Depende de SCRUM-329 (HT-23) — endpoint GET /api/ai/quota
+// Si el usuario agotó sus consultas, mostrar mensaje y bloquear envío.

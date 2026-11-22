@@ -1,10 +1,17 @@
+/* ══════════════════════════════════════════
+   AI Chat Drawer
+   Usa los design tokens de tokens.css
+   ══════════════════════════════════════════ */
+
+/* ── Overlay ── */
 .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--modal-overlay-bg, rgba(15, 23, 42, 0.6));
     z-index: 200;
 }
 
+/* ── Drawer ── */
 .drawer {
     position: fixed;
     right: 0;
@@ -12,7 +19,7 @@
     height: 100%;
     width: 380px;
     max-width: 90vw;
-    background: var(--bg-surface, #fff);
+    background: var(--bg-surface);
     display: flex;
     flex-direction: column;
     box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
@@ -29,28 +36,56 @@
     }
 }
 
+/* ── Header (color dinámico via style inline) ── */
 .header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border-color, #e5e5e5);
+    gap: 10px;
+    padding: 14px 16px;
+    color: #fff;
 }
 
-.title {
-    margin: 0;
-    font-size: 1rem;
+.headerText {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
-.close {
-    background: none;
+.botName {
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.botSub {
+    font-size: 12px;
+    opacity: 0.85;
+}
+
+.headerActions {
+    display: flex;
+    gap: 6px;
+}
+
+.iconBtn {
+    background: rgba(255, 255, 255, 0.2);
     border: none;
-    font-size: 1.25rem;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     cursor: pointer;
-    padding: 0.25rem;
-    color: inherit;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
 }
 
+.iconBtn:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+/* ── Cuerpo ── */
 .body {
     flex: 1;
     overflow-y: auto;
@@ -60,40 +95,122 @@
     gap: 0.75rem;
 }
 
-.empty {
-    color: var(--text-muted, #888);
+/* ── Welcome ── */
+.welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 32px 20px 16px;
     text-align: center;
-    margin-top: 2rem;
-    font-size: 0.9rem;
 }
 
+.welcomeText {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+.chip {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text-primary);
+}
+
+.chip:hover {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+}
+
+/* ── Burbujas ── */
 .bubble {
     max-width: 85%;
     padding: 0.6rem 0.9rem;
     border-radius: 12px;
     font-size: 0.9rem;
     line-height: 1.45;
-    white-space: pre-wrap;
     word-break: break-word;
 }
 
 .user {
     align-self: flex-end;
-    background: var(--color-primary, #f57c00);
+    background: var(--color-primary);
     color: #fff;
     border-bottom-right-radius: 4px;
 }
 
 .assistant {
     align-self: flex-start;
-    background: var(--bg-muted, #f0f0f0);
-    color: var(--text-primary, #222);
+    background: var(--border-color);
+    /* #E2E8F0 claro ⟶ #2b303c oscuro */
+    color: var(--text-primary);
+    /* #0F172A claro ⟶ #F8FAFC oscuro */
     border-bottom-left-radius: 4px;
 }
 
+/* ── Markdown dentro de burbujas del asistente ── */
+.assistant :global(p) {
+    margin: 0 0 8px;
+}
+
+.assistant :global(p:last-child) {
+    margin-bottom: 0;
+}
+
+.assistant :global(ul),
+.assistant :global(ol) {
+    margin: 4px 0 8px;
+    padding-left: 20px;
+}
+
+.assistant :global(li) {
+    margin-bottom: 4px;
+}
+
+.assistant :global(strong) {
+    font-weight: 600;
+}
+
+.assistant :global(a) {
+    color: var(--color-primary);
+    text-decoration: underline;
+}
+
+/* ── Timer de respuesta (dentro de la burbuja) ── */
+.responseTime {
+    display: block;
+    margin-top: 6px;
+    font-size: 11px;
+    opacity: 0.55;
+    text-align: right;
+}
+
+/* ── Loading: dots + timer en vivo ── */
 .dots {
     display: inline-block;
     animation: pulse 1s infinite;
+    margin-right: 8px;
+}
+
+.liveTimer {
+    font-size: 12px;
+    opacity: 0.6;
+    font-variant-numeric: tabular-nums;
+    /* dígitos de ancho fijo */
 }
 
 @keyframes pulse {
@@ -108,38 +225,42 @@
     }
 }
 
+/* ── Error ── */
 .error {
-    color: #d32f2f;
+    color: var(--state-error-text);
     font-size: 0.85rem;
     text-align: center;
 }
 
+/* ── Form ── */
 .form {
     display: flex;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
-    border-top: 1px solid var(--border-color, #e5e5e5);
+    border-top: 1px solid var(--border-color);
 }
 
 .input {
     flex: 1;
     padding: 0.5rem 0.75rem;
-    border: 1px solid var(--border-color, #ccc);
-    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
     font-size: 0.9rem;
     outline: none;
+    background: var(--bg-surface);
+    color: var(--text-primary);
 }
 
 .input:focus {
-    border-color: var(--color-primary, #f57c00);
+    border-color: var(--color-primary);
 }
 
 .send {
     padding: 0.5rem 1rem;
-    background: var(--color-primary, #f57c00);
+    background: var(--color-primary);
     color: #fff;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
     font-size: 0.9rem;
 }
@@ -147,25 +268,4 @@
 .send:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-}
-
-.headerInfo {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.header {
-    /* agrega */
-    background: var(--color-primary, #f57c00);
-    color: #fff;
-}
-
-.close {
-    /* agrega */
-    color: #fff;
-}
-
-.title {
-    color: #fff;
 }
