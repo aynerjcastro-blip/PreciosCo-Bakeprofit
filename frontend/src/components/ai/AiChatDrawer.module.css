@@ -1,0 +1,171 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 200;
+}
+
+.drawer {
+    position: fixed;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 380px;
+    max-width: 90vw;
+    background: var(--bg-surface, #fff);
+    display: flex;
+    flex-direction: column;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+    animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color, #e5e5e5);
+}
+
+.title {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.close {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    color: inherit;
+}
+
+.body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.empty {
+    color: var(--text-muted, #888);
+    text-align: center;
+    margin-top: 2rem;
+    font-size: 0.9rem;
+}
+
+.bubble {
+    max-width: 85%;
+    padding: 0.6rem 0.9rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.user {
+    align-self: flex-end;
+    background: var(--color-primary, #f57c00);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+
+.assistant {
+    align-self: flex-start;
+    background: var(--bg-muted, #f0f0f0);
+    color: var(--text-primary, #222);
+    border-bottom-left-radius: 4px;
+}
+
+.dots {
+    display: inline-block;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 0.3;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+.error {
+    color: #d32f2f;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.form {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border-color, #e5e5e5);
+}
+
+.input {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+.input:focus {
+    border-color: var(--color-primary, #f57c00);
+}
+
+.send {
+    padding: 0.5rem 1rem;
+    background: var(--color-primary, #f57c00);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.headerInfo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.header {
+    /* agrega */
+    background: var(--color-primary, #f57c00);
+    color: #fff;
+}
+
+.close {
+    /* agrega */
+    color: #fff;
+}
+
+.title {
+    color: #fff;
+}

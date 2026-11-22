@@ -1,8 +1,12 @@
+import { useState } from 'react';
+import { useContext } from 'react';
 import { useEffect } from 'react';
 import { Outlet, useLocation, useNavigationType } from 'react-router-dom';
 import Header from '../components/layout/Header/Header';
 import Footer from '../components/layout/Footer/Footer';
-
+import AiDock from '@/components/ai/AiDock';
+import AiChatDrawer from '@/components/ai/AiChatDrawer';
+import { AuthContext } from '@/context/AuthContext';
 /**
  * Lleva la ventana al inicio al entrar a otra página.
  * Por qué: BrowserRouter no restablece el scroll, así que una página nueva abría a la misma
@@ -25,21 +29,29 @@ function ScrollToTopOnNavigate() {
 }
 
 export default function MainLayout() {
+    const { user } = useContext(AuthContext);
+    const [chatSection, setChatSection] = useState(null);
+
+
+
     return (
         <>
             <ScrollToTopOnNavigate />
             <Header />
-
-            {/* 
-        Contenedor principal. Su estructura modular facilita
-        añadir un sidebar colapsable en el futuro si la app crece. 
-      */}
             <div className="layout-content">
                 <main>
-                    {/* Aquí se inyectarán dinámicamente tus páginas (Inicio, Buscar, etc.) */}
                     <Outlet />
                 </main>
             </div>
+
+            {user && <AiDock onOpenChat={setChatSection} />}
+
+            {chatSection && (
+                <AiChatDrawer
+                    section={chatSection}
+                    onClose={() => setChatSection(null)}
+                />
+            )}
 
             <Footer />
         </>
