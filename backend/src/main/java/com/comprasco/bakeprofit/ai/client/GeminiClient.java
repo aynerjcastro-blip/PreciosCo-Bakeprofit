@@ -44,7 +44,7 @@ public class GeminiClient {
                         List.of(new GeminiApiModel.Part(systemPrompt))),
                 contents);
 
-        String url = BASE_URL + properties.model() + ":generateContent";
+        String url = BASE_URL + properties.model() + ":generateContent?key=" + properties.apiKey();
 
         GeminiApiModel.GenerateResponse response = restClient.post()
                 .uri(url)
