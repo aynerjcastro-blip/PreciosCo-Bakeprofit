@@ -2,11 +2,11 @@
 
 Plataforma web para comparación de productos y precios
 
-**Versión 2.1 · Actualización: 18 de noviembre de 2026.** Consolida la visión general y las decisiones de captura, identidad, comparación y revisión de datos acordadas durante el desarrollo. Los requisitos e historias se mantienen en [PreciosCo — Análisis y especificación](<PreciosCo__Analisis y especificacion (historias, modelo de negocio, requisitos y trazabilidad).md>); las decisiones técnicas y su estado de integración, en [DECISIONS.md](DECISIONS.md). Estos tres documentos son las referencias principales; no requieren conservar los informes y guías auxiliares de la conversación.
+**Versión 2.2 · Actualización: 21 de noviembre de 2026.** Consolida la visión general, las decisiones de captura y comparación de datos y los cambios de alcance acordados para el Sprint 4. Los requisitos e historias se mantienen en [PreciosCo — Análisis y especificación](<PreciosCo__Analisis y especificacion (historias, modelo de negocio, requisitos y trazabilidad).md>); las decisiones técnicas y su estado de integración, en [DECISIONS.md](DECISIONS.md). Estos tres documentos son las referencias principales; no requieren conservar los informes y guías auxiliares de la conversación.
 
 ## 1. Descripción del proyecto
 
-**Descripción general:** transformar un bot de Telegram en una plataforma web que permita comparar productos y precios de supermercados, droguerías, tiendas de cuidado facial y tiendas de repuestos para vehículos y motos, incorporando notificaciones, calificaciones, inteligencia artificial especializada y participación directa de proveedores.
+**Descripción general:** transformar un bot de Telegram en una plataforma web que permita comparar productos y precios de supermercados, droguerías, tiendas de cuidado facial y tiendas de repuestos para automóviles, incorporando notificaciones, calificaciones, inteligencia artificial especializada y participación directa de proveedores.
 
 Diseñar y desarrollar una plataforma web que permita a los usuarios consultar, comparar y calificar productos de diferentes establecimientos comerciales. La plataforma mostrará los precios disponibles por supermercado o tienda, identificará las mejores opciones de compra y ofrecerá recomendaciones mediante inteligencia artificial.
 
@@ -16,7 +16,7 @@ El sistema es una evolución del bot de Telegram existente, conservando su funci
 
 ## 2. Objetivo general
 
-Desarrollar una plataforma web que centralice y compare los precios de productos de supermercados, droguerías, tiendas de cuidado facial y tiendas de repuestos para vehículos y motos, permitiendo a los usuarios encontrar las mejores ofertas, recibir alertas de cambios de precio, consultar recomendaciones mediante IA y calificar los productos o establecimientos.
+Desarrollar una plataforma web que centralice y compare los precios de productos de supermercados, droguerías, tiendas de cuidado facial y tiendas de repuestos para automóviles, permitiendo a los usuarios encontrar las mejores ofertas, recibir alertas de cambios de precio, consultar recomendaciones mediante IA y calificar los productos o establecimientos.
 
 ## 3. Objetivos específicos
 
@@ -26,12 +26,12 @@ Desarrollar una plataforma web que centralice y compare los precios de productos
 - Permitir consultas por nombre, marca o categoría y mostrar la mejor opción de compra.
 - Incorporar calificaciones y opiniones de los usuarios.
 - Implementar notificaciones cuando disminuya el precio de un producto seguido.
-- Añadir comparadores para droguerías, tiendas de cuidado facial y tiendas de repuestos para vehículos y motos.
+- Añadir comparadores para droguerías, tiendas de cuidado facial y tiendas de repuestos para automóviles.
 - Incorporar asistentes de IA especializados según la categoría consultada.
 - Permitir que las tiendas registren sus productos, precios y disponibilidad como proveedores.
 - Facilitar la actualización de la información de productos y precios.
 
-Objetivos del negocio asociados (ver el documento de Análisis y especificación): OB-01 reducir el tiempo y esfuerzo para comparar precios; OB-02 aumentar el ahorro al elegir dónde comprar; OB-03 mejorar la confianza en la información de precios; OB-04 ampliar las compras cubiertas, de supermercados a droguería, cuidado facial y repuestos de vehículos y motos; OB-05 mejorar la confianza en la calidad de productos y establecimientos; OB-06 facilitar que los establecimientos mantengan su oferta actualizada.
+Objetivos del negocio asociados (ver el documento de Análisis y especificación): OB-01 reducir el tiempo y esfuerzo para comparar precios; OB-02 aumentar el ahorro al elegir dónde comprar; OB-03 mejorar la confianza en la información de precios; OB-04 ampliar las compras cubiertas, de supermercados a droguería, cuidado facial y repuestos de automóviles; OB-05 mejorar la confianza en la calidad de productos y establecimientos; OB-06 facilitar que los establecimientos mantengan su oferta actualizada; OB-07 generar ingresos sostenibles mediante un modelo freemium con comparación de precios gratuita.
 
 ## 4. Funcionalidades incluidas
 
@@ -58,15 +58,15 @@ Objetivos del negocio asociados (ver el documento de Análisis y especificación
 - Aseo para el hogar.
 - Droguería.
 - Cuidado facial.
-- Repuestos para vehículos y motos.
+- Repuestos para automóviles.
 - Otras categorías definidas durante el análisis.
 
 ### C. Comparación de establecimientos
 
 - Supermercados: D1, Jumbo, Éxito y Olímpica.
 - Droguerías: Drogas La Rebaja, Farmatodo y Farmanorte, mediante las fuentes públicas admitidas para cada integración.
-- Cuidado facial: Cutis, Medipiel y BellaPiel; los códigos locales de una tienda requieren resolución de identidad controlada.
-- Tiendas de repuestos para vehículos y motos.
+- Cuidado facial: Cutis, Medipiel y BellaPiel. Se cambió la selección inicial para facilitar la captura con fuentes VTEX. Farmatodo–Cuidado facial, Ánimus Lab y Botanikalia quedaron como propuestas y nunca se implementaron. Los códigos locales requieren resolución de identidad controlada, como en BellaPiel. La planificación del Sprint 4 confirma esta selección sin una tarea adicional de verificación.
+- Repuestos para automóviles: Importadoras Asociadas, Autoplanet y Zona Repuestera son las fuentes de la prueba de datos en curso (SCRUM-295). El Sprint 4 incluye la prueba y el scraper. El comparador sigue en backlog, condicionado a la viabilidad de comparar por marca y referencia. Los repuestos de motocicletas quedan fuera del alcance actual.
 - Otros proveedores comerciales en fases posteriores.
 
 ### D. Calificaciones y comentarios
@@ -89,10 +89,10 @@ Objetivos del negocio asociados (ver el documento de Análisis y especificación
 
 ### F. Inteligencia artificial
 
-- IA para recomendaciones de supermercados.
-- IA para sugerir recetas con productos disponibles.
-- IA para consultar productos de droguería y sus precios, sin sustituir a profesionales de la salud.
-- IA para recomendaciones de cuidado facial según tipo de piel, necesidades y presupuesto.
+- Avatares flotantes en el lateral derecho para Supermercados, Droguería y Cuidado facial. Cada avatar abre un chat temporal de su sección. El historial se pierde al cerrar el chat o recargar la página. En móvil los avatares se reúnen en un único botón flotante.
+- Supermercados. Recomienda dónde comprar una lista según los precios del catálogo y sugiere recetas con preparación e ingredientes disponibles.
+- Droguería. Según el catálogo, consulta precios y recomienda únicamente productos que no requieren fórmula médica. Las respuestas incluyen un aviso de que no brindan diagnóstico ni sustituyen al profesional de la salud.
+- Cuidado facial. Recomienda productos del catálogo según tipo de piel, necesidades y presupuesto, con el aviso de orientación al consumidor.
 
 ### G. Módulo para proveedores
 
@@ -105,6 +105,10 @@ Objetivos del negocio asociados (ver el documento de Análisis y especificación
 - Consulta de la fecha de última actualización de cada producto.
 
 ### H. Panel administrativo
+
+El panel es exclusivo del rol ADMIN. El Sprint 4 contempla un listado general y la gestión completa de clientes, gráficos de clientes activos en tiempo real y promedios, rankings de productos más seguidos y más buscados, CRUD de marcas, productos, tiendas y categorías (HT-26), y gráficas del historial de precios por producto y tienda (HT-27). HT-26 comienza con una evaluación de cuatro horas de una herramienta administrativa integrable. HT-27 usa las series históricas de precios registrados.
+
+La ampliación del panel queda en backlog e incluye consultar el estado de los planes de suscripción, gestionar objetivos de captura y ofertas capturadas, revisar comentarios y reportes, gestionar seguimientos y calificaciones y mantener los mapas de SKU a EAN, los vínculos de SKU con productos y las correcciones de presentación. La carga manual de precios desde el panel queda por definir. Cada recurso aplica las operaciones de creación, consulta, modificación, activación, desactivación o eliminación que correspondan, con los controles de integridad e historial.
 
 - Gestión de usuarios y proveedores.
 - Aprobación o rechazo de solicitudes de proveedor.
@@ -126,6 +130,18 @@ Objetivos del negocio asociados (ver el documento de Análisis y especificación
 - Corridas identificadas y cerradas antes de procesar, deduplicación por tienda/identidad/corrida y conservación del historial por periodos.
 - Curaduría mediante SQL y archivos `sku_offers.csv` y `conflictos_tamanos.csv`, sin afirmar que exista ya un panel administrativo para esas tareas.
 
+### J. Planes y suscripción
+
+La incorporación del modelo freemium y de la pasarela de suscripción responde a una exigencia externa de la asignatura Programación Web, registrada en la planificación del Sprint 4.
+
+| Acceso | Comparación de precios | IA y seguimiento | Opiniones |
+| --- | --- | --- | --- |
+| Visitante sin sesión | Gratuita | Requieren iniciar sesión | Comentar y calificar requiere iniciar sesión |
+| Consumidor con plan Gratuito | Gratuita | Hasta 4 consultas de IA por mes, máximo 200 caracteres por mensaje completo, incluida la lista entera, y hasta 5 productos seguidos simultáneamente | Permitidas según las reglas de opinión |
+| Consumidor con plan Premium | Gratuita | Amplía los límites de IA y seguimiento tras confirmarse la suscripción mediante la pasarela | Permitidas según las reglas de opinión |
+
+El sistema muestra el plan vigente, sus límites y el consumo. Si una acción supera un tope gratuito, la bloquea y ofrece pasar a Premium. El contador de IA se reinicia mensualmente. La pasarela y los límites concretos de Premium están pendientes de definición.
+
 ## 5. Entregables del proyecto
 
 - Documento de análisis: modelo de negocio (objetivos, actores, procesos y reglas), historias de usuario, requisitos funcionales y no funcionales, y matrices de trazabilidad.
@@ -134,6 +150,7 @@ Objetivos del negocio asociados (ver el documento de Análisis y especificación
 - Plataforma web para usuarios.
 - Módulos de comparación, calificaciones, notificaciones e IA.
 - Módulo para proveedores y panel administrativo.
+- Módulo de planes y suscripción Premium con integración de prueba de la pasarela.
 - Migración de información o lógica disponible en el bot.
 - Pruebas funcionales y de seguridad.
 - Manual de usuario y documentación técnica.
@@ -149,17 +166,17 @@ Se documentan por separado, con numeración, trazabilidad hacia los objetivos y 
 | --- | --- |
 | Fase 1: MVP | Plataforma web, usuarios, categorías, productos, precios y comparación de supermercados. |
 | Fase 2 | Calificaciones, comentarios, seguimiento de productos y notificaciones. |
-| Fase 3 | Comparadores de droguerías, cuidado facial y repuestos para vehículos y motos. |
-| Fase 4 | IA especializada para recetas, supermercados, droguerías y cuidado facial. |
-| Fase 5 | Módulo de proveedores para publicar productos y actualizar precios, y panel administrativo (gestión de cuentas, aprobaciones, revisión de productos, categorías, revisión de precios, moderación, bloqueo e historial). |
+| Fase 3 | Comparadores de droguerías, cuidado facial y repuestos para automóviles. |
+| Fase 4 | IA especializada para recetas, supermercados, droguerías y cuidado facial, y planes de suscripción para IA y seguimiento. |
+| Fase 5 | Módulo de proveedores y panel administrativo. El Sprint 4 prioriza clientes, actividad, rankings, CRUD de catálogo e historial de precios. La operación ampliada del panel queda en backlog. |
 | Fase 6 | Mejoras, reportes e integraciones externas. |
 
-Hasta que el panel administrativo (Fase 5) esté construido, la moderación de comentarios reportados y el bloqueo de cuentas se realizan de forma manual en la base de datos.
+La moderación de comentarios reportados y el bloqueo de cuentas se realizan manualmente en la base de datos hasta disponer de las funciones correspondientes del panel.
 
 ## 9. Elementos fuera del alcance
 
 - Aplicación móvil nativa.
-- Compra directa, pagos y domicilios.
+- Compra directa, pagos y domicilios de productos.
 - Inventario interno de cada supermercado.
 - Garantía de disponibilidad física del producto.
 - Diagnósticos médicos o dermatológicos realizados por la IA.
@@ -170,7 +187,10 @@ Hasta que el panel administrativo (Fase 5) esté construido, la moderación de c
 - Garantía de actualización de precios en tiempo real.
 - Publicidad o monetización avanzada, salvo definición explícita.
 - Expansión internacional.
-- Verificación de compatibilidad de un repuesto con un modelo específico de vehículo o moto (provisional).
+- Repuestos para motocicletas en el alcance actual.
+- Verificación de compatibilidad de un repuesto con un modelo específico de automóvil (provisional).
+
+El pago de la suscripción Premium a PreciosCo está incluido en el alcance descrito en la sección 4.J.
 
 **Nota:** el sistema mostrará los precios registrados o suministrados por las fuentes disponibles, pero no será responsable de variaciones, errores o diferencias entre el precio publicado y el precio final aplicado por cada establecimiento.
 
@@ -189,11 +209,11 @@ Hasta que el panel administrativo (Fase 5) esté construido, la moderación de c
 | RP-03 | El código fuente debe gestionarse con Git/GitHub y una rama por funcionalidad. |
 | RP-04 | Cada integrante usa como máximo 2 conexiones a la base de datos compartida, para evitar el error EMAXCONNSESSION. |
 
-Inicialmente, el sistema no incluye compras, pagos, domicilios, aplicación móvil, diagnósticos médicos ni garantía de disponibilidad en tiempo real de los productos. Estas funcionalidades podrán considerarse como ampliaciones posteriores.
+La pasarela del Sprint 4 se integra en modo de prueba para la suscripción Premium. La elección del proveedor se registra al cerrar HT-22.
 
 ### Estado operativo y límites actuales
 
-La cobertura de código no equivale a cobertura de datos verificados. Éxito conserva estrategia, pero queda fuera de la selección inicial por bloqueos; las tiendas sin objetivos activos no se capturan. Repuestos mantiene sus historias de Fase 3 y su validación de viabilidad, pero su ingesta automática sigue pendiente de la identidad por referencia.
+La cobertura de código no equivale a cobertura de datos verificados. Éxito conserva estrategia, pero queda fuera de la selección inicial por bloqueos; las tiendas sin objetivos activos no se capturan. En Repuestos, SCRUM-295 mide 20 productos por tienda. Si menos del 30 % aparece en dos o más tiendas, se replantea el comparador como un listado con buscador por referencia. El scraper debe conservar evidencia de identidad y la publicación automática queda condicionada a que se pueda validar marca y referencia del fabricante.
 
 La calidad depende de objetivos, categorías, equivalencias y pesos curados. No se incluyen asignaciones ficticias de SKU, correcciones automáticas de maestros históricos, equivalencias de medicamentos por ingrediente activo ni conversión supuesta entre gramos y mililitros. La ejecución compartida requiere preflight, migraciones comprobadas y una instancia de procesador designada; el arranque de un backend o un BUILD SUCCESS no certifican datos correctos.
 
@@ -247,6 +267,8 @@ Se extiende el modelo de datos (categorías raíz Droguería, Cuidado facial y R
 | --- | --- | --- |
 | Consumo de IA | Spring WebClient / RestTemplate | Llama la API de un modelo de IA desde el backend |
 | Contexto por sección | Lógica propia (RAG) sobre PostgreSQL | Arma el prompt según la categoría consultando datos reales antes de responder |
+| Interfaz de IA | React | Avatares por sección y chat con historial en memoria durante la sesión del panel |
+| Planes y suscripción | Backend Spring Boot y pasarela externa por seleccionar | Controla acceso y límites por cuenta y confirma la activación de Premium mediante la integración de prueba |
 
 ### 6. Fase 5 y 6 — Proveedores y panel administrativo
 
@@ -279,3 +301,4 @@ DBeaver o pgAdmin para inspeccionar la base de datos; Docker, opcional, para emp
 | 04-nov-2026 | Stack (Fase 3) | Carga de precios con la API VTEX y tabla de staging procesada por el backend; marca, EAN y contenido neto en el modelo | Decisión del equipo en el Sprint 2 |
 | 09-nov-2026 | 4.A, Stack (Fase 1 y Fase 3) | Resultados de búsqueda por páginas; la fecha mostrada es la de la última confirmación del precio; búsqueda sin tildes en SQL; precios registrados por periodos | Decisiones del equipo en el Sprint 2 (HU-06b, DP-32 y HT-10) |
 | 18-nov-2026 | Visión, funcionalidades, restricciones y stack | Versión 2.1: captura por dominios, identidad secundaria, genéricos por kg, revisión CONFLICT/CSV, filtros por sección y ejecución manual real de Actions; enlaces locales a los documentos principales | Consolidar las decisiones de la entrega sin presentar curaduría o despliegue como completados |
+| 20-nov-2026 | 1 a 5, 8 a 10 y stack | Versión 2.2: IA por sección, preselección de fuentes de repuestos de automóvil, planes Gratuito y Premium con cuotas mensuales, y primeras funciones del panel administrativo | Acuerdos del Sprint 4 y exigencia de Programación Web. Actualización documental del 21-nov-2026 |
