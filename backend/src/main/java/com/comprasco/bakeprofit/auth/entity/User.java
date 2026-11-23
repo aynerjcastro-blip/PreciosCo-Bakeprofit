@@ -1,6 +1,11 @@
 package com.comprasco.bakeprofit.auth.entity;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+
+import org.hibernate.annotations.Generated;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -53,5 +58,19 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(name = "auth_provider", nullable = false)
     private AuthProvider authProvider = AuthProvider.LOCAL;
+
+    @Generated
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "plan", nullable = false, length = 10)
+    private Plan plan;
+
+    @Generated
+    @Column(name = "ai_queries_used", nullable = false)
+    private Integer aiQueriesUsed;
+
+    @Generated
+    @Column(name = "ai_queries_reset_at", nullable = false)
+    private OffsetDateTime aiQueriesResetAt;
 
 }
