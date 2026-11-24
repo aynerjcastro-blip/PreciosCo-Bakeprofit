@@ -14,8 +14,6 @@ import com.comprasco.bakeprofit.auth.entity.User;
 import java.util.List;
 import java.util.Optional;
 
-
-
 public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
@@ -31,11 +29,24 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Transactional
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
-        UPDATE users
-        SET ai_queries_used = 0,
-            ai_queries_reset_at = ai_queries_reset_at + INTERVAL '1 month'
-        WHERE ai_queries_reset_at <= :now
-        """, nativeQuery = true)
+            UPDATE users
+            SET ai_queries_used = 0,
+                ai_queries_reset_at = ai_queries_reset_at + INTERVAL '1 month'
+            WHERE ai_queries_reset_at <= :now
+            """, nativeQuery = true)
     int resetDueAiQuotas(@Param("now") OffsetDateTime now);
+
+    /**
+     * Incrementa en 1 el contador de consultas IA del usuario.
+     * Se usa después de cada consulta exitosa al chat de IA.
+     */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            UPDATE users
+            SET ai_queries_used = ai_queries_used + 1
+            WHERE id = :userId
+            """, nativeQuery = true)
+    int incrementAiQueriesUsed(@Param("userId") Long userId);
 
 }

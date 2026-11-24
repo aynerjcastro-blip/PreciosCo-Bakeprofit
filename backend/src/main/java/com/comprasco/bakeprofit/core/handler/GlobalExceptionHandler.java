@@ -1,6 +1,7 @@
 package com.comprasco.bakeprofit.core.handler;
 
 import com.comprasco.bakeprofit.ai.exception.AiEmptyResponseException;
+import com.comprasco.bakeprofit.ai.exception.AiQuotaExceededException;
 import com.comprasco.bakeprofit.auth.exception.AccountLockedException;
 import com.comprasco.bakeprofit.auth.exception.EmailAlreadyExistsException;
 import com.comprasco.bakeprofit.auth.exception.ForbiddenActionException;
@@ -577,5 +578,29 @@ public class GlobalExceptionHandler {
                 return ResponseEntity
                                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                                 .body(Map.of("error", ex.getMessage()));
+        }
+
+        /**
+         * Maneja el exceso de cuota de consultas IA para usuarios FREE.
+         * Retorna HTTP 429 Too Many Requests con el mensaje descriptivo.
+         *
+         * @param ex      excepcion de cuota excedida
+         * @param request peticion HTTP actual
+         * @return respuesta HTTP 429 Too Many Requests
+         */
+        @ExceptionHandler(AiQuotaExceededException.class)
+        public ResponseEntity<ErrorResponse> handleAiQuotaExceeded(
+                        AiQuotaExceededException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.TOO_MANY_REQUESTS.value())
+                                .error("Too Many Requests")
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(error);
         }
 }
