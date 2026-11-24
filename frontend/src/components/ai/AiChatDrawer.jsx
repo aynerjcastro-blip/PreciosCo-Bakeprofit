@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { sendAiMessage } from '../../api/ai';
+import { sendAiMessage, fetchAiQuota } from '../../api/ai';
 import s from '@/components/ai/AiChatDrawer.module.css';
 import {
     SuperAvatar,
@@ -37,7 +37,7 @@ const SUGGESTIONS = {
     ],
 };
 
-/** Formatea segundos a "0.0s" */
+/** Formatea milisegundos a "0.0s" */
 function formatTime(ms) {
     return (ms / 1000).toFixed(1) + 's';
 }
@@ -67,9 +67,19 @@ export default function AiChatDrawer({ section, onClose }) {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [elapsed, setElapsed] = useState(0);   // ms transcurridos
+    const [elapsed, setElapsed] = useState(0);
     const bottomRef = useRef(null);
-    const timerRef = useRef(null);   // referencia al interval
+    const timerRef = useRef(null);
+
+    // ── Estado de cuota ──
+    const [quota, setQuota] = useState(null); // { queriesUsed, queriesLimit, plan }
+
+    // ── Cargar cuota al montar el componente ──
+    useEffect(() => {
+        fetchAiQuota()
+            .then(setQuota)
+            .catch(() => { }); // silencioso: si falla, no bloqueamos el chat
+    }, []);
 
     // ── Persistir mensajes en sessionStorage ──
     useEffect(() => {
@@ -83,7 +93,6 @@ export default function AiChatDrawer({ section, onClose }) {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, loading]);
 
-    // ── Timer: cuenta mientras loading === true ──
     // ── Timer: cuenta mientras loading === true ──
     useEffect(() => {
         if (!loading) return;
@@ -102,6 +111,20 @@ export default function AiChatDrawer({ section, onClose }) {
         sessionStorage.removeItem(storageKey);
     }
 
+    // ── Texto del contador de cuota ──
+    function quotaText() {
+        if (!quota) return null;
+        if (quota.plan === 'PREMIUM') return '∞ Premium';
+        const remaining = Math.max(0, quota.queriesLimit - quota.queriesUsed);
+        return `${remaining}/${quota.queriesLimit}`;
+    }
+
+    // ── ¿Cuota agotada? ──
+    function isQuotaExhausted() {
+        if (!quota || quota.plan === 'PREMIUM') return false;
+        return quota.queriesUsed >= quota.queriesLimit;
+    }
+
     // ── Enviar mensaje ──
     async function handleSend(e) {
         e.preventDefault();
@@ -115,21 +138,39 @@ export default function AiChatDrawer({ section, onClose }) {
         setElapsed(0);
         setLoading(true);
 
-        const start = Date.now();                        // ← captura el inicio
+        const start = Date.now();
 
         try {
-            const { reply } = await sendAiMessage({
+            const data = await sendAiMessage({
                 section,
                 message: text,
                 history: messages,
             });
-            const duration = Date.now() - start;         // ← tiempo real
+            const duration = Date.now() - start;
             setMessages(prev => [
                 ...prev,
-                { role: 'assistant', content: reply, time: duration },
+                { role: 'assistant', content: data.reply, time: duration },
             ]);
+
+            // Actualizar cuota con los datos que devuelve el backend
+            if (data.queriesUsed != null) {
+                setQuota({
+                    queriesUsed: data.queriesUsed,
+                    queriesLimit: data.queriesLimit,
+                    plan: data.plan,
+                });
+            }
         } catch (err) {
-            setError(err.message);
+            // Error 429 = cuota excedida
+            if (err.status === 429) {
+                setError('Has alcanzado tu límite de consultas este mes. Actualiza a Premium para consultas ilimitadas.');
+                // Forzar cuota agotada en el estado local
+                if (quota) {
+                    setQuota({ ...quota, queriesUsed: quota.queriesLimit });
+                }
+            } else {
+                setError(err.message);
+            }
         } finally {
             setLoading(false);
         }
@@ -152,6 +193,17 @@ export default function AiChatDrawer({ section, onClose }) {
                         <span className={s.botSub}>{cfg.sub}</span>
                     </div>
                     <div className={s.headerActions}>
+                        {/* Contador de cuota */}
+                        {quotaText() && (
+                            <span
+                                className={`${s.quotaBadge} ${isQuotaExhausted() ? s.quotaExhausted : ''}`}
+                                title={quota?.plan === 'PREMIUM'
+                                    ? 'Plan Premium — consultas ilimitadas'
+                                    : `Consultas restantes este mes`}
+                            >
+                                {quotaText()}
+                            </span>
+                        )}
                         <button className={s.iconBtn} onClick={handleClear}
                             title="Limpiar chat" aria-label="Limpiar chat">
                             🗑
@@ -197,7 +249,6 @@ export default function AiChatDrawer({ section, onClose }) {
                                 ? msg.content
                                 : <ReactMarkdown>{msg.content}</ReactMarkdown>
                             }
-                            {/* Tiempo de respuesta (solo asistente) */}
                             {msg.role === 'assistant' && msg.time != null && (
                                 <span className={s.responseTime}>
                                     ⚡ {formatTime(msg.time)}
@@ -227,12 +278,14 @@ export default function AiChatDrawer({ section, onClose }) {
                         type="text"
                         value={input}
                         onChange={e => setInput(e.target.value)}
-                        placeholder={`Pregúntale a ${cfg.label}...`}
-                        disabled={loading}
+                        placeholder={isQuotaExhausted()
+                            ? 'Límite de consultas alcanzado'
+                            : `Pregúntale a ${cfg.label}...`}
+                        disabled={loading || isQuotaExhausted()}
                         autoFocus
                     />
                     <button className={s.send} type="submit"
-                        disabled={loading || !input.trim()}>
+                        disabled={loading || !input.trim() || isQuotaExhausted()}>
                         Enviar
                     </button>
                 </form>
