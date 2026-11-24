@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.comprasco.bakeprofit.auth.entity.Plan;
 import com.comprasco.bakeprofit.auth.entity.Role;
 import com.comprasco.bakeprofit.auth.entity.User;
 
@@ -37,5 +38,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
         WHERE ai_queries_reset_at <= :now
         """, nativeQuery = true)
     int resetDueAiQuotas(@Param("now") OffsetDateTime now);
+
+    @Modifying
+    @Query("UPDATE User u SET u.plan = :plan WHERE u.id = :userId")
+    int updatePlan(@Param("userId") Long userId, @Param("plan") Plan plan);
 
 }

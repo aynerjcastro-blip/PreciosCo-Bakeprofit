@@ -85,6 +85,8 @@ public class SecurityConfig {
                                                 .requestMatchers(HttpMethod.GET, "/api/prices/compare").permitAll()
                                                 .requestMatchers(HttpMethod.GET, "/api/reviews", "/api/reviews/summary")
                                                 .permitAll()
+                                                .requestMatchers(HttpMethod.POST, "/api/payments/webhook/mercadopago")
+                                                .permitAll()
                                                 .anyRequest().authenticated())
                                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
