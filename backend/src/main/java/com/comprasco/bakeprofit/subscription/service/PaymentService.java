@@ -83,7 +83,8 @@ public class PaymentService {
     }
 
     private Order createOrder(User user, String externalReference) {
-        String amount = checkout.price().setScale(2).toPlainString();
+        BigDecimal price = checkout.price().stripTrailingZeros();
+        String amount = price.scale() <= 0 ? price.toPlainString() : price.setScale(2).toPlainString();
         OrderItemRequest item = OrderItemRequest.builder()
             .title("PreciosCo Premium")
             .quantity(1)

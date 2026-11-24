@@ -38,7 +38,7 @@ class PaymentServiceTest {
     private static final long PAYMENT_ID = 83L;
     private static final String ORDER_ID = "ORDTST01KS5AJ6HTK2HRQ3XJ3C2JCKP9";
     private static final String CHECKOUT_URL = "https://www.mercadopago.com.co/checkout/v1/redirect?order_id=" + ORDER_ID;
-    private static final BigDecimal PRICE = new BigDecimal("27900.50");
+    private static final BigDecimal PRICE = new BigDecimal("27900.00");
 
     private final UserRepository userRepository = mock(UserRepository.class);
     private final PaymentTransactionRepository paymentRepository = mock(PaymentTransactionRepository.class);
@@ -81,12 +81,12 @@ class PaymentServiceTest {
             assertThat(body.get("external_reference").getAsString()).isEqualTo(reference);
             assertThat(body.get("type").getAsString()).isEqualTo("online");
             assertThat(body.get("processing_mode").getAsString()).isEqualTo("manual");
-            assertThat(body.get("total_amount").getAsString()).isEqualTo("27900.50");
+            assertThat(body.get("total_amount").getAsString()).isEqualTo("27900");
             assertThat(body.getAsJsonObject("payer").get("email").getAsString()).isEqualTo("buyer@example.test");
             var item = body.getAsJsonArray("items").get(0).getAsJsonObject();
             assertThat(item.get("title").getAsString()).isEqualTo("PreciosCo Premium");
             assertThat(item.get("quantity").getAsInt()).isEqualTo(1);
-            assertThat(item.get("unit_price").getAsString()).isEqualTo("27900.50");
+            assertThat(item.get("unit_price").getAsString()).isEqualTo("27900");
             var online = body.getAsJsonObject("config").getAsJsonObject("online");
             assertThat(online.get("success_url").getAsString()).isEqualTo("https://frontend.example.test/success");
             assertThat(online.get("failure_url").getAsString()).isEqualTo("https://frontend.example.test/failure");
