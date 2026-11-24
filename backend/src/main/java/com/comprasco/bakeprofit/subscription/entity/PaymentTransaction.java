@@ -42,9 +42,9 @@ public class PaymentTransaction {
         foreignKey = @ForeignKey(name = "fk_payment_transactions_subscriptions"))
     private Subscription subscription;
 
-    /** Corresponde a data.id de Mercado Pago y puede ser nulo al iniciar el pago. */
-    @Column(name = "external_payment_id", unique = true, length = 50)
-    private String externalPaymentId;
+    /** ID de la Order de Mercado Pago. Es nulo hasta que el proveedor crea la orden. */
+    @Column(name = "external_order_id", unique = true, length = 50)
+    private String externalOrderId;
 
     /** Referencia generada por la aplicación al iniciar el pago. */
     @Column(name = "external_reference", unique = true, nullable = false, length = 64)
