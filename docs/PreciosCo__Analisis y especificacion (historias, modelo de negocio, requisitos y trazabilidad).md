@@ -2,7 +2,7 @@
 
 Análisis y especificación: historias de usuario, modelo de negocio, requisitos y trazabilidad
 
-Documento iniciado el 15 de octubre de 2026 · Versión 1.1 (reconciliación de requisitos) · Actualizado el 18 de noviembre de 2026
+Documento iniciado el 15 de octubre de 2026 · Versión 1.2 (planificación del Sprint 4) · Actualizado el 21 de noviembre de 2026
 
 **Universidad Popular del Cesar** · Programa de Ingeniería de Sistemas · Asignatura: Ingeniería de Software I · Docente: John Jairo Patiño Vanegas
 
@@ -12,7 +12,7 @@ Valledupar, Colombia · actualización de noviembre de 2026
 
 ## 1. Planteamiento y contexto
 
-PreciosCo compara los precios de productos del hogar, de droguería, de cuidado facial y de repuestos para vehículos y motos entre establecimientos, y señala dónde comprar más barato, para que quien compra no tenga que ir de tienda en tienda.
+PreciosCo compara los precios de productos del hogar, de droguería y de cuidado facial entre establecimientos. El proyecto contempla extender la comparación a repuestos de automóviles, según el resultado de la prueba de datos.
 
 **El problema.** Quien hace su mercado no sabe en qué establecimiento están las mejores opciones de compra y no puede recorrer supermercado por supermercado para comparar. Pierde tiempo y transporte, y termina pagando más de lo necesario.
 
@@ -25,7 +25,7 @@ PreciosCo compara los precios de productos del hogar, de droguería, de cuidado 
 | PB-3 | Los precios cambian con frecuencia y no se entera de las bajadas | Por validar con usuarios |
 | PB-4 | No sabe si el precio que ve está vigente ni de dónde proviene | Por validar con usuarios |
 | PB-5 | No conoce la opinión de otros compradores sobre productos y tiendas | Por validar con usuarios |
-| PB-6 | La comparación existente solo cubre supermercados; droguería, cuidado facial y repuestos de vehículos y motos quedan fuera | Observado en el bot actual |
+| PB-6 | La comparación existente solo cubre supermercados; droguería, cuidado facial y repuestos de automóviles quedan fuera | Observado en el bot actual |
 | PB-7 | Los establecimientos no tienen un canal propio para mantener sus precios al día | Por validar con usuarios |
 
 ### Estado de partida (AS-IS del bot)
@@ -38,7 +38,7 @@ PreciosCo compara los precios de productos del hogar, de droguería, de cuidado 
 
 ### Estado deseado (TO-BE)
 
-Una plataforma web (React, Spring Boot y PostgreSQL) que conserva la comparación del bot y suma cuentas de usuario, calificaciones y comentarios de un producto en una tienda con sus promedios, y seguimiento de productos con avisos de baja de precio. Las fases posteriores agregan droguerías, cuidado facial, repuestos para vehículos y motos, IA especializada y un módulo para que los proveedores publiquen sus precios.
+Una plataforma web (React, Spring Boot y PostgreSQL) que conserva la comparación del bot y suma cuentas de usuario, calificaciones y comentarios de un producto en una tienda con sus promedios, y seguimiento de productos con avisos de baja de precio. Las fases posteriores agregan droguerías, cuidado facial, repuestos para automóviles, IA especializada, suscripciones, un panel administrativo y un módulo para que los proveedores publiquen sus precios.
 
 ### Alcance por fases
 
@@ -46,12 +46,14 @@ Una plataforma web (React, Spring Boot y PostgreSQL) que conserva la comparació
 | --- | --- | --- |
 | 1 (MVP) | Usuarios, categorías, productos, precios y comparación de supermercados | Con historias |
 | 2 | Calificaciones, comentarios, seguimiento de productos y notificaciones | Con historias |
-| 3 | Comparadores de droguerías, cuidado facial y repuestos para vehículos y motos | Con historias |
-| 4 | IA especializada: supermercados, recetas, droguerías y cuidado facial | Solo requisitos |
-| 5 | Módulo de proveedores y panel administrativo | Solo requisitos |
+| 3 | Comparadores de droguerías, cuidado facial y repuestos para automóviles | Cuidado facial: Cutis, Medipiel y BellaPiel. Sprint 4: prueba de datos y scraper de repuestos. El comparador queda en backlog |
+| 4 | IA especializada en tres secciones y planes Gratuito y Premium | Historias y requisitos del Sprint 4 |
+| 5 | Módulo de proveedores y panel administrativo | Historias del panel priorizado para el Sprint 4. Proveedores y gestión ampliada quedan para fases de trabajo posteriores |
 | 6 | Reportes, mejoras e integraciones externas | Solo requisitos |
 
-**Fuera del alcance:** compra directa, pagos y domicilios; inventario interno de las tiendas; garantía de disponibilidad física del producto y de precios en tiempo real; diagnósticos médicos o dermatológicos y prescripciones; aplicación móvil nativa; integración con todas las tiendas; integraciones iniciales con WhatsApp o SMS; logística de proveedores; monetización avanzada; expansión internacional.
+**Fuera del alcance:** compra directa, pagos y domicilios de productos; repuestos para motocicletas en el alcance actual; verificación de compatibilidad con modelos de automóvil; inventario interno de las tiendas; garantía de disponibilidad física del producto y de precios en tiempo real; diagnósticos médicos o dermatológicos y prescripciones; aplicación móvil nativa; integración con todas las tiendas; integraciones iniciales con WhatsApp o SMS; logística de proveedores; monetización avanzada; expansión internacional.
+
+El pago de la suscripción Premium a PreciosCo se incorpora por una exigencia de Programación Web. Las historias y requisitos de suscripción trazan ese origen en OB-07 y en la decisión DP-51.
 
 ### Restricciones y entregables
 
@@ -66,13 +68,15 @@ Entregables de cada fase: E-01 pruebas funcionales y de seguridad; E-02 manual d
 
 ### Estado y límites de este documento
 
-Conserva el modelo de negocio y las historias de las Fases 1 a 3 y los reconcilia con las decisiones de captura, identidad, calidad y navegación del 18-nov-2026. La descripción del bot es el estado de partida, no el estado actual de la web. El comportamiento acordado se especifica aquí; el detalle técnico, la evidencia y los pendientes de integración se registran en DECISIONS.md. Reconstruye el modelo de negocio a partir del bot, del documento de alcance y de los planes de trabajo, y las historias de usuario se derivaron de los requisitos para validarlos. Los problemas PB-3, PB-4, PB-5 y PB-7 y las reglas marcadas «por confirmar» no se han validado con usuarios reales. Los valores con asterisco (\*) son propuestas del equipo. Hasta la Fase 5, la moderación de comentarios y el bloqueo de cuentas se hacen a mano en la base de datos.
+Conserva el modelo de negocio, las historias anteriores y la reconciliación del 18-nov-2026. Incorpora el alcance y los requisitos del Sprint 4 según los acuerdos del 20-nov-2026. La descripción del bot es el estado de partida, no el estado actual de la web. El comportamiento acordado se especifica aquí; el detalle técnico, la evidencia y los pendientes de integración se registran en DECISIONS.md. Reconstruye el modelo de negocio a partir del bot, del documento de alcance y de los planes de trabajo, y las historias de usuario se derivaron de los requisitos para validarlos. Los problemas PB-3, PB-4, PB-5 y PB-7 y las reglas marcadas «por confirmar» no se han validado con usuarios reales. Los valores con asterisco (\*) son propuestas del equipo. La moderación de comentarios y el bloqueo de cuentas se hacen manualmente en la base de datos hasta que estén disponibles las funciones correspondientes del panel.
 
 ### Glosario
 
 - **Consumidor:** persona registrada que consulta y compara precios (rol USER). **Visitante:** consumidor sin sesión.
 - **Proveedor:** establecimiento con cuenta comercial (rol SUPPLIER).&#32;
 - **Administrador:** rol ADMIN.
+- **Plan Gratuito:** acceso básico a IA y seguimiento para el consumidor con sesión, sujeto a topes por cuenta.
+- **Plan Premium:** suscripción a PreciosCo que amplía los topes de IA y seguimiento.
 - **Calificación:** puntaje de un producto en una tienda. Una opinión es la calificación y el comentario que se registran juntos.&#32;
 - **Borrado lógico:** el registro se conserva con estado ELIMINADO y deja de mostrarse.
 - **Observación/oferta cruda:** dato capturado en staging; todavía no es un precio publicado.
@@ -83,22 +87,23 @@ Conserva el modelo de negocio y las historias de las Fases 1 a 3 y los reconcili
 
 ## 2. Objetivos del negocio
 
-Seis objetivos, independientes de la tecnología, cubren el problema desde el ahorro del consumidor hasta la calidad de la información que publican los establecimientos.
+Los objetivos abarcan el ahorro del consumidor, la calidad de la información y la sostenibilidad del servicio.
 
 | ID | Objetivo | Problema | Indicador |
 | --- | --- | --- | --- |
 | OB-01 | Reducir el tiempo y esfuerzo que una persona invierte en comparar precios para su mercado | PB-1, PB-2 | Minutos para decidir dónde comprar una lista |
 | OB-02 | Aumentar el ahorro que logra al elegir dónde comprar | PB-1, PB-3 | Diferencia entre el precio promedio y el de la mejor opción |
 | OB-03 | Mejorar la confianza en la información de precios (vigencia y origen) | PB-4 | % de precios actualizados dentro de un plazo definido |
-| OB-04 | Ampliar las compras cubiertas, de supermercados a droguería, cuidado facial y repuestos de vehículos y motos | PB-6 | Tipos de establecimiento y categorías comparables |
+| OB-04 | Ampliar las compras cubiertas, de supermercados a droguería, cuidado facial y repuestos de automóviles | PB-6 | Tipos de establecimiento y categorías comparables |
 | OB-05 | Mejorar la confianza en la calidad de productos y establecimientos | PB-5 | % de productos con al menos una calificación |
 | OB-06 | Facilitar que los establecimientos mantengan su oferta actualizada | PB-7 | % de productos de proveedores actualizados en plazo |
+| OB-07 | Generar ingresos sostenibles mediante un modelo freemium y mantener gratuita la comparación de precios | Exigencia de Programación Web | Tasa de altas Premium y disponibilidad de la comparación pública |
 
 Las metas numéricas de los indicadores se fijan cuando haya datos de uso reales.
 
 ## 3. Actores
 
-Intervienen cuatro actores humanos y cuatro actores automáticos; los roles de acceso USER, SUPPLIER y ADMIN corresponden a los actores humanos registrados.
+Los roles USER, SUPPLIER y ADMIN corresponden a los actores humanos registrados. Los servicios externos y las tareas programadas participan como actores de soporte.
 
 | ID | Actor | Naturaleza | Participación | Rol en el sistema |
 | --- | --- | --- | --- | --- |
@@ -111,12 +116,13 @@ Intervienen cuatro actores humanos y cuatro actores automáticos; los roles de a
 | ACT-07 | Revisión periódica de precios | Tiempo | Iniciador | Tarea programada |
 | ACT-08 | Fuente externa de precios | Sistema externo | Secundario | Scraper que captura observaciones; el backend valida y publica precios. Ejecución local o manual en GitHub Actions |
 | ACT-09 | Proveedor de identidad (Google) | Sistema externo | Secundario | Valida la cuenta de Google al iniciar sesión |  
+| ACT-10 | Pasarela de pagos | Sistema externo | Secundario | Procesa la suscripción a PreciosCo y comunica su resultado. Proveedor por seleccionar |
 
 Solo el rol USER puede calificar, comentar y reportar: ADMIN y SUPPLIER reciben 403. No se consideran actores «el sistema», la base de datos, el bot de Telegram, el panel administrativo ni «el usuario» genérico.
 
 ## 4. Procesos del negocio
 
-Siete procesos recorren el servicio, desde la cuenta del consumidor hasta la administración de la plataforma.
+Los procesos recorren el servicio desde el acceso y la comparación hasta la suscripción y la administración de la plataforma.
 
 | ID | Proceso | Actor | Entrada | Salida |
 | --- | --- | --- | --- | --- |
@@ -124,15 +130,16 @@ Siete procesos recorren el servicio, desde la cuenta del consumidor hasta la adm
 | P-02 | Consultar y comparar precios | Visitante o consumidor | Sección, producto o categoría y filtros compatibles | Precios comparables, mejor opción y fecha de confirmación |
 | P-03 | Calificar, comentar y reportar | Consumidor registrado | Producto, tienda, puntaje, comentario, razón del reporte | Calificación o comentario registrado y promedio actualizado |
 | P-04 | Seguir productos y recibir alertas | Consumidor registrado, revisión periódica | Producto seguido, precio objetivo | Aviso de baja de precio |
-| P-05 | Consultar asesoría de compra | Consumidor registrado | Lista, receta o necesidad | Recomendación con productos y precios del catálogo |
+| P-05 | Consultar asesoría de compra | Consumidor registrado, servicio de IA | Sección y lista, receta o necesidad | Recomendación en chat temporal, con productos y precios elegibles del catálogo y los avisos de la sección |
 | P-06 | Publicar y actualizar oferta | Proveedor | Datos del establecimiento, productos, precios, disponibilidad | Oferta publicada de inmediato y pendiente de revisión |
-| P-07 | Administrar y moderar | Administrador | Solicitudes, productos publicados, reportes, precios registrados | Decisiones registradas en el historial y reportes |
+| P-07 | Administrar y moderar | Administrador | Cuentas, actividad, catálogo, solicitudes, reportes, precios y datos de operación | Cambios registrados en el historial, métricas, rankings y gráficas |
+| P-08 | Gestionar plan y suscripción | Consumidor registrado, pasarela de pagos | Plan vigente, consumo, solicitud de cambio y confirmación de pago | Consulta de límites o activación confirmada de Premium |
 
 **Subproceso de soporte a P-02 y P-04 (RF51):** capturar observaciones de fuentes permitidas, cerrar la corrida, verificar identidad/presentación, resolver duplicados y registrar o refrescar el precio. Los rechazos y conflictos se revisan antes de autorizar su reintento. Este soporte no otorga al proveedor ni al visitante acceso directo a staging o equivalencias.
 
 ## 5. Historias de usuario
 
-Las 35 historias cubren las Fases 1 a 3 con el formato Como…, quiero…, para…; cada una trae criterios de aceptación comprobables, el requisito que la origina (RF), su objetivo (OB) y su tamaño.
+Las historias usan el formato Como…, quiero…, para… y se vinculan con criterios de aceptación, requisitos y objetivos. Las historias del Sprint 4 conservan su tamaño por estimar cuando el plan no lo define.
 
 ### Cómo leerlas: INVEST y SMART
 
@@ -414,7 +421,7 @@ Como visitante, quiero comparar el precio de un producto de droguería entre var
 - Si el mismo producto también se vende en un supermercado, ese precio aparece en la misma comparación (RF07, DP-25).
 - Cada precio con página registrada muestra el enlace a la tienda; uno sin página se muestra sin enlace (RF57).
 
-**HU-29 · Explorar la sección de droguería** — RF11, RF52 · OB-04 · S
+**HU-29 · Explorar la sección de droguería** — RF06, RF11, RF52 · OB-04 · S
 
 Como visitante, quiero entrar a la sección de droguería y ver sus categorías, para encontrar productos cuando no sé el nombre exacto.
 
@@ -434,7 +441,7 @@ Como visitante, quiero comparar el precio de un producto de cuidado facial entre
 - Una tienda autorizada como BellaPiel puede resolver un SKU local mediante equivalencia o coincidencia secundaria controlada hacia un maestro comercial existente; no crea otro producto por semejanza de nombre ni acepta una imagen como prueba suficiente de EAN.
 - Cada precio con página registrada muestra el enlace a la tienda; uno sin página se muestra sin enlace (RF57).
 
-**HU-31 · Explorar la sección de cuidado facial** — RF11, RF58 · OB-04 · S
+**HU-31 · Explorar la sección de cuidado facial** — RF06, RF11, RF58 · OB-04 · S
 
 Como visitante, quiero entrar a la sección de cuidado facial y ver sus categorías, para descubrir productos según lo que necesito.
 
@@ -444,15 +451,17 @@ Como visitante, quiero entrar a la sección de cuidado facial y ver sus categor�
 - El buscador ofrece únicamente categorías y tiendas activas de esa sección; quitar la categoría conserva la sección y sus filtros compatibles.
 - Combinar la sección con texto, tienda o rango de precio filtra por todo a la vez (HU-06a, HU-06b).
 
+Las historias HU-32 a HU-34 quedan en backlog. SCRUM-295 y HT-28 cubren durante el Sprint 4 la prueba de datos y el scraper de repuestos para automóviles (DP-31 y DP-50).
+
 **HU-32 · Comparar un repuesto por su referencia** — RF55 · OB-04 · M
 
-Como visitante, quiero comparar el precio de un repuesto entre varias tiendas usando su referencia del fabricante, para estar seguro de que comparo exactamente la misma pieza.
+Como visitante, quiero comparar el precio de un repuesto de automóvil entre varias tiendas usando su referencia del fabricante, para estar seguro de que comparo exactamente la misma pieza.
 
 - Un repuesto con la misma marca y referencia en dos tiendas muestra los dos precios, cada uno con su fecha (RN-32).
 - Dos repuestos con nombre parecido y distinta referencia, o con la misma referencia y distinta marca, no se comparan entre sí.
 - La marca y la referencia se muestran junto al nombre del repuesto en la comparación.
 - Un repuesto sin referencia registrada no entra en la comparación (por confirmar, DP-28).
-- La comparación muestra un aviso de que la plataforma no verifica la compatibilidad con un vehículo o moto (DP-20).
+- La comparación muestra un aviso de que la plataforma no verifica la compatibilidad con un modelo de automóvil (DP-20).
 
 **HU-33 · Buscar un repuesto por su referencia** — RF05, RF55 · OB-01, OB-04 · S
 
@@ -464,14 +473,16 @@ Como visitante, quiero buscar un repuesto escribiendo su referencia o código de
 
 **HU-34 · Explorar la sección de repuestos** — RF11, RF55 · OB-04 · S
 
-Como visitante, quiero entrar a la sección de repuestos para vehículos y motos y ver sus categorías, para encontrar la pieza que busco por tipo.
+Como visitante, quiero entrar a la sección de repuestos para automóviles y ver sus categorías, para encontrar la pieza que busco por tipo.
 
 - Repuestos aparece como categoría raíz, con sus categorías.
 - La sección muestra los productos activos que tienen precio en al menos una tienda de repuestos (DP-26).
 - Elegir una categoría de Repuestos lista solo sus productos activos.
 - Combinar la sección con texto, tienda o rango de precio filtra por todo a la vez (HU-06a, HU-06b).
 
-### Historias para próximos sprints
+### Historias de búsqueda y vigencia
+
+HU-35 (SCRUM-305) se retoma en el Sprint 4 después de que el flujo de pagos funcione de punta a punta. HU-36 permanece en backlog, según DP-38.
 
 **HU-35 · Filtrar por marca** — RF06 (completa el filtro por marca que no cubrieron HU-06a ni HU-06b) · OB-01, OB-02 · S
 
@@ -490,9 +501,88 @@ Como visitante, quiero que un precio que la tienda dejó de publicar no cuente c
 - Un precio cuya última confirmación es más antigua que la ventana no cuenta como vigente, ni en la búsqueda ni en el comparador; la regla se aplica igual en los dos.
 - Se retoma cuando el scraper corra a diario de forma automática; antes de estimar se decide la duración de la ventana y qué se muestra de un precio vencido (DP-38).
 
+### Sprint 4 — IA especializada
+
+Las cuatro historias comparten el chat temporal de RF59 y la política de acceso y cuotas de los planes. Los criterios se aplican a cada asistente por sección.
+
+**HU-37 · Recomendar dónde comprar una lista** — RF29, RF59 · OB-01, OB-02, OB-07 · por estimar
+
+Como consumidor con sesión, quiero enviar mi lista al asistente de Supermercados para saber dónde encontrar mejores precios.
+
+- El avatar de Supermercados abre el chat de esa sección. Una lista con coincidencias devuelve opciones respaldadas por el catálogo y señala los artículos que no puede cotizar.
+- Al cerrar el chat o recargar, se pierde la conversación. El consumo de la cuota se conserva hasta el reinicio mensual.
+
+**HU-38 · Sugerir recetas con productos del catálogo** — RF30, RF59 · OB-01, OB-02 · por estimar
+
+Como consumidor con sesión, quiero pedir una receta para saber cómo preparar el plato y qué ingredientes comprar.
+
+- El asistente de Supermercados muestra pasos de preparación e identifica los ingredientes disponibles en el catálogo.
+- Si un ingrediente no tiene coincidencia, el asistente informa que no está disponible en lugar de atribuirle un precio.
+
+**HU-39 · Consultar productos de droguería** — RF31, RF59, RF63 · OB-04 · por estimar
+
+Como consumidor con sesión, quiero consultar productos y precios de droguería para orientar una compra.
+
+- La respuesta muestra el aviso de orientación incluso si la consulta pide un diagnóstico o un producto que requiere fórmula médica.
+- Los productos que requieren fórmula médica se excluyen del resultado incluso cuando están en el catálogo y se solicitan por nombre.
+
+**HU-40 · Recibir recomendaciones de cuidado facial** — RF32, RF59 · OB-04 · por estimar
+
+Como consumidor con sesión, quiero buscar productos de cuidado facial según mi tipo de piel, necesidades y presupuesto.
+
+- El asistente de Cuidado facial muestra coincidencias del catálogo dentro del presupuesto, cuando existen, e indica cuando no encuentra una opción.
+- La respuesta incluye el aviso de que la recomendación es orientativa y no sustituye a un profesional de la salud.
+
+### Sprint 4 — Planes y suscripción
+
+**HU-41 · Consultar mi plan y sus límites** — RF64 · OB-07 · por estimar
+
+Como consumidor con sesión, quiero ver mi plan vigente, los límites de IA y seguimiento y mi consumo para saber qué funciones puedo usar.
+
+- En Gratuito se muestran 4 consultas al mes, 200 caracteres por mensaje completo y hasta 5 productos seguidos. El consumidor ve cuántas consultas y productos seguidos ha usado.
+- En Premium se muestran los límites ampliados vigentes y su consumo.
+
+**HU-42 · Adquirir el plan Premium** — RF62 · OB-07 · por estimar
+
+Como consumidor con sesión, quiero suscribirme a Premium para ampliar mis límites de IA y seguimiento.
+
+- Una confirmación válida de la pasarela activa Premium para la cuenta correspondiente y sus límites ampliados.
+- Un intento pendiente, cancelado o rechazado conserva el plan vigente. Repetir una confirmación del mismo pago mantiene una única activación.
+
+**HU-43 · Conocer el bloqueo al superar un límite gratuito** — RF60, RF61, RF64 · OB-07 · por estimar
+
+Como consumidor con plan Gratuito, quiero conocer qué límite alcancé y cómo pasar a Premium cuando el sistema bloquea una acción.
+
+- Se permiten la cuarta consulta del mes, un mensaje completo de 200 caracteres y el quinto producto seguido. Se bloquean la quinta consulta del mes, los mensajes completos de 201 caracteres y el sexto seguimiento simultáneo. Al reiniciarse el contador mensual vuelve a estar disponible la cuota de cuatro consultas.
+- El aviso identifica el límite y ofrece adquirir Premium. Cerrar el chat o cambiar de sección no restaura la cuota.
+- La comparación sigue disponible de forma gratuita. Un visitante puede comparar y recibe una invitación a iniciar sesión al intentar usar IA, seguir, comentar o calificar.
+
+### Sprint 4 — Panel administrativo
+
+**HU-44 · Gestionar los clientes** — RF40, RF47, RF48 · OB-03, OB-05 · por estimar
+
+Como administrador, quiero listar, crear, consultar, editar, activar, desactivar y eliminar cuentas de clientes para administrar su acceso.
+
+- El listado general refleja las operaciones permitidas y sus cambios de estado. Una cuenta bloqueada o desactivada no accede a la plataforma.
+- Cada cambio queda en el historial con fecha y responsable. Un visitante o una cuenta con otro rol no accede al panel ni a sus endpoints.
+
+**HU-45 · Visualizar la actividad de clientes** — RF65 · OB-03 · por estimar
+
+Como administrador, quiero ver cuántos clientes están activos en tiempo real y los promedios de actividad para conocer el uso de la plataforma.
+
+- La vista muestra el conteo y gráficas con el periodo de los promedios. Las métricas coinciden con los datos de prueba según la definición de actividad y frecuencia que se acuerden en DP-54.
+
+**HU-46 · Consultar los productos más seguidos y más buscados** — RF66 · OB-03 · por estimar
+
+Como administrador, quiero consultar dos rankings de productos para conocer qué productos concentran los seguimientos y las búsquedas.
+
+- Cada ranking muestra el producto y su conteo, ordenado de mayor a menor. El ranking de búsquedas usa el registro de búsquedas y la regla de atribución acordada en DP-54.
+
+HT-26 cubre el CRUD del catálogo (RF43 y RF67) y comienza con una evaluación de cuatro horas de una herramienta externa. HT-27 cubre la visualización de series históricas de precios por producto y tienda (RF44 y RF68). La ampliación del panel se identifica como backlog en RF69 a RF72 y en la decisión DP-55.
+
 ### Verificación INVEST
 
-Las 37 historias cumplen Valiosa, Negociable y Testeable; estas son las excepciones y la acción para cada una.
+La tabla identifica las dependencias y decisiones que afectan la estimación y la verificación de las historias.
 
 | Historia | Principio | Observación | Acción |
 | --- | --- | --- | --- |
@@ -507,14 +597,17 @@ Las 37 historias cumplen Valiosa, Negociable y Testeable; estas son las excepcio
 | HU-32 a HU-34 | Estimable | Dependen de la prueba de datos de repuestos (DP-31) y del caso sin referencia (DP-28) | Hacer la prueba de datos y resolver DP-28 antes de estimar |
 | HU-35 | Independiente | Se construye sobre la búsqueda paginada de HU-06b | Implementar después de HU-06b |
 | HU-36 | Estimable | Faltan la duración de la ventana y qué se muestra de un precio vencido; necesita el scraper diario automático | Decidir DP-38 antes de estimar |
+| HU-37 a HU-40 | Independiente | Comparten el cliente y el chat temporal. Droguería depende del dato verificable de venta bajo fórmula | Acordar interfaz móvil y fuente de clasificación |
+| HU-41 a HU-43 | Estimable | Dependen de la elección de pasarela y del modelo de cuotas | Resolver HT-22 y HT-23 |
+| HU-44 a HU-46 | Estimable | Dependen del alcance operativo del CRUD de clientes, definiciones de métricas y fuente de datos | Acordar DP-54 y evaluar la herramienta de HT-26 |
 
 ### Verificación SMART
 
 | Dimensión | Estado |
 | --- | --- |
 | Específico | Cumple: cada criterio nombra rol, acción y resultado |
-| Medible | Cumple: usa 1 a 5 estrellas, 10 a 500 caracteres, 1 día (24 horas), 50 por página y códigos HTTP |
-| Alcanzable | HU-21 y HU-23 dependen del scraper programado y del correo |
+| Medible | Cumple: usa límites y resultados comprobables, incluidos 4 consultas al mes, 200 caracteres por mensaje completo y 5 seguimientos para el plan Gratuito |
+| Alcanzable | HU-21 y HU-23 dependen del scraper programado y del correo. Las nuevas historias tienen dependencias abiertas de pasarela, cuotas, clasificación y métricas |
 | Relevante | Cumple: cada historia lleva su objetivo (OB) |
 | Temporal | Débil: cada historia tiene fase, pero no fecha; falta fijar la fecha de entrega de cada fase |
 
@@ -528,7 +621,7 @@ Las 37 historias cumplen Valiosa, Negociable y Testeable; estas son las excepcio
 | RN-04 | Restricción | Los precios son informativos y no vinculantes: no se garantiza su actualización en tiempo real. | Definida |
 | RN-05 | Validación | Las categorías tienen dos niveles: sección raíz y categoría hoja. Cada establecimiento pertenece a una raíz y cada producto/objetivo a una hoja; cambiar una sección de búsqueda limita sus opciones, sin reclasificar automáticamente productos históricos. | Definida |
 | RN-06 | Restricción | Los supermercados comparables en la etapa inicial son D1, Jumbo, Éxito y Olímpica; otros establecimientos se incorporan por fases. | Definida |
-| RN-07 | Autorización | Solo un consumidor registrado (rol USER) puede calificar, comentar, reportar comentarios y seguir productos; ADMIN y SUPPLIER no. | Definida |
+| RN-07 | Autorización | Solo un consumidor con sesión (rol USER) puede usar IA, calificar, comentar, reportar comentarios y seguir productos. | Definida |
 | RN-08 | Validación | Cada cuenta se identifica con un correo único, también cuando se inicia sesión con Google, y la recuperación de contraseña solo se envía a ese correo. | Definida |
 | RN-09 | Autorización | Cada rol (consumidor, proveedor, administrador) accede solo a las funciones de su rol. | Definida |
 | RN-10 | Restricción | Una cuenta bloqueada/desactivada no puede acceder a la plataforma. | Definida |
@@ -554,10 +647,15 @@ Las 37 historias cumplen Valiosa, Negociable y Testeable; estas son las excepcio
 | RN-30 | Restricción | Calificar y comentar un producto en una tienda son una sola acción: no se puede calificar sin comentar ni comentar sin calificar, y ambos se registran al mismo tiempo. El id de una opinión es el de su calificación y es el que usan editar, eliminar y reportar. | Definida |
 | RN-31 | Restricción | El estado del comentario (incluido OCULTO) no afecta el promedio del producto ni del establecimiento; retirar una calificación del promedio exige una razón propia de la calificación (indicio de fraude), no la moderación de su comentario. | Definida |
 | RN-32 | Restricción | Un repuesto solo se compara con el mismo repuesto, identificado por su marca y su referencia o código del fabricante, normalizada a solo letras y números en mayúsculas; dos repuestos con distinta marca o distinta referencia no se comparan. | Definida |
+| RN-33 | Restricción | El servicio de IA de droguería excluye antes de enviar al modelo los productos que requieren fórmula médica. El filtro es independiente del prompt y de la configuración del scraper. Toda respuesta de droguería advierte que el asistente no sustituye el diagnóstico, la prescripción ni la orientación de un profesional de la salud. | Definida. Fuente de clasificación pendiente (DP-56) |
+| RN-34 | Restricción | El dominio Repuestos se limita a piezas de automóviles. Los repuestos de motocicletas quedan excluidos en el alcance actual. | Definida |
+| RN-35 | Acceso | Buscar y comparar precios es gratuito para visitantes y consumidores de cualquier plan. Las funciones de IA, seguimiento y registro de opiniones se rigen por RN-07. | Definida |
+| RN-36 | Cuotas | El plan Gratuito permite hasta 4 consultas de IA por cuenta al mes, 200 caracteres por mensaje completo y 5 productos seguidos simultáneamente. El límite de 200 incluye todos los artículos de la lista en conjunto. Toda acción que exceda un tope se bloquea y ofrece pasar a Premium. El contador se reinicia mensualmente y se conserva al cambiar de sección, cerrar el chat o recargar. | Topes gratuitos y reinicio mensual definidos. Topes Premium pendientes (DP-52) |
+| RN-37 | Suscripción | El pago por la pasarela externa cubre el acceso a funciones Premium de PreciosCo. La cuenta adquiere los límites ampliados cuando el backend valida la confirmación del pago correspondiente. La compra de productos, los pagos a tiendas y los domicilios quedan excluidos. | Definida |
 
 ## 7. Requisitos funcionales
 
-Son 58 requisitos en siete módulos. DEBE indica obligación y DEBERÍA una función recomendable que puede aplazarse; la columna Fase dice cuándo se construye. Los IDs ya no se renumeran: RF49 a RF58 cubren funcionalidades que faltaban en las Fases 1 a 3 y se agregaron al final de su módulo, aunque eso rompa el orden estrictamente consecutivo dentro de la página.
+Los requisitos se agrupan por módulo y conservan su numeración. DEBE indica obligación y DEBERÍA una función que puede aplazarse. La columna Fase señala la fase del producto y, cuando corresponde, la prioridad de Sprint 4 o backlog.
 
 ### Gestión de usuarios
 
@@ -585,7 +683,7 @@ Son 58 requisitos en siete módulos. DEBE indica obligación y DEBERÍA una func
 | RF50 | Mostrar página de inicio | ACT-01 | 1 | El sistema DEBE mostrar una portada con presentación del servicio, datos y ejemplos reales disponibles y acceso a las secciones comerciales. DEBE omitir bloques sin respaldo y enlazar cada sección con su búsqueda correspondiente, sin testimonios ni IA ficticios. |
 | RF51 | Cargar precios de fuente externa | ACT-08 | 1 | El sistema DEBE capturar observaciones en staging y validar identidad/presentación antes de publicar precios. Procesa pendientes de corridas cerradas o legado sin corrida, deduplica por tienda/identidad/corrida y mantiene historial por periodos. Un precio igual refresca su confirmación; las contradicciones quedan para revisión sin registrar precios. |
 | RF52 | Comparar droguerías | ACT-01, 02 | 3 | El sistema DEBE incluir en la comparación los precios de droguerías. |
-| RF55 | Comparar repuestos | ACT-01, 02 | 3 | El sistema DEBE incluir en la comparación los precios de tiendas de repuestos para vehículos y motos. |
+| RF55 | Comparar repuestos | ACT-01, 02 | 3 (backlog) | Si SCRUM-295 confirma la viabilidad de la comparación, el sistema DEBE incluir los precios de repuestos de automóviles con la misma marca y referencia del fabricante (RN-32 y RN-34). |
 | RF57 | Enlazar a la tienda | ACT-01, 02 | 1 | El sistema DEBE mostrar junto a cada precio un enlace a la página del producto en la tienda, cuando la fuente la haya registrado. |
 | RF58 | Comparar cuidado facial | ACT-01, 02 | 3 | El sistema DEBE incluir en la comparación los precios de tiendas de cuidado facial. |
 
@@ -608,7 +706,7 @@ Son 58 requisitos en siete módulos. DEBE indica obligación y DEBERÍA una func
 
 | ID | Nombre | Actor | Fase | Requisito |
 | --- | --- | --- | --- | --- |
-| RF23 | Seguir producto | ACT-02 | 2 | El sistema DEBE permitir al consumidor seguir un producto. |
+| RF23 | Seguir producto | ACT-02 | 2 | El sistema DEBE permitir al consumidor seguir un producto, sujeto al plan y a RF61. |
 | RF24 | Definir alerta | ACT-02 | 2 | El sistema DEBE permitir definir, para un producto seguido, un precio objetivo o la alerta ante cualquier reducción. |
 | RF25 | Activar o desactivar aviso | ACT-02 | 2 | El sistema DEBE permitir activar o desactivar la notificación de cada producto seguido. |
 | RF26 | Listar productos seguidos | ACT-02 | 2 | El sistema DEBERÍA permitir consultar la lista de productos seguidos. |
@@ -622,9 +720,22 @@ Son 58 requisitos en siete módulos. DEBE indica obligación y DEBERÍA una func
 | ID | Nombre | Actor | Fase | Requisito |
 | --- | --- | --- | --- | --- |
 | RF29 | Recomendar supermercado | ACT-02, ACT-05 | 4 | El sistema DEBE recomendar, mediante un asistente de IA, en qué supermercado comprar una lista de productos. |
-| RF30 | Sugerir recetas | ACT-02, ACT-05 | 4 | El sistema DEBE sugerir, mediante un asistente de IA, recetas con los productos que el consumidor indique. |
-| RF31 | Consultar droguería | ACT-02, ACT-05 | 4 | El sistema DEBE responder, mediante un asistente de IA, consultas sobre productos de droguería y sus precios, acompañando cada respuesta del aviso de que no sustituye a un profesional de la salud. |
-| RF32 | Recomendar cuidado facial | ACT-02, ACT-05 | 4 | El sistema DEBE recomendar, mediante un asistente de IA, productos de cuidado facial según tipo de piel, necesidades y presupuesto indicados, con el mismo aviso. |
+| RF30 | Sugerir recetas | ACT-02, ACT-05 | 4 | El sistema DEBE sugerir, mediante un asistente de IA, recetas con su preparación e ingredientes, identificando los disponibles en el catálogo. |
+| RF31 | Consultar droguería | ACT-02, ACT-05 | 4 | El sistema DEBE responder, mediante un asistente de IA, consultas sobre productos de droguería y sus precios, aplicando la exclusión de medicamentos bajo fórmula y el aviso definidos en RF63. |
+| RF32 | Recomendar cuidado facial | ACT-02, ACT-05 | 4 | El sistema DEBE recomendar, mediante un asistente de IA, productos de cuidado facial según tipo de piel, necesidades y presupuesto indicados, con un aviso de que la recomendación es orientativa y no sustituye a un profesional de la salud. |
+| RF59 | Abrir un chat temporal por sección | ACT-02, ACT-05 | 4 · Sprint 4 | El sistema DEBE ofrecer al consumidor con sesión avatares flotantes en el lateral derecho para Supermercados, Droguería y Cuidado facial. El avatar abre el chat temporal de su sección. El historial se pierde al cerrar el chat o recargar la página (RNF13). En móvil los avatares se reúnen en un único botón flotante. |
+| RF63 | Restringir la asesoría de droguería | ACT-02, ACT-05 | 4 · Sprint 4 | El sistema DEBE excluir de las recomendaciones los medicamentos que requieren fórmula médica y mostrar en cada respuesta el aviso de RN-33. La exclusión se aplica en el servicio de IA antes de enviar productos al modelo, con independencia del prompt y del scraper. |
+
+### Planes y suscripción
+
+Origen: exigencia de Programación Web integrada a la planificación del Sprint 4 (DP-51).
+
+| ID | Nombre | Actor | Fase | Requisito |
+| --- | --- | --- | --- | --- |
+| RF60 | Validar límites gratuitos de IA | ACT-02 | 4 · Sprint 4 | El backend DEBE permitir hasta 4 consultas de IA por cuenta al mes, con un máximo de 200 caracteres por mensaje completo, incluida la lista entera. El contador DEBE reiniciarse mensualmente. Ante un intento que exceda cualquiera de esos límites, DEBE bloquear la consulta y ofrecer Premium. |
+| RF61 | Validar el límite gratuito de seguimiento | ACT-02 | 4 · Sprint 4 | El backend DEBE permitir hasta 5 productos seguidos simultáneamente en el plan Gratuito. Ante un intento de exceder el tope, DEBE bloquear el nuevo seguimiento y ofrecer Premium. |
+| RF62 | Adquirir Premium | ACT-02, ACT-10 | 4 · Sprint 4 | El sistema DEBE permitir iniciar el pago de la suscripción mediante una pasarela externa, comprobar la confirmación en el backend y activar los límites ampliados de Premium solo para la cuenta correspondiente. La integración del sprint usa el entorno de prueba. |
+| RF64 | Consultar plan, límites y consumo | ACT-02 | 4 · Sprint 4 | El sistema DEBE mostrar al consumidor el plan vigente, sus topes de IA y seguimiento y el consumo de las cuotas aplicables. |
 
 ### Módulo de proveedores
 
@@ -642,19 +753,27 @@ Son 58 requisitos en siete módulos. DEBE indica obligación y DEBERÍA una func
 
 | ID | Nombre | Actor | Fase | Requisito |
 | --- | --- | --- | --- | --- |
-| RF40 | Gestionar cuentas | ACT-04 | 5 | El sistema DEBE permitir al administrador consultar y modificar los datos y el estado de las cuentas de consumidores y proveedores. |
+| RF40 | Gestionar cuentas | ACT-04 | 5 · clientes en Sprint 4 | El sistema DEBE permitir al administrador listar clientes y crear, consultar, editar, activar, desactivar y eliminar cuentas de consumidores conforme a las reglas de integridad. La consulta y modificación de cuentas de proveedores permanece en el módulo ampliado. |
 | RF41 | Aprobar o rechazar proveedores | ACT-04 | 5 | El sistema DEBE permitir al administrador aprobar o rechazar solicitudes de cuenta de proveedor. |
 | RF42 | Revisar productos publicados | ACT-04 | 5 | El sistema DEBE permitir al administrador conservar o dar de baja un producto publicado por un proveedor. |
-| RF43 | Administrar categorías y marcas | ACT-04 | 5 | El sistema DEBE permitir al administrador crear, modificar y desactivar categorías y marcas. |
+| RF43 | Administrar categorías y marcas | ACT-04 | 5 · Sprint 4 | El sistema DEBE permitir al administrador listar, crear, consultar, modificar, activar, desactivar y eliminar categorías y marcas según la integridad de sus relaciones. |
 | RF44 | Consultar precios registrados | ACT-04 | 5 | El sistema DEBE permitir al administrador consultar los precios registrados con su fecha y fuente. |
-| RF45 | Moderar comentarios | ACT-04 | 5 (manual en la Fase 2) | El sistema DEBE permitir al administrador conservar u ocultar un comentario reportado, lo que resuelve sus reportes. |
+| RF45 | Moderar comentarios | ACT-04 | 5 (panel en backlog, moderación manual vigente) | El sistema DEBE permitir al administrador conservar u ocultar un comentario reportado, lo que resuelve sus reportes. |
 | RF46 | Generar reportes | ACT-04 | 6 | El sistema DEBERÍA generar reportes con el total de usuarios, productos y búsquedas por periodo. |
 | RF47 | Bloquear cuentas | ACT-04 | 5 (manual en la Fase 2) | El sistema DEBE permitir al administrador bloquear una cuenta. |
 | RF48 | Consultar historial | ACT-04 | 5 | El sistema DEBE permitir al administrador consultar el historial de cambios administrativos con fecha y responsable. |
+| RF65 | Consultar actividad de clientes | ACT-04 | 5 · Sprint 4 | El sistema DEBE mostrar al administrador los clientes activos en tiempo real y gráficas con los promedios de actividad por periodo (DP-54). |
+| RF66 | Consultar rankings de productos | ACT-04 | 5 · Sprint 4 | El sistema DEBE registrar las búsquedas para generar un ranking de productos más buscados y mostrar al administrador ese ranking y el de productos más seguidos, con sus conteos. |
+| RF67 | Administrar productos y tiendas | ACT-04 | 5 · Sprint 4 | El sistema DEBE permitir al administrador listar, crear, consultar, modificar, activar, desactivar y eliminar productos y tiendas según la integridad de sus relaciones. |
+| RF68 | Visualizar el historial de precios | ACT-04 | 5 · Sprint 4 | El sistema DEBE mostrar series históricas de precios por producto y tienda, con fechas, a partir de los precios registrados. |
+| RF69 | Gestionar objetivos y ofertas capturadas | ACT-04 | 5 · backlog | El sistema DEBE permitir al administrador consultar y gestionar los objetivos de captura y revisar las ofertas capturadas según sus estados y controles de publicación. |
+| RF70 | Gestionar reglas de equivalencia y presentación | ACT-04 | 5 · backlog | El sistema DEBE permitir al administrador gestionar equivalencias SKU–EAN, vínculos SKU–producto y correcciones de presentación con nombres legibles y evidencia para cada recurso. |
+| RF71 | Consultar el estado de las suscripciones | ACT-04 | 5 · backlog | El sistema DEBE permitir al administrador ver el plan y el estado de suscripción de los clientes. |
+| RF72 | Gestionar seguimientos y calificaciones | ACT-04 | 5 · backlog | El sistema DEBE ofrecer al administrador vistas y operaciones de gestión para seguimientos y calificaciones, preservando las reglas de avisos, opiniones, promedios y auditoría. |
 
 ## 8. Requisitos no funcionales
 
-Diez requisitos de calidad condicionan cómo funciona el sistema; las pruebas y la documentación pasaron a ser entregables del proyecto (E-01 y E-02), no requisitos.
+Los requisitos de calidad definen cómo funciona el sistema. Las pruebas y la documentación se mantienen como entregables (E-01 y E-02). Los identificadores RNF11 y RNF12 permanecen retirados.
 
 | ID | Categoría | Requisito | Criterio de verificación |
 | --- | --- | --- | --- |
@@ -668,21 +787,24 @@ Diez requisitos de calidad condicionan cómo funciona el sistema; las pruebas y 
 | RNF08 | Robustez de la API | Los errores reales DEBEN conservar código y JSON uniforme mientras la conexión sea utilizable; una desconexión reconocida del cliente no debe provocar otra respuesta ni un falso error interno. | Verificar 400/401/403/404/409 y 500 real; una cancelación reconocida deja registro DEBUG sin stack trace y no oculta fallos de aplicación, base o API externa |
 | RNF09 | Seguridad | El sistema DEBE mostrar los textos escritos por usuarios (comentarios y reportes) como texto plano, sin interpretarlos como HTML. | Un comentario con una etiqueta de script se ve literal |
 | RNF10 | Rendimiento | La búsqueda de productos y la comparación de precios DEBEN responder en menos de 3 segundos\* en el 95% de las consultas, con hasta 20 usuarios concurrentes\*. | En 30 consultas consecutivas sobre la plataforma publicada, al menos 29 responden en menos de 3 s |
+| RNF13 | Privacidad | PreciosCo DEBE mantener el historial del chat en memoria durante su uso y evitar su persistencia en almacenamiento local, base de datos o registros de aplicación. El contador de consultas se conserva por cuenta, separado del historial. | Cerrar o recargar deja el chat vacío. No aparecen mensajes en medios persistentes de PreciosCo y el contador sigue reflejando el uso previo |
+| RNF14 | Integridad | El backend DEBE aplicar las validaciones de plan aun cuando las solicitudes coincidan en el tiempo y procesar de forma idempotente la confirmación de una transacción Premium. | Dos acciones simultáneas por el último cupo permiten solo una. Repetir una confirmación válida procesa una única activación |
 
 ## 9. Matrices de trazabilidad
 
-Cuatro matrices conectan cada objetivo con sus procesos, reglas, requisitos e historias; solo RF04 y RF46 carecen de una regla directa, y se justifican por necesidad de gestión.
+Las matrices conectan los objetivos con los procesos, reglas, requisitos e historias. Las funciones que siguen en backlog conservan su trazabilidad.
 
 ### 9.1 Objetivo → procesos → reglas → requisitos
 
 | Objetivo | Procesos | Reglas | Requisitos |
 | --- | --- | --- | --- |
-| OB-01 | P-01, P-02, P-04, P-05 | RN-02, 04, 05, 06, 07, 08, 09, 10, 15, 18 | RF01–RF07, RF12, RF23, RF25, RF26, RF29, RF30, RF50, RF56, RF57 |
-| OB-02 | P-02, P-04, P-05 | RN-02 a RN-07, RN-15, RN-16, RN-18 | RF05–RF09, RF12, RF23, RF24, RF27 a RF30, RF53, RF54 |
-| OB-03 | P-02, P-06, P-07 | RN-01, 02, 04, 09, 19, 20, 22, 23 | RF10, RF36, RF39 a RF42, RF44, RF46, RF48, RF51 |
-| OB-04 | P-02, P-05, P-06, P-07 | RN-02, 05, 09, 17, 18, 20, 21, 32 | RF05, RF11, RF31, RF32, RF35, RF43, RF52, RF55, RF58 |
-| OB-05 | P-01, P-03, P-07 | RN-07 a RN-14, RN-23 a RN-30 | RF01–RF04, RF13–RF22, RF40, RF45, RF47, RF48, RF49, RF56 |
+| OB-01 | P-01, P-02, P-04, P-05 | RN-01, 02, 04, 05, 06, 07, 08, 09, 10, 15, 18, 32, 34, 35 | RF01–RF07, RF10, RF12, RF23, RF25, RF26, RF29, RF30, RF50, RF55, RF56, RF57, RF59 |
+| OB-02 | P-02, P-04, P-05 | RN-01 a RN-07, RN-15, RN-16, RN-18, RN-35 | RF05–RF10, RF12, RF23, RF24, RF27 a RF30, RF53, RF54, RF59 |
+| OB-03 | P-02, P-06, P-07 | RN-01, 02, 03, 04, 06, 09, 10, 19, 20, 22, 23 | RF07, RF08, RF10, RF12, RF36, RF39 a RF42, RF44, RF46 a RF48, RF51, RF65 a RF70 |
+| OB-04 | P-02, P-05, P-06, P-07 | RN-02, 05, 07, 09, 17, 18, 20, 21, 32, 33, 34 | RF05, RF06, RF11, RF31, RF32, RF35, RF43, RF52, RF55, RF58, RF59, RF63, RF67 |
+| OB-05 | P-01, P-03, P-07 | RN-07 a RN-14, RN-23 a RN-31 | RF01–RF04, RF13–RF22, RF40, RF45, RF47, RF48, RF49, RF56, RF72 |
 | OB-06 | P-06, P-07 | RN-01, 05, 09, 19 a 23 | RF33–RF39, RF41, RF42, RF46 |
+| OB-07 | P-02, P-04, P-05, P-07, P-08 | RN-07, RN-09, RN-18, RN-23, RN-35, RN-36, RN-37 | RF05 a RF12, RF23, RF29, RF59 a RF62, RF64, RF71 |
 
 ### 9.2 Historia → requisitos → reglas → objetivos
 
@@ -720,49 +842,64 @@ Cuatro matrices conectan cada objetivo con sus procesos, reglas, requisitos e hi
 | HU-29 Explorar la sección de droguería | RF06, RF11, RF52 | RN-05 | OB-04 |
 | HU-30 Comparar precios de cuidado facial | RF58 | RN-01, RN-02 | OB-04 |
 | HU-31 Explorar la sección de cuidado facial | RF06, RF11, RF58 | RN-05 | OB-04 |
-| HU-32 Comparar un repuesto por su referencia | RF55 | RN-02, RN-32 | OB-04 |
-| HU-33 Buscar un repuesto por su referencia | RF05, RF55 | RN-05, RN-32 | OB-01, OB-04 |
-| HU-34 Explorar la sección de repuestos | RF11, RF55 | RN-05 | OB-04 |
+| HU-32 Comparar un repuesto por su referencia | RF55 | RN-02, RN-32, RN-34 | OB-04 |
+| HU-33 Buscar un repuesto por su referencia | RF05, RF55 | RN-05, RN-32, RN-34 | OB-01, OB-04 |
+| HU-34 Explorar la sección de repuestos | RF11, RF55 | RN-05, RN-34 | OB-04 |
 | HU-35 Filtrar por marca | RF06 | RN-05 | OB-01, OB-02 |
 | HU-36 Vigencia del precio | RF07, RF08, RF10 | RN-01, RN-04 | OB-02, OB-03 |
+| HU-37 Recomendar dónde comprar una lista | RF29, RF59 | RN-07, RN-18 | OB-01, OB-02, OB-07 |
+| HU-38 Sugerir recetas con productos del catálogo | RF30, RF59 | RN-07, RN-18 | OB-01, OB-02 |
+| HU-39 Consultar productos de droguería | RF31, RF59, RF63 | RN-07, RN-17, RN-18, RN-33 | OB-04 |
+| HU-40 Recibir recomendaciones de cuidado facial | RF32, RF59 | RN-07, RN-17, RN-18 | OB-04 |
+| HU-41 Consultar mi plan y sus límites | RF64 | RN-07, RN-36, RN-37 | OB-07 |
+| HU-42 Adquirir el plan Premium | RF62 | RN-07, RN-37 | OB-07 |
+| HU-43 Conocer el bloqueo al superar un límite gratuito | RF60, RF61, RF64 | RN-07, RN-35, RN-36 | OB-07 |
+| HU-44 Gestionar los clientes | RF40, RF47, RF48 | RN-09, RN-10, RN-23 | OB-03, OB-05 |
+| HU-45 Visualizar la actividad de clientes | RF65 | RN-09 | OB-03 |
+| HU-46 Consultar los productos más seguidos y más buscados | RF66 | RN-09 | OB-03 |
 
-Sin historia todavía: RF29 a RF48 (Fases 4 a 6).
+El CRUD de catálogo (RF43 y RF67) se planifica en HT-26 y las gráficas históricas de precios (RF44 y RF68) en HT-27. Los requisitos de proveedores, moderación y gestión administrativa ampliada tienen planificación independiente.
 
 ### 9.3 Regla → requisitos
 
 | Regla | Requisitos | Regla | Requisitos |
 | --- | --- | --- | --- |
-| RN-01 | RF10, RF36, RF44, RF51, RF57 | RN-16 | RF24, RF27, RF28 |
-| RN-02 | RF07, RF51, RF52, RF55, RF58 | RN-17 | RF31, RF32 |
-| RN-03 | RF08, RF09 | RN-18 | RF29 a RF32 |
+| RN-01 | RF10, RF36, RF44, RF51, RF57, RF68 | RN-16 | RF24, RF27, RF28, RF53 |
+| RN-02 | RF07, RF51, RF52, RF55, RF58, RF69, RF70 | RN-17 | RF31, RF32, RF63 |
+| RN-03 | RF08, RF09 | RN-18 | RF29 a RF32, RF63 |
 | RN-04 | RF07, RF10 | RN-19 | RF33, RF34, RF41 |
 | RN-05 | RF05, RF06, RF11, RF35, RF43, RF52, RF55, RF58 | RN-20 | RF35, RF42 |
 | RN-06 | RF12 | RN-21 | RF35, RF37, RF38 |
-| RN-07 | RF13, RF14, RF17, RF19, RF20, RF22, RF23 | RN-22 | RF36, RF39 |
-| RN-08 | RF01, RF03, RF04, RF56 | RN-23 | RF40, RF41, RF42, RF45, RF47, RF48 |
-| RN-09 | RF02, RF33, RF40, RF43, RF56 | RN-24 | RF13, RF14 |
-| RN-10 | RF02, RF47, RF56 | RN-25 | RF19, RF21, RF22 |
+| RN-07 | RF13, RF14, RF17, RF19, RF20, RF22, RF23, RF29 a RF32, RF59 a RF64 | RN-22 | RF36, RF39 |
+| RN-08 | RF01, RF03, RF04, RF56 | RN-23 | RF40, RF41, RF42, RF43, RF45, RF47, RF48, RF67, RF69, RF70, RF72 |
+| RN-09 | RF02, RF33, RF40 a RF48, RF56, RF65 a RF72 | RN-24 | RF13, RF14 |
+| RN-10 | RF02, RF40, RF47, RF56 | RN-25 | RF19, RF21, RF22 |
 | RN-11 | RF13, RF16 | RN-26 | RF17 |
 | RN-12 | RF13, RF18, RF20 | RN-27 | RF17, RF45 |
 | RN-13 | RF15 | RN-28 | RF14, RF18 |
 | RN-14 | RF17, RF21, RF22, RF45 | RN-29 | RF19 |
-| RN-15 | RF23, RF25, RF26, RF27, RF28 | RN-30 | RF13, RF14 |
-| RN-31 | RF15 | RN-32 | RF05, RF55 |
+| RN-15 | RF23, RF25, RF26, RF27, RF28, RF53, RF72 | RN-30 | RF13, RF14 |
+| RN-31 | RF15, RF72 | RN-32 | RF05, RF51, RF55 |
+| RN-33 | RF31, RF63 | RN-34 | RF05, RF51, RF55 |
+| RN-35 | RF05 a RF12, RF13, RF14, RF23, RF59, RF60, RF61 | RN-36 | RF23, RF60 a RF62, RF64 |
+| RN-37 | RF62, RF64, RF71 | — | — |
 
 ### 9.4 Requisitos no funcionales → objetivos y requisitos afectados
 
 | RNF | Objetivo | Requisitos o módulos afectados | Regla |
 | --- | --- | --- | --- |
-| RNF01 | OB-01 | Todos los requisitos con interfaz | — |
+| RNF01 | OB-01, OB-03, OB-04, OB-07 | Todos los requisitos con interfaz, incluidos panel, chat y suscripción | — |
 | RNF02 | OB-05 | RF01, RF02, RF03, RF33 | — |
 | RNF03 | OB-01 | Todos | — |
 | RNF04 | OB-04 | RF11, RF12, RF43, RF52, RF55, RF58 | RN-06 |
 | RNF05 | OB-04, OB-06 | Módulos por fase | — |
-| RNF06 | OB-03 | RF36, RF44 | RN-01 |
+| RNF06 | OB-03, OB-04 | RF36, RF44, RF51, RF55, RF63, RF68 a RF70 | RN-01, RN-02, RN-33 |
 | RNF07 | OB-05 | RF02, RF56 | RN-09 |
-| RNF08 | OB-01 | Todos los requisitos con API | RN-09 |
+| RNF08 | OB-01, OB-03, OB-07 | Todos los requisitos con API, incluidos cuotas, panel y confirmación de pagos | RN-09, RN-36, RN-37 |
 | RNF09 | OB-05 | RF14, RF17, RF21 | — |
 | RNF10 | OB-01 | RF05 a RF09 | — |
+| RNF13 | OB-04, OB-07 | RF29 a RF32, RF59, RF60 | RN-07, RN-36 |
+| RNF14 | OB-07 | RF60, RF61, RF62 | RN-36, RN-37 |
 
 ## Anexos
 
@@ -794,15 +931,15 @@ Cada requisito se verifica con un criterio de «pasa si…»; los valores con as
 | RF20 | OB-05 | RN-07, RN-12 | Devuelve la calificación y el comentario propios, o 204 si aún no opinó |
 | RF21 | OB-05 | RN-14, RN-25 | Lista solo comentarios no OCULTOS ni ELIMINADOS, máximo 50 por página, recientes primero, sin estado ni correo |
 | RF22 | OB-05 | RN-07, 14, 25 | El autor elimina su comentario: queda ELIMINADO y desaparece del listado; otro usuario recibe 403; no puede volver a comentar ese producto en esa tienda; eliminar un comentario OCULTO da 409 y sigue OCULTO; repetir la eliminación da 204 |
-| RF23 | OB-01, OB-02 | RN-07, RN-15 | Seguir dos veces el mismo producto da 409 |
+| RF23 | OB-01, OB-02, OB-07 | RN-07, RN-15, RN-36 | Seguir dos veces el mismo producto da 409. Un visitante debe iniciar sesión. El plan aplica el tope de RF61 |
 | RF24 | OB-02 | RN-16 | Un precio objetivo de 0 o negativo da 400; sin objetivo cuenta cualquier reducción |
 | RF25 | OB-01 | RN-15 | Con el aviso desactivado una baja no genera aviso |
 | RF26 | OB-01 | RN-15 | Siguiendo 2 productos, la lista muestra esos 2 |
 | RF27 | OB-02 | RN-15, RN-16 | Bajar de $6.000 a $4.800 con objetivo de $5.000 genera un solo aviso; correr la revisión dos veces no duplica |
 | RF28 | OB-02 | RN-15, RN-16 | En el caso de RF27 llega el correo; si el envío falla, el aviso existe igual |
 | RF29 | OB-01, OB-02 | RN-18 | Recomienda con precios del catálogo y sin productos ajenos a él |
-| RF30 | OB-01, OB-02 | RN-18 | Las recetas usan solo productos del catálogo |
-| RF31 | OB-04 | RN-17, RN-18 | La respuesta trae precios y el aviso de salud |
+| RF30 | OB-01, OB-02 | RN-18 | La respuesta incluye preparación e ingredientes e indica cuáles se encuentran en el catálogo |
+| RF31 | OB-04 | RN-17, RN-18, RN-33 | La respuesta usa precios del catálogo, excluye medicamentos bajo fórmula y trae el aviso de que no sustituye el diagnóstico ni la prescripción médica |
 | RF32 | OB-04 | RN-17, RN-18 | Recomienda dentro del presupuesto y con el aviso |
 | RF33 | OB-06 | RN-09, RN-19 | La solicitud queda PENDIENTE y no puede publicar |
 | RF34 | OB-06 | RN-19 | Los datos se guardan y se consultan |
@@ -811,10 +948,10 @@ Cada requisito se verifica con un criterio de «pasa si…»; los valores con as
 | RF37 | OB-06 | RN-21 | Modifica o elimina lo propio y no lo de otro proveedor |
 | RF38 | OB-06 | RN-21 | La lista contiene solo sus productos |
 | RF39 | OB-03, OB-06 | RN-22 | Cada producto muestra su última actualización |
-| RF40 | OB-03, OB-05 | RN-09, RN-23 | El cambio de estado de una cuenta queda reflejado |
+| RF40 | OB-03, OB-05 | RN-09, RN-10, RN-23 | ADMIN lista, crea, consulta, modifica, activa, desactiva y elimina un cliente sujeto a integridad. Las operaciones no están disponibles para otros roles y se auditan cuando cambian datos |
 | RF41 | OB-03, OB-06 | RN-19, RN-23 | Un proveedor rechazado no puede publicar |
 | RF42 | OB-03, OB-06 | RN-20, RN-23 | Un producto dado de baja deja de ser visible y uno conservado sigue visible |
-| RF43 | OB-04 | RN-05, RN-09 | Una categoría nueva queda disponible |
+| RF43 | OB-04 | RN-05, RN-09, RN-23 | ADMIN gestiona marcas y categorías. Una categoría activa y válida queda disponible; una operación incompatible con la jerarquía o las relaciones se rechaza |
 | RF44 | OB-03 | RN-01 | Cada precio se muestra con su fecha y fuente |
 | RF45 | OB-05 | RN-14, 23, 27 | Ocultar un comentario lo quita de los listados y resuelve sus reportes |
 | RF46 | OB-03, OB-06 | — | El reporte muestra los totales del periodo |
@@ -826,10 +963,24 @@ Cada requisito se verifica con un criterio de «pasa si…»; los valores con as
 | RF52 | OB-04 | RN-02, RN-05 | Un producto de droguería vendido en dos droguerías muestra los dos precios en la comparación |
 | RF53 | OB-02 | RN-15, RN-16 | La lista de mis avisos incluye los generados por RF27 con su cantidad de no leídos |
 | RF54 | OB-02 | — | Marcar un aviso como leído baja el contador del encabezado |
-| RF55 | OB-04 | RN-02, RN-05, RN-32 | Un repuesto con la misma referencia en dos tiendas muestra los dos precios; uno con distinta referencia no se compara con él |
+| RF55 | OB-04 | RN-02, RN-05, RN-32, RN-34 | Si se habilita el comparador, una pieza de automóvil con la misma marca y referencia en dos tiendas muestra ambos precios; una referencia o marca distinta no coincide y los repuestos de motocicletas quedan excluidos |
 | RF56 | OB-01, OB-05 | RN-08, RN-10 | Una cuenta de Google nueva crea una cuenta USER e inicia sesión; un correo ya registrado entra a la misma cuenta; una cuenta desactivada no entra |
 | RF57 | OB-01 | RN-01 | Un precio con página registrada muestra el enlace y abre la página del producto en la tienda; un precio sin página registrada no muestra enlace |
 | RF58 | OB-04 | RN-02, RN-05 | Un producto de cuidado facial vendido en dos tiendas muestra los dos precios en la comparación |
+| RF59 | OB-01, OB-02, OB-04, OB-07 | RN-07 | Cada avatar abre el chat de su sección al consumidor con sesión. En móvil se accede desde un único botón flotante. Cerrar o recargar borra el historial y un visitante recibe una invitación a iniciar sesión |
+| RF60 | OB-07 | RN-07, RN-35, RN-36 | Con plan Gratuito se acepta la cuarta consulta del mes y se bloquea la quinta. Una lista completa de 200 caracteres se acepta y una de 201 se bloquea aunque cada artículo sea más corto. Cambiar de sección o reabrir el chat no restaura la cuota. El reinicio mensual habilita las cuatro consultas siguientes |
+| RF61 | OB-07 | RN-07, RN-35, RN-36 | Se acepta el quinto producto seguido y se bloquea el sexto. Retirar un seguimiento libera un cupo. Comparar precios sigue disponible |
+| RF62 | OB-07 | RN-07, RN-37, RN-36 | Una confirmación válida de prueba activa Premium y amplía topes; una confirmación duplicada no duplica la activación, y un pago pendiente, fallido o sin confirmación mantiene el plan anterior |
+| RF63 | OB-04 | RN-17, RN-18, RN-33 | Ante una consulta por un medicamento bajo fórmula, el servicio lo excluye antes de enviar productos al modelo aunque esté en el catálogo o el scraper no lo excluya. El aviso se muestra también cuando no hay recomendaciones |
+| RF64 | OB-07 | RN-07, RN-37, RN-36 | Tras usar una consulta o seguir un producto se muestra el consumo actualizado en Mi plan. Al activarse Premium se muestran sus límites ampliados |
+| RF65 | OB-03 | RN-09 | ADMIN ve un total de clientes activos y la gráfica de promedios que corresponden al conjunto de actividad y periodo de prueba |
+| RF66 | OB-03 | RN-09 | Un conjunto de búsquedas y seguimientos con conteos conocidos produce dos rankings ordenados, cada uno con su métrica |
+| RF67 | OB-03, OB-04 | RN-09, RN-23 | ADMIN puede gestionar productos y tiendas y un cambio admisible queda auditado. Se rechaza una eliminación que infrinja la integridad de las relaciones |
+| RF68 | OB-03 | RN-01, RN-09 | Un producto con precios en dos tiendas muestra ambas series con fechas en orden cronológico. Sin precios se informa que no hay datos |
+| RF69 | OB-03 | RN-02, RN-09, RN-23 | ADMIN revisa un objetivo y una oferta en conflicto. Gestionar la oferta respeta su estado y no omite la validación que precede a publicar |
+| RF70 | OB-03 | RN-02, RN-09, RN-23 | ADMIN identifica los tres recursos por su nombre legible. Una equivalencia modificada conserva evidencia y registra fecha y responsable |
+| RF71 | OB-07 | RN-09, RN-37 | ADMIN consulta el plan de un cliente y el estado de su suscripción. Otro rol no accede a esa vista |
+| RF72 | OB-05 | RN-09, RN-15, RN-23, RN-31 | Una acción permitida sobre un seguimiento o una calificación se audita. Moderar el texto de un comentario por sí solo no altera el promedio |
 
 ### Anexo B. Registro de decisiones y pendientes
 
@@ -851,12 +1002,12 @@ Este registro reúne acuerdos definidos y decisiones que conservan un valor prov
 | DP-12 | Fase de RF03 y RF04 | Fase 2 (Sprint 2, épica Cuenta de usuario) | RF03, RF04 |
 | DP-13 | La Fase 6 incluye «aplicación móvil» y el alcance excluye la app móvil nativa | Aclarar si es web adaptable o nativa | Fase 6 |
 | DP-14 | Valores de RNF10 (3 segundos, 20 usuarios) | Propuestos; validar con una prueba de carga | RNF10 |
-| DP-15 | Moderación y bloqueo manuales hasta la Fase 5 | Manual en la base de datos | RF45, RF47 |
+| DP-15 | Moderación y bloqueo mientras falten sus funciones en el panel | Manual en la base de datos | RF45, RF47 |
 | DP-16 | Al eliminar su comentario, ¿se conserva la calificación? | Sí: la calificación queda y no puede volver a calificar ni a comentar ese producto en esa tienda | RN-12, RN-25, RF22 |
 | DP-17 | Exigir un comentario para calificar (RN-30) puede reducir el número de calificaciones | Se mantiene; medirlo con el indicador de OB-05 | RN-30, OB-05 |
 | DP-18 | Catálogo cerrado de razones de reporte | SPAM, LENGUAJE\_OFENSIVO, INFORMACION\_FALSA, OTRO (hasta ahora) | RN-27, RF17 |
-| DP-19 | ¿Bajo qué criterio de fraude se puede retirar una calificación del promedio? | Ninguno todavía: el estado del comentario (incluido OCULTO) no retira la calificación; moderar el texto no debe cambiar el promedio | RN-13, RF40 |
-| DP-20 | Compatibilidad de un repuesto con un modelo de vehículo o moto | Fuera del alcance: se compara solo por referencia | RF55, RN-32 |
+| DP-19 | ¿Bajo qué criterio de fraude se puede retirar una calificación del promedio? | Ninguno todavía: el estado del comentario (incluido OCULTO) no retira la calificación; moderar el texto no debe cambiar el promedio | RN-13, RN-31, RF15, RF72 |
+| DP-20 | Compatibilidad de un repuesto con un modelo de automóvil | Fuera del alcance: se compara solo por referencia | RF55, RN-32 |
 | DP-21 | ¿Repuestos tiene un asistente de IA en la Fase 4? | No | RF29 a RF32 |
 | DP-22 | Inicio de sesión con Google con un correo ya registrado | Entra a la cuenta existente si Google confirma el correo | RF56, RN-08 |
 | DP-23 | Cuenta creada con Google: ¿tiene contraseña y puede cambiar su correo? | No tiene contraseña hasta que la cree con RF03; no cambia su correo desde el perfil | RF03, RF04, RF56 |
@@ -867,7 +1018,7 @@ Este registro reúne acuerdos definidos y decisiones que conservan un valor prov
 | DP-28 | Repuesto sin referencia registrada | No entra en la comparación (por confirmar) | RF55, RN-32 |
 | DP-29 | Contenido de la página de inicio | Definida: presentación, ejemplos y cifras reales, tiendas, secciones comerciales, beneficios, cómo funciona, quiénes somos, preguntas frecuentes y llamada a la acción; sin testimonios o funciones no implementadas | RF50, HU-03 |
 | DP-30 | Profundidad de la jerarquía de categorías | Dos niveles: dominio (raíz) y categoría (hoja); los productos cuelgan de la hoja, por ejemplo Supermercado › Granos y cereales | RN-05, RF11 |
-| DP-31 | ¿Las tiendas de repuestos permiten comparar? | Se mide antes de construir EP-06 (20 productos por tienda); si menos del 30 % de los repuestos aparece en 2 tiendas o más, EP-06 se replantea como listado con buscador por referencia | RF55, RN-32 |
+| DP-31 | ¿Las tiendas de repuestos permiten comparar? | SCRUM-295 mide 20 productos por tienda en Importadoras Asociadas, Autoplanet y Zona Repuestera. Se mide la coincidencia exacta en dos o más tiendas por marca y referencia del fabricante, incluido un código OEM cuando identifica la misma pieza y se verifica su marca. Si la coincidencia es menor al 30 %, se replantea SCRUM-156 (EP-06) como listado con buscador por referencia | RF55, RN-32, RN-34 |
 | DP-32 | ¿Qué fecha se muestra junto a un precio? | La última vez que la fuente lo confirmó (last_seen_at) | RF10, RN-01 |
 | DP-33 | ¿Qué cumple la “fuente” que exige RN-01? | La tienda del precio, que siempre existe; la página del producto en la tienda (RF57) es evidencia adicional cuando se registró. prices.source guarda el nombre del producto tal como lo publica la tienda, para rastrear de qué oferta salió. Se revisa al llegar EP-08 | RN-01, RF51, RF57 |
 | DP-34 | ¿Qué precio cuenta en el filtro por rango? | El vigente: el más reciente de cada par producto-tienda, nunca uno anterior, y solo en tiendas activas; con tiendas seleccionadas, solo el de esas tiendas; límites inclusivos | RF06, HU-06b |
@@ -886,6 +1037,14 @@ Este registro reúne acuerdos definidos y decisiones que conservan un valor prov
 | DP-47 | Opciones del buscador por sección | Catálogo de raíces activas y categorías/tiendas de la raíz; cambiar sección limpia categoría/tienda/página. Un error de catálogo no lanza búsqueda global | RF06, RF11, HU-29, HU-31 |
 | DP-48 | Cancelaciones de navegación | Conservar AbortController y StrictMode; clasificar desconexiones reconocidas en DEBUG sin otra respuesta, manteniendo ERROR/500 en fallos reales | RNF08, RF05, RF50 |
 | DP-49 | Conflictos entre ofertas y correcciones globales | PENDING/UNCLASSIFIED de corridas elegibles pueden aportar evidencia de tamaño; se omite solo aceptación de rango/unidad del target al evaluar esa evidencia. El override requiere una única identidad física y no cambia un maestro existente | RF51, RN-02 |
+| DP-50 | Repuestos en el Sprint 4 | HT-28 y SCRUM-295 cubren automóviles. Las HU-32 a HU-34 quedan en backlog y se revisan con el resultado de DP-31. La publicación requiere validar marca y referencia | RF51, RF55, RN-32, RN-34 |
+| DP-51 | Origen y selección de la pasarela | Exigencia de Programación Web. HT-22 evalúa Wompi, PayU y Stripe en modo de prueba y registra la elección motivada en DECISIONS.md. HT-24 implementa la integración elegida | OB-07, ACT-10, RF62, RN-37 |
+| DP-52 | Cuotas mensuales y límites de Premium | HT-23 modela planes, suscripciones y contadores e implementa el reinicio mensual. Los topes gratuitos quedan definidos por RN-36 y HT-25 los valida desde el backend. El precio y los límites Premium quedan pendientes | RF60 a RF62, RF64, RN-36, RNF14 |
+| DP-53 | Asistente y control móvil | HT-20 cubre el modelo compartido con contexto por sección. HT-21 cubre los avatares laterales, el chat temporal y el botón flotante único en móvil | RF29 a RF32, RF59, RNF01, RNF13 |
+| DP-54 | Métricas, gestión de clientes y herramienta del panel | Definir cliente activo, periodo y frecuencia de actualización, atribución de búsquedas y política de eliminación de cuentas. HT-26 empieza con una evaluación de cuatro horas de una herramienta integrable. HT-27 usa series sobre los precios registrados | RF40, RF43, RF65 a RF68 |
+| DP-55 | Operación ampliada del panel | Quedan en backlog planes, captura, equivalencias, comentarios/reportes y gestión de seguimientos/calificaciones. La carga manual de precios desde el panel queda por definir | RF45, RF69 a RF72 |
+| DP-56 | Evidencia para la restricción de droguería | Definir la fuente de clasificación de medicamentos sujetos a fórmula. Aplicar la exclusión en el servicio de IA con independencia del prompt y del scraper | RF31, RF63, RN-33 |
+| DP-57 | Selección de cuidado facial | Cutis, Medipiel y BellaPiel. Farmatodo–Cuidado facial, Ánimus Lab y Botanikalia fueron propuestas que nunca se implementaron. La selección está confirmada sin tarea adicional de verificación en el Sprint 4 | RF51, RF58, RNF06 |
 
 ### Anexo C. Criterios de aceptación de la ingesta y la navegación
 
@@ -910,3 +1069,7 @@ Estos casos concretan RF51, RF06, RF11 y RNF06/RNF08; no crean nuevos requisitos
 ### Anexo D. Actualización documental del 18-nov-2026
 
 Se preservan los identificadores RF/RN/HU y las fases de IA, proveedores y administración. Se reconcilian RF09/RF50 con la interfaz real, se concreta RF51 y se agregan decisiones DP-40 a DP-49 y criterios verificables. La planificación de una fase no certifica su despliegue; los pendientes de curaduría, publicación de parches y base compartida figuran en DECISIONS.md.
+
+### Anexo E. Actualización documental del Sprint 4 (21-nov-2026)
+
+Los acuerdos del 20-nov-2026 agregan OB-07, ACT-10, P-08, HU-37 a HU-46, RN-37 a RN-33, RF59 a RF72 y RNF13 a RNF14. Se preservan los identificadores anteriores y se actualizan los criterios de prueba y las matrices de trazabilidad. Las condiciones abiertas figuran en DP-50 a DP-57. El registro técnico y de responsables está en [DECISIONS.md](DECISIONS.md).
