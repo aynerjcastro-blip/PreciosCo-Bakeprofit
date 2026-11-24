@@ -1,0 +1,17 @@
+{
+  "action": "order.processed",
+  "api_version": "v1",
+  "application_id": "5852534070406015",
+  "type": "order",
+  "live_mode": false,
+  "data": {
+    "currency_id": "CLP",
+    "external_reference": "ext_ref_manual_full_test",
+    "id": "ORDTST01M4V4VSXCTN8ZN1FJ02KKMFGE",
+    "status": "processed",
+    "status_detail": "accredited",
+    "total_amount": "4500",
+    "total_paid_amount": "4500",
+    "type": "online"
+  }
+}

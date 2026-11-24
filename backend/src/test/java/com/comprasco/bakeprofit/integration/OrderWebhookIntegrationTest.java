@@ -1,10 +1,16 @@
 package com.comprasco.bakeprofit.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -15,24 +21,43 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 
 import com.comprasco.bakeprofit.auth.entity.Plan;
 import com.comprasco.bakeprofit.auth.entity.Role;
 import com.comprasco.bakeprofit.auth.entity.User;
 import com.comprasco.bakeprofit.auth.repository.UserRepository;
+import com.comprasco.bakeprofit.auth.security.JwtAuthFilter;
+import com.comprasco.bakeprofit.auth.security.JwtSecurity;
+import com.comprasco.bakeprofit.auth.security.SecurityConfig;
+import com.comprasco.bakeprofit.core.filter.RateLimitFilter;
+import com.comprasco.bakeprofit.core.handler.GlobalExceptionHandler;
+import com.comprasco.bakeprofit.subscription.controller.PaymentWebhookController;
 import com.comprasco.bakeprofit.subscription.entity.PaymentTransaction;
 import com.comprasco.bakeprofit.subscription.entity.SubscriptionStatus;
 import com.comprasco.bakeprofit.subscription.repository.PaymentTransactionRepository;
@@ -44,19 +69,31 @@ import com.mercadopago.net.MPResponse;
 
 @Tag("integration")
 @EnabledIfEnvironmentVariable(named = "SPRING_DATASOURCE_URL", matches = ".+")
+@ExtendWith(OutputCaptureExtension.class)
 @SpringBootTest(classes = OrderWebhookIntegrationTest.Config.class,
-    webEnvironment = SpringBootTest.WebEnvironment.NONE,
+    webEnvironment = SpringBootTest.WebEnvironment.MOCK,
     properties = {
         "app.mercadopago.access-token=webhook-integration-test",
+        "app.mercadopago.webhook-secret=" + OrderWebhookIntegrationTest.WEBHOOK_SECRET,
+        "jwt.secret=local-only-integration-test-secret-for-webhook",
         "spring.datasource.hikari.maximum-pool-size=2"
     })
 class OrderWebhookIntegrationTest {
+
+    static final String WEBHOOK_SECRET = "webhook-integration-signing-secret";
+    private static final String WEBHOOK_PATH = "/api/payments/webhook/mercadopago";
+    // Cuerpos de la sección de validación y del simulador publicados en la guía de Webhooks de Checkout Pro Orders.
+    private static final ClassPathResource ORDER_NOTIFICATION = new ClassPathResource(
+        "mercadopago/checkout-pro-orders-notification.json");
+    private static final ClassPathResource SIMULATED_NOTIFICATION = new ClassPathResource(
+        "mercadopago/checkout-pro-orders-simulated-notification.json");
 
     @Configuration(proxyBeanMethods = false)
     @EnableAutoConfiguration
     @EntityScan(basePackageClasses = {User.class, PaymentTransaction.class})
     @EnableJpaRepositories(basePackageClasses = {UserRepository.class, PaymentTransactionRepository.class})
-    @Import(OrderWebhookService.class)
+    @Import({OrderWebhookService.class, PaymentWebhookController.class, SecurityConfig.class,
+        JwtAuthFilter.class, JwtSecurity.class, RateLimitFilter.class, GlobalExceptionHandler.class})
     static class Config {
         @Bean
         Clock clock() {
@@ -105,8 +142,15 @@ class OrderWebhookIntegrationTest {
     @Autowired private SubscriptionRepository subscriptions;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private TestOrders orders;
+    @Autowired private WebApplicationContext webContext;
 
     private final List<Long> testUsers = new ArrayList<>();
+    private MockMvc mvc;
+
+    @BeforeEach
+    void configureMvc() {
+        mvc = MockMvcBuilders.webAppContextSetup(webContext).apply(springSecurity()).build();
+    }
 
     @AfterEach
     void cleanTestRows() {
@@ -120,17 +164,59 @@ class OrderWebhookIntegrationTest {
     }
 
     @Test
+    void rejectsAnInvalidSignatureWithoutCallingMercadoPagoOrChangingAnyRows() throws Exception {
+        Fixture payment = newPayment();
+        var originalPayment = jdbc.queryForMap("SELECT * FROM payment_transactions WHERE id = ?", payment.paymentId());
+        var originalUser = jdbc.queryForMap("SELECT * FROM users WHERE id = ?", payment.userId());
+        int calls = orders.calls.get();
+
+        mvc.perform(webhook(payment.orderId(), orderBody(payment.orderId()), false))
+            .andExpect(status().isUnauthorized());
+
+        assertThat(orders.calls.get()).isEqualTo(calls);
+        assertThat(jdbc.queryForMap("SELECT * FROM payment_transactions WHERE id = ?", payment.paymentId()))
+            .isEqualTo(originalPayment);
+        assertThat(jdbc.queryForMap("SELECT * FROM users WHERE id = ?", payment.userId())).isEqualTo(originalUser);
+        assertNotActivated(payment);
+    }
+
+    @Test
+    void activatesPremiumForAnAccreditedOrderWithTheRecordedReferenceAndAmount() throws Exception {
+        Fixture payment = newPayment();
+        respond(payment, "processed", "accredited", "10000", "10000", "COP", "processed", "accredited");
+
+        mvc.perform(signedWebhook(payment.orderId())).andExpect(status().isOk());
+
+        assertPayment(payment, "processed", "accredited");
+        assertActivated(payment);
+    }
+
+    @Test
+    void handlesTheSameSignedWebhookTwiceWithoutCreatingASecondSubscription() throws Exception {
+        Fixture payment = newPayment();
+        respond(payment, "processed", "accredited", "10000", "10000", "COP", "processed", "accredited");
+        var request = signedWebhook(payment.orderId());
+
+        mvc.perform(request).andExpect(status().isOk());
+        Long originalSubscription = assertActivated(payment);
+        mvc.perform(request).andExpect(status().isOk());
+
+        assertThat(assertActivated(payment)).isEqualTo(originalSubscription);
+        assertPayment(payment, "processed", "accredited");
+    }
+
+    @Test
     void recordsTheObservedPendingAndRejectedOrdersWithoutActivatingPremium() throws Exception {
         Fixture payment = newPayment();
         respond(payment, "processing", "in_process", "10000", null, "COP", "processing", "in_process");
-        service.process(payment.orderId());
+        mvc.perform(signedWebhook(payment.orderId())).andExpect(status().isOk());
         assertPayment(payment, "processing", "in_process");
+        assertNotActivated(payment);
 
         respond(payment, "action_required", "waiting_retry", "10000", null, "COP", "failed", "rejected_by_issuer");
-        service.process(payment.orderId());
+        mvc.perform(signedWebhook(payment.orderId())).andExpect(status().isOk());
         assertPayment(payment, "action_required", "rejected_by_issuer");
-        assertThat(subscriptions.findByUserIdAndStatus(payment.userId(), SubscriptionStatus.ACTIVE)).isEmpty();
-        assertThat(users.findById(payment.userId()).orElseThrow().getPlan()).isEqualTo(Plan.FREE);
+        assertNotActivated(payment);
     }
 
     @Test
@@ -148,13 +234,7 @@ class OrderWebhookIntegrationTest {
         }
 
         assertPayment(payment, "processed", "accredited");
-        var active = subscriptions.findByUserIdAndStatus(payment.userId(), SubscriptionStatus.ACTIVE);
-        assertThat(active).singleElement().satisfies(subscription -> {
-            assertThat(subscription.getPlan()).isEqualTo(Plan.PREMIUM);
-            assertThat(jdbc.queryForObject("SELECT subscription_id FROM payment_transactions WHERE id = ?",
-                Long.class, payment.paymentId())).isEqualTo(subscription.getId());
-        });
-        assertThat(users.findById(payment.userId()).orElseThrow().getPlan()).isEqualTo(Plan.PREMIUM);
+        assertActivated(payment);
 
         respond(payment, "refunded", "refunded", "10000", "10000", "COP", "refunded", "refunded");
         service.process(payment.orderId());
@@ -165,17 +245,84 @@ class OrderWebhookIntegrationTest {
     }
 
     @Test
-    void ignoresOrdersWithADifferentCurrencyAmountOrAccreditedTotal() throws Exception {
+    void logsOrdersWithADifferentCurrencyAmountOrAccreditedTotal(CapturedOutput output) throws Exception {
         Fixture payment = newPayment();
         respond(payment, "processed", "accredited", "10000", "10000", "USD", "processed", "accredited");
-        service.process(payment.orderId());
+        mvc.perform(signedWebhook(payment.orderId())).andExpect(status().isOk());
         respond(payment, "processed", "accredited", "9000", "9000", "COP", "processed", "accredited");
-        service.process(payment.orderId());
+        mvc.perform(signedWebhook(payment.orderId())).andExpect(status().isOk());
         respond(payment, "processed", "accredited", "10000", "9000", "COP", "processed", "accredited");
-        service.process(payment.orderId());
+        mvc.perform(signedWebhook(payment.orderId())).andExpect(status().isOk());
 
         assertThat(payments.findById(payment.paymentId()).orElseThrow().getStatus()).isEqualTo("CREATED");
-        assertThat(subscriptions.findByUserIdAndStatus(payment.userId(), SubscriptionStatus.ACTIVE)).isEmpty();
+        assertNotActivated(payment);
+        String expectedMessage = "El importe o la moneda de la Order " + payment.orderId()
+            + " no coincide con el intento local";
+        assertThat(output.getAll().lines().filter(line -> line.contains(expectedMessage)).count()).isEqualTo(3L);
+    }
+
+    @Test
+    void acknowledgesAnOrderWithNoMatchingCheckoutIntent(CapturedOutput output) throws Exception {
+        Fixture payment = newPayment();
+        String unknownReference = UUID.randomUUID().toString();
+        respond(payment, "processed", "accredited", "10000", "10000", "COP", "processed", "accredited");
+        orders.responses.computeIfPresent(payment.orderId(), (id, response) ->
+            response.replace(payment.reference(), unknownReference));
+        String body = SIMULATED_NOTIFICATION.getContentAsString(StandardCharsets.UTF_8)
+            .replace("ORDTST01M4V4VSXCTN8ZN1FJ02KKMFGE", payment.orderId())
+            .replace("ext_ref_manual_full_test", unknownReference);
+
+        mvc.perform(webhook(payment.orderId(), body, true)).andExpect(status().isOk());
+
+        assertThat(payments.findByExternalReference(unknownReference)).isEmpty();
+        assertThat(payments.findByExternalOrderId(payment.orderId())).isEmpty();
+        assertThat(payments.findById(payment.paymentId()).orElseThrow().getStatus()).isEqualTo("CREATED");
+        assertNotActivated(payment);
+        assertThat(output.getAll()).contains("No existe un intento local para la Order " + payment.orderId());
+    }
+
+    private Long assertActivated(Fixture payment) {
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_transactions WHERE user_id = ?",
+            Long.class, payment.userId())).isEqualTo(1L);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM subscriptions WHERE user_id = ?",
+            Long.class, payment.userId())).isEqualTo(1L);
+        var active = subscriptions.findByUserIdAndStatus(payment.userId(), SubscriptionStatus.ACTIVE);
+        assertThat(active).singleElement().satisfies(subscription -> assertThat(subscription.getPlan()).isEqualTo(Plan.PREMIUM));
+        Long subscriptionId = active.getFirst().getId();
+        assertThat(jdbc.queryForObject("SELECT subscription_id FROM payment_transactions WHERE id = ?",
+            Long.class, payment.paymentId())).isEqualTo(subscriptionId);
+        assertThat(users.findById(payment.userId()).orElseThrow().getPlan()).isEqualTo(Plan.PREMIUM);
+        return subscriptionId;
+    }
+
+    private void assertNotActivated(Fixture payment) {
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM subscriptions WHERE user_id = ?",
+            Long.class, payment.userId())).isZero();
+        assertThat(users.findById(payment.userId()).orElseThrow().getPlan()).isEqualTo(Plan.FREE);
+    }
+
+    private MockHttpServletRequestBuilder signedWebhook(String orderId) throws Exception {
+        return webhook(orderId, orderBody(orderId), true);
+    }
+
+    private String orderBody(String orderId) throws Exception {
+        return ORDER_NOTIFICATION.getContentAsString(StandardCharsets.UTF_8)
+            .replace("ORD01JYH1Z1YJN4HZ8J3Q0RB3YP6D", orderId);
+    }
+
+    private MockHttpServletRequestBuilder webhook(String orderId, String body, boolean validSignature) throws Exception {
+        String requestId = UUID.randomUUID().toString();
+        long timestamp = Instant.now().getEpochSecond();
+        String manifest = "id:%s;request-id:%s;ts:%s;".formatted(orderId.toLowerCase(Locale.ROOT), requestId, timestamp);
+        var mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(WEBHOOK_SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+        String digest = HexFormat.of().formatHex(mac.doFinal(manifest.getBytes(StandardCharsets.UTF_8)));
+        if (!validSignature) {
+            digest = (digest.startsWith("0") ? "1" : "0") + digest.substring(1);
+        }
+        return post(WEBHOOK_PATH).queryParam("data.id", orderId).queryParam("type", "order")
+            .header("x-request-id", requestId).header("x-signature", "ts=%s,v1=%s".formatted(timestamp, digest))
+            .contentType(MediaType.APPLICATION_JSON).content(body);
     }
 
     private Fixture newPayment() {
