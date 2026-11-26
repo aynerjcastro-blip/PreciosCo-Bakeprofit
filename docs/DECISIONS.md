@@ -606,11 +606,19 @@ El equipo prioriza IA especializada, planes de suscripción y el primer panel ad
 | `canceled` o `expired` | Registra la cancelación o el vencimiento y conserva el plan vigente. |
 | `processed/partially_refunded` o `refunded` | Registra el reembolso parcial o total y conserva el plan vigente. |
 
+Una cuenta que ya tiene Premium recibe `409 Conflict` al solicitar otro checkout. Si se acreditan dos órdenes abiertas antes de la activación, el backend serializa el procesamiento por usuario y registra ambos pagos vinculados a la misma suscripción activa. El segundo pago queda registrado para seguimiento y conserva las fechas de la suscripción.
+
 Las órdenes locales en `canceled`, `expired` o `refunded` se omiten antes de consultar al proveedor. La revocación de acceso por reembolso o contracargo, la renovación automática y la gestión de mediaciones quedan pendientes. [Estados de Orders](https://www.mercadopago.com.co/developers/es/docs/checkout-pro-orders/payment-management/status/order-status?scope=prod)
 
 **Configuración.** Para Docker, define las variables de `backend/.env.example` en `backend/.env`. En **Tus integraciones → Webhooks → Prueba**, registra la URL HTTPS del túnel ngrok con el sufijo `/api/payments/webhook/mercadopago` y selecciona **Order (Mercado Pago)**. Actualiza la URL en el panel si cambia el túnel y configura `MERCADO_PAGO_WEBHOOK_SECRET` con la firma de esa aplicación. Aplica el ajuste de `external_order_id` y `external_reference` de la [migración HT-23](../scripts/2026-11-ht23-planes-suscripciones.sql) antes de arrancar este backend. [Configuración de Webhooks](https://www.mercadopago.com.co/developers/es/docs/checkout-pro-orders/notifications)
 
-**Prueba manual en sandbox.** Inicia un checkout por escenario con un usuario de prueba en `FREE`. Usa la tarjeta oficial y el titular `APRO` para aprobación, `FUND` para rechazo por fondos insuficientes o `CONT` para pendiente. Comprueba en ngrok que el webhook de la misma Order recibió `200`. El aprobado debe enlazar una sola suscripción y dejar al comprador en `PREMIUM`. El rechazo y el pendiente deben conservar `FREE`. Para probar un duplicado, selecciona la entrega original en **Inicio → Webhooks → Prueba** y usa **Reenviar notificaciones**. Verifica que el mismo `data.id` vuelve a recibir `200` y conserva el mismo `subscription_id`. [Tarjetas de prueba de Colombia](https://www.mercadopago.com.co/developers/es/docs/checkout-pro-orders/integration-test/test-purchase-with-card?scope=prod) · [Monitoreo y reenvío de notificaciones](https://www.mercadopago.com.co/developers/es/docs/checkout-pro-orders/notifications)
+**Prueba manual en sandbox.** Inicia un checkout por escenario con un usuario de prueba en `FREE`. Usa la tarjeta oficial y el titular `APRO` para aprobación, `FUND` para rechazo por fondos insuficientes o `CONT` para pendiente. Comprueba en ngrok que el webhook de la misma Order recibió `200`. El aprobado debe enlazar una sola suscripción y dejar al comprador en `PREMIUM`. El rechazo y el pendiente deben conservar `FREE`. [Tarjetas de prueba de Colombia](https://www.mercadopago.com.co/developers/es/docs/checkout-pro-orders/integration-test/test-purchase-with-card?scope=prod)
+
+**Reenvío de la misma Order.** En **Inicio → Webhooks → Prueba**, busca la entrega original de `order.processed` que respondió `200`. Confirma que su `data.id` es el `external_order_id` del pago y usa **Reenviar notificaciones** si aparece en el panel. [Monitoreo y reenvío de notificaciones](https://www.mercadopago.com.co/developers/es/docs/checkout-pro-orders/notifications)
+
+Si el botón no está disponible, usa **Replay en ngrok**. Con el túnel y el backend activos, abre el inspector local en `http://127.0.0.1:4040` y selecciona el POST original que obtuvo `200`. Pulsa **Replay** sin editar la ruta, la query, los encabezados de firma ni el cuerpo. La firma original debe corresponder al secreto que carga el backend. [Reenvío desde el inspector local de ngrok](https://ngrok.com/docs/gateway/agent/web-inspection-interface#replaying-requests)
+
+Verifica un nuevo `200` para el mismo `data.id`. El pago debe conservar su `subscription_id` y el usuario debe mantener el mismo número de suscripciones. Si la entrega original ya no está capturada, usa la petición firmada de Postman o la prueba automatizada para comprobar la idempotencia sin abrir otro checkout. Un `401` del simulador ocurre antes de procesar la orden y no verifica duplicados.
 
 **Prueba automatizada.** Desde `backend`, con JDK 25, usa una base PostgreSQL de pruebas con HT-23 aplicado y define `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` y `SPRING_DATASOURCE_PASSWORD` en la misma terminal. El test simula el `GET` a Mercado Pago y usa un pool de dos conexiones para probar concurrencia.
 
@@ -618,7 +626,11 @@ Las órdenes locales en `canceled`, `expired` o `refunded` se omiten antes de co
 .\mvnw.cmd test '-Dtest=OrderWebhookIntegrationTest' '-Dsurefire.excludedGroups='
 ```
 
-El resultado esperado es `Tests run: 7, Failures: 0, Errors: 0, Skipped: 0`. La suite cubre firma inválida, acreditación, duplicados, rechazo, pendiente, importe o moneda incorrectos, referencia inexistente y entrega concurrente.
+El resultado esperado es `Tests run: 11, Failures: 0, Errors: 0, Skipped: 0`. La suite incluye el rechazo, que confirma la entrega con `200` y conserva el plan `FREE`, y verifica que Swagger documenta el webhook como público.
+
+**Postman.** Abre la [colección Suscripciones](../postman/collections/Suscripciones/) en Local View. Usa `baseUrl=http://localhost:8080` para el backend local y `token` para el JWT de un usuario de prueba en `FREE`. Para el webhook, configura `mpOrderId` con una Order de sandbox ya acreditada y registrada en esa base. Guarda `mpWebhookSecret` como valor local del entorno de Postman, con el mismo secreto que carga el backend.
+
+El pre-request de firma válida genera `x-request-id` y firma mediante HMAC-SHA256 el manifiesto `id:<data.id en minúsculas>;request-id:<x-request-id>;ts:<timestamp>;`. Envía el resultado hexadecimal como `x-signature` en el formato `ts=<timestamp>,v1=<firma>`. La colección verifica checkout `201` con sesión y `401` sin sesión, y webhook `200` con la firma calculada y `401` con firma inválida. [Scripts de pre-request de Postman](https://learning.postman.com/docs/tests-and-scripts/write-scripts/pre-request-scripts)
 
 ### Panel administrativo (Ramos)
 

@@ -1,0 +1,24 @@
+$kind: http-request
+name: POST Webhook - Firma inválida
+description: Envía una firma incorrecta para la misma Order de sandbox.
+url: "{{baseUrl}}/api/payments/webhook/mercadopago?data.id={{mpOrderId}}&type=order"
+method: POST
+auth:
+  type: noauth
+headers:
+  - key: x-request-id
+    value: "{{$guid}}"
+  - key: x-signature
+    value: "ts={{$timestamp}},v1=0000000000000000000000000000000000000000000000000000000000000000"
+body:
+  type: json
+  content: '{"type":"order","action":"order.processed","live_mode":false,"data":{"id":"{{mpOrderId}}"}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Rechaza la firma con 401 y cuerpo vacío", () => {
+        pm.response.to.have.status(401);
+        pm.expect(pm.response.text()).to.equal("");
+      });
+order: 4000
