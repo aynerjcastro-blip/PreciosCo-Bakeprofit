@@ -22,8 +22,8 @@ import org.springframework.context.annotation.Configuration;
 public class OpenApiConfig {
 
     /**
-     * Inyecta automaticamente las respuestas HTTP 401 y 403 en la documentacion de
-     * todos los endpoints.
+     * Añade las respuestas de autenticación a las operaciones protegidas.
+     * Una operación con seguridad vacía sobrescribe el Bearer global.
      *
      * @return OpenApiCustomizer con la declaracion de esquemas de respuesta de
      *         seguridad
@@ -32,6 +32,9 @@ public class OpenApiConfig {
     public OpenApiCustomizer globalSecurityResponsesCustomizer() {
         return openApi -> openApi.getPaths().values()
                 .forEach(pathItem -> pathItem.readOperations().forEach(operation -> {
+                    if (operation.getSecurity() != null && operation.getSecurity().isEmpty()) {
+                        return;
+                    }
                     ApiResponses apiResponses = operation.getResponses();
                     if (!apiResponses.containsKey("401")) {
                         apiResponses.addApiResponse("401", new ApiResponse()

@@ -22,6 +22,11 @@ public class AiQuotaResetJob {
         this.clock = clock;
     }
 
+    /**
+     * El lote avanza un mes desde el vencimiento registrado para conservar el calendario de cada
+     * usuario aunque la ejecución se retrase. Si quedaron varios períodos vencidos, se recupera
+     * uno por cada ejecución.
+     */
     @Scheduled(
         initialDelayString = "${app.ai-quota.reset-check.initial-delay:PT1M}",
         fixedDelayString = "${app.ai-quota.reset-check.fixed-delay:PT1H}")

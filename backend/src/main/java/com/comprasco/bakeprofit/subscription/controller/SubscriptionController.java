@@ -18,6 +18,12 @@ import com.comprasco.bakeprofit.subscription.exception.CheckoutGatewayException;
 import com.comprasco.bakeprofit.subscription.exception.PremiumAlreadyActiveException;
 import com.comprasco.bakeprofit.subscription.service.PaymentService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
@@ -30,6 +36,27 @@ public class SubscriptionController {
         this.paymentService = paymentService;
     }
 
+    @Operation(summary = "Iniciar el checkout de Premium",
+        description = "Requiere el rol USER. Crea un intento de pago y devuelve la URL de Checkout Pro. "
+            + "La acreditación se confirma mediante el webhook de Mercado Pago.")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponse(responseCode = "201", description = "Intento creado",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = CheckoutIntentResponse.class)))
+    @ApiResponse(responseCode = "401", description = "JWT ausente o inválido, o cuenta inactiva",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "El rol de la cuenta no permite iniciar un checkout",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "La cuenta ya no existe al crear el intento",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "La cuenta ya tiene Premium activo",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "429", description = "Límite de solicitudes por IP excedido",
+        headers = @Header(name = "Retry-After", description = "Segundos hasta que se restablezca el límite"),
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "500", description = "No se pudo iniciar el checkout por un fallo interno o de configuración",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "502", description = "Mercado Pago no pudo crear la orden o devolvió datos incompatibles",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     @PostMapping("/checkout")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<CheckoutIntentResponse> checkout(@CurrentUser User user) {

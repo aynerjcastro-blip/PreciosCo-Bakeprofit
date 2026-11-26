@@ -2,7 +2,9 @@ package com.comprasco.bakeprofit.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -57,6 +59,7 @@ import com.comprasco.bakeprofit.auth.repository.UserRepository;
 import com.comprasco.bakeprofit.auth.security.JwtAuthFilter;
 import com.comprasco.bakeprofit.auth.security.JwtSecurity;
 import com.comprasco.bakeprofit.auth.security.SecurityConfig;
+import com.comprasco.bakeprofit.core.config.OpenApiConfig;
 import com.comprasco.bakeprofit.core.filter.RateLimitFilter;
 import com.comprasco.bakeprofit.core.handler.GlobalExceptionHandler;
 import com.comprasco.bakeprofit.subscription.config.PremiumCheckoutProperties;
@@ -99,7 +102,7 @@ class OrderWebhookIntegrationTest {
     @EntityScan(basePackageClasses = {User.class, PaymentTransaction.class})
     @EnableJpaRepositories(basePackageClasses = {UserRepository.class, PaymentTransactionRepository.class})
     @Import({OrderWebhookService.class, PaymentService.class, PaymentWebhookController.class,
-        SubscriptionController.class, SecurityConfig.class,
+        SubscriptionController.class, SecurityConfig.class, OpenApiConfig.class,
         JwtAuthFilter.class, JwtSecurity.class, RateLimitFilter.class, GlobalExceptionHandler.class})
     static class Config {
         @Bean
@@ -214,17 +217,45 @@ class OrderWebhookIntegrationTest {
     }
 
     @Test
-    void recordsTheObservedPendingAndRejectedOrdersWithoutActivatingPremium() throws Exception {
+    void recordsAPendingOrderWithoutActivatingPremium() throws Exception {
         Fixture payment = newPayment();
         respond(payment, "processing", "in_process", "10000", null, "COP", "processing", "in_process");
         mvc.perform(signedWebhook(payment.orderId())).andExpect(status().isOk());
         assertPayment(payment, "processing", "in_process");
         assertNotActivated(payment);
+    }
 
+    @Test
+    void acknowledgesARejectedOrderAndKeepsTheUserOnFree() throws Exception {
+        Fixture payment = newPayment();
         respond(payment, "action_required", "waiting_retry", "10000", null, "COP", "failed", "rejected_by_issuer");
-        mvc.perform(signedWebhook(payment.orderId())).andExpect(status().isOk());
+        mvc.perform(signedWebhook(payment.orderId()))
+            .andExpect(status().isOk())
+            .andExpect(content().string(""));
         assertPayment(payment, "action_required", "rejected_by_issuer");
+        assertThat(payments.findById(payment.paymentId()).orElseThrow().getSubscription()).isNull();
         assertNotActivated(payment);
+    }
+
+    @Test
+    void exposesBearerOnlyForCheckoutAndDescribesTheWebhookSignatureInOpenApi() throws Exception {
+        String checkout = "$.paths['/api/subscriptions/checkout'].post";
+        String webhook = "$.paths['" + WEBHOOK_PATH + "'].post";
+
+        mvc.perform(get("/v3/api-docs"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath(checkout + ".security[0].bearerAuth").isArray())
+            .andExpect(jsonPath(checkout + ".responses['201']").exists())
+            .andExpect(jsonPath(checkout + ".responses['200']").doesNotExist())
+            .andExpect(jsonPath(checkout + ".responses['409'].content['application/json'].schema['$ref']")
+                .value("#/components/schemas/ErrorResponse"))
+            .andExpect(jsonPath(checkout + ".responses['429']").exists())
+            .andExpect(jsonPath(webhook + ".security").isArray())
+            .andExpect(jsonPath(webhook + ".security").isEmpty())
+            .andExpect(jsonPath(webhook + ".responses['401'].description").value(
+                "Firma ausente o inválida, o ID firmado inconsistente"))
+            .andExpect(jsonPath(webhook + ".responses['403']").doesNotExist())
+            .andExpect(jsonPath(webhook + ".responses['429']").exists());
     }
 
     @Test
