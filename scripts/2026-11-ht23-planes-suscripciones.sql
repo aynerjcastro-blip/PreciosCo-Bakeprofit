@@ -34,7 +34,7 @@ CREATE TABLE public.payment_transactions (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
     subscription_id BIGINT NULL,
-    external_order_id VARCHAR(50) NOT NULL,
+    external_payment_id VARCHAR(50) NOT NULL,
     status VARCHAR(30) NOT NULL,
     status_detail VARCHAR(100) NULL,
     amount NUMERIC(12,2) NOT NULL,
@@ -43,30 +43,14 @@ CREATE TABLE public.payment_transactions (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT fk_payment_transactions_users FOREIGN KEY (user_id) REFERENCES public.users (id),
     CONSTRAINT fk_payment_transactions_subscriptions FOREIGN KEY (subscription_id) REFERENCES public.subscriptions (id),
-    -- Impide vincular dos intentos con la misma Order de Mercado Pago.
-    CONSTRAINT payment_transactions_external_order_id_key UNIQUE (external_order_id)
+    -- Impide registrar dos veces el mismo pago de Mercado Pago.
+    CONSTRAINT payment_transactions_external_payment_id_key UNIQUE (external_payment_id)
 );
 
 CREATE INDEX idx_payment_transactions_user_id ON public.payment_transactions (user_id);
 
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
-
--- Permite registrar la referencia de la aplicación antes de recibir el ID de Mercado Pago.
--- En una base que todavía use el nombre anterior, ejecutar estos dos cambios en una transacción.
--- ALTER TABLE public.payment_transactions RENAME COLUMN external_payment_id TO external_order_id;
--- ALTER TABLE public.payment_transactions RENAME CONSTRAINT payment_transactions_external_payment_id_key
---     TO payment_transactions_external_order_id_key;
--- Si la referencia aún no existe, ejecutar también estos tres ALTER TABLE dentro de esa transacción.
-ALTER TABLE public.payment_transactions
-    ALTER COLUMN external_order_id DROP NOT NULL;
-
-ALTER TABLE public.payment_transactions
-    ADD COLUMN external_reference VARCHAR(64) NOT NULL DEFAULT gen_random_uuid()::text;
-
-ALTER TABLE public.payment_transactions
-    ALTER COLUMN external_reference DROP DEFAULT,
-    ADD CONSTRAINT payment_transactions_external_reference_key UNIQUE (external_reference);
 
 COMMIT;
 
@@ -90,8 +74,7 @@ WITH expected_tables (table_name) AS (
         ('payment_transactions', 'id', 'bigint', true, NULL),
         ('payment_transactions', 'user_id', 'bigint', true, NULL),
         ('payment_transactions', 'subscription_id', 'bigint', false, NULL),
-        ('payment_transactions', 'external_order_id', 'character varying(50)', false, NULL),
-        ('payment_transactions', 'external_reference', 'character varying(64)', true, NULL),
+        ('payment_transactions', 'external_payment_id', 'character varying(50)', true, NULL),
         ('payment_transactions', 'status', 'character varying(30)', true, NULL),
         ('payment_transactions', 'status_detail', 'character varying(100)', false, NULL),
         ('payment_transactions', 'amount', 'numeric(12,2)', true, NULL),
@@ -106,8 +89,7 @@ WITH expected_tables (table_name) AS (
         ('subscriptions', 'fk_subscriptions_users', 'f', 'user_id', 'users', NULL),
         ('payment_transactions', 'fk_payment_transactions_users', 'f', 'user_id', 'users', NULL),
         ('payment_transactions', 'fk_payment_transactions_subscriptions', 'f', 'subscription_id', 'subscriptions', NULL),
-        ('payment_transactions', 'payment_transactions_external_order_id_key', 'u', 'external_order_id', NULL, NULL),
-        ('payment_transactions', 'payment_transactions_external_reference_key', 'u', 'external_reference', NULL, NULL)
+        ('payment_transactions', 'payment_transactions_external_payment_id_key', 'u', 'external_payment_id', NULL, NULL)
 ), actual_tables AS (
     SELECT relation.oid AS table_id, relation.relname::text AS table_name, relation.relrowsecurity
     FROM pg_catalog.pg_class AS relation
