@@ -38,7 +38,7 @@ public class SubscriptionController {
         content = @Content(mediaType = "application/json", schema = @Schema(implementation = CheckoutIntentResponse.class)))
     @ApiResponse(responseCode = "401", description = "JWT ausente o inválido, o cuenta inactiva",
         content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
-    @ApiResponse(responseCode = "403", description = "El rol de la cuenta no permite iniciar un checkout",
+    @ApiResponse(responseCode = "403", description = "Rol no permitido: solo USER puede iniciar un pago",
         content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "404", description = "La cuenta ya no existe al crear el intento",
         content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))

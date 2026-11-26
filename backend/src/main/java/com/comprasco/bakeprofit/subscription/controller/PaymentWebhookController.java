@@ -82,15 +82,19 @@ public class PaymentWebhookController {
     @SecurityRequirements
     @ApiResponse(responseCode = "200", description = "Entrega confirmada, incluidos pagos rechazados y avisos ignorados",
         content = @Content)
-    @ApiResponse(responseCode = "400", description = "JSON ilegible o ID de orden con formato inválido", content = @Content)
+    @ApiResponse(responseCode = "400", description = "JSON ilegible o ID de orden con formato inválido",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "401", description = "Firma ausente o inválida, o ID firmado inconsistente",
-        content = @Content)
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Origen rechazado por CORS. Este rechazo es independiente del JWT",
+        content = @Content(mediaType = "text/plain", schema = @Schema(type = "string")))
     @ApiResponse(responseCode = "429", description = "Límite de solicitudes por IP excedido",
         headers = @Header(name = "Retry-After", description = "Segundos hasta que se restablezca el límite"),
         content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "500", description = "Fallo interno o configuración incompleta del webhook",
         content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
-    @ApiResponse(responseCode = "502", description = "No se pudo consultar la orden en Mercado Pago", content = @Content)
+    @ApiResponse(responseCode = "502", description = "No se pudo consultar la orden en Mercado Pago",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     @PostMapping("/api/payments/webhook/mercadopago")
     public ResponseEntity<Void> receive(HttpServletRequest request, @RequestBody(required = false) String body) {
         var query = UriComponentsBuilder.newInstance().query(request.getQueryString()).build().getQueryParams();

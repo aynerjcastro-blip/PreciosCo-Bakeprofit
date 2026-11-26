@@ -301,6 +301,8 @@ class OrderWebhookIntegrationTest {
             .andExpect(jsonPath(checkout + ".security[0].bearerAuth").isArray())
             .andExpect(jsonPath(checkout + ".responses['201']").exists())
             .andExpect(jsonPath(checkout + ".responses['200']").doesNotExist())
+            .andExpect(jsonPath(checkout + ".responses['403'].description")
+                .value("Rol no permitido: solo USER puede iniciar un pago"))
             .andExpect(jsonPath(checkout + ".responses['409'].content['application/json'].schema['$ref']")
                 .value("#/components/schemas/ErrorResponse"))
             .andExpect(jsonPath(checkout + ".responses['429']").exists())
@@ -308,7 +310,8 @@ class OrderWebhookIntegrationTest {
             .andExpect(jsonPath(webhook + ".security").isEmpty())
             .andExpect(jsonPath(webhook + ".responses['401'].description").value(
                 "Firma ausente o inválida, o ID firmado inconsistente"))
-            .andExpect(jsonPath(webhook + ".responses['403']").doesNotExist())
+            .andExpect(jsonPath(webhook + ".responses['403'].description")
+                .value("Origen rechazado por CORS. Este rechazo es independiente del JWT"))
             .andExpect(jsonPath(webhook + ".responses['429']").exists());
     }
 
