@@ -16,7 +16,8 @@ export async function streamAiMessage(payload, onChunk) {
         headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${getToken()}`,
-            Accept: 'text/event-stream',
+            // application/json: los errores 400/429 llegan como JSON antes del stream
+            Accept: 'text/event-stream, application/json',
         },
         body: JSON.stringify(payload),
     });
@@ -33,6 +34,8 @@ export async function streamAiMessage(payload, onChunk) {
     const decoder = new TextDecoder();
     let quotaInfo = null;
     let buffer = '';
+    // Fuera del bucle: "event:" y "data:" pueden llegar en lecturas distintas
+    let currentEvent = null;
 
     while (true) {
         const { done, value } = await reader.read();
@@ -45,31 +48,33 @@ export async function streamAiMessage(payload, onChunk) {
         // Guardar la última línea incompleta para la siguiente iteración
         buffer = lines.pop() || '';
 
-        let currentEvent = null;
+        for (const rawLine of lines) {
+            const line = rawLine.replace(/\r$/, '');
 
-        for (const line of lines) {
-            if (line.startsWith('event:')) {
+            if (line === '') {
+                currentEvent = null; // línea vacía = fin del evento SSE
+            } else if (line.startsWith('event:')) {
                 currentEvent = line.slice('event:'.length).trim();
             } else if (line.startsWith('data:')) {
                 const data = line.slice('data:'.length).trim();
                 if (!data) continue;
 
+                let parsed;
                 try {
-                    const parsed = JSON.parse(data);
-
-                    if (currentEvent === 'chunk' && parsed.text) {
-                        onChunk(parsed.text);
-                    } else if (currentEvent === 'done') {
-                        quotaInfo = parsed;
-                    } else if (currentEvent === 'error') {
-                        throw new Error(parsed.message || 'Error en streaming');
-                    }
-                } catch (e) {
-                    // Si no es JSON válido y no es un error nuestro, seguir
-                    if (e.message === 'Error en streaming') throw e;
+                    parsed = JSON.parse(data);
+                } catch {
+                    continue; // fragmento no JSON: se ignora
                 }
 
-                currentEvent = null; // reset después de procesar data
+                if (currentEvent === 'chunk' && parsed.text) {
+                    onChunk(parsed.text);
+                } else if (currentEvent === 'done') {
+                    quotaInfo = parsed;
+                } else if (currentEvent === 'error') {
+                    // Fuera del try/catch del JSON: el error SIEMPRE llega a la UI
+                    reader.cancel().catch(() => {});
+                    throw new Error(parsed.message || 'Error en el chat de IA');
+                }
             }
         }
     }

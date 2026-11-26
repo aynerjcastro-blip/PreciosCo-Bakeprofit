@@ -2,7 +2,6 @@ package com.comprasco.bakeprofit.ai.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.comprasco.bakeprofit.ai.exception.AiQuotaExceededException;
 import com.comprasco.bakeprofit.auth.entity.Plan;
@@ -14,6 +13,11 @@ import com.comprasco.bakeprofit.auth.repository.UserRepository;
  * <p>
  * Los usuarios FREE tienen un límite mensual configurable.
  * Los usuarios PREMIUM no tienen límite.
+ * </p>
+ * <p>
+ * La consulta se <b>reserva</b> antes de llamar a la IA con un UPDATE
+ * condicional (atómico), y se <b>devuelve</b> si la llamada falla. Así varias
+ * peticiones en paralelo no pueden superar el límite.
  * </p>
  */
 @Service
@@ -30,26 +34,28 @@ public class AiQuotaService {
     }
 
     /**
-     * Verifica que el usuario tenga cuota disponible.
+     * Reserva una consulta para el usuario.
      *
+     * @return consultas usadas este mes después de reservar
      * @throws AiQuotaExceededException si el usuario FREE agotó su cuota
      */
-    public void assertQuotaAvailable(User user) {
+    public int consume(User user) {
         if (user.getPlan() == Plan.PREMIUM) {
-            return; // sin límite
+            userRepository.incrementAiQueriesUsed(user.getId());
+        } else if (userRepository.tryConsumeAiQuery(user.getId(), freeMonthlyLimit) == 0) {
+            throw new AiQuotaExceededException(freeMonthlyLimit, freeMonthlyLimit);
         }
-        if (user.getAiQueriesUsed() >= freeMonthlyLimit) {
-            throw new AiQuotaExceededException(user.getAiQueriesUsed(), freeMonthlyLimit);
-        }
+        return userRepository.findAiQueriesUsedById(user.getId());
     }
 
-    /**
-     * Incrementa el contador de consultas usadas en 1.
-     * Se llama DESPUÉS de obtener la respuesta exitosa de la IA.
-     */
-    @Transactional
-    public void incrementUsage(User user) {
-        userRepository.incrementAiQueriesUsed(user.getId());
+    /** Devuelve una consulta reservada cuando la IA no pudo responder. */
+    public void refund(User user) {
+        userRepository.refundAiQuery(user.getId());
+    }
+
+    /** Límite mensual del usuario (0 = ilimitado / PREMIUM). */
+    public int limitFor(User user) {
+        return user.getPlan() == Plan.PREMIUM ? 0 : freeMonthlyLimit;
     }
 
     /** Límite mensual para usuarios FREE. */

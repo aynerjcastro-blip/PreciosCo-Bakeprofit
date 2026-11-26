@@ -1,65 +1,53 @@
 package com.comprasco.bakeprofit.ai.client;
 
-import com.comprasco.bakeprofit.ai.exception.AiEmptyResponseException;
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
  * Estructura interna que representa los objetos JSON de la API de Gemini.
  * No se exponen al frontend — solo las usa GeminiClient.
  *
- * La API espera: { "system_instruction": {...}, "contents": [...] }
- * Y responde: { "candidates": [{ "content": { "parts": [{ "text": "..." }] } }]
- * }
+ * La API espera: { "system_instruction": {...}, "contents": [...],
+ * "generationConfig": {...} }
  */
 class GeminiApiModel {
-
-    // --- Request ---
 
     /** Una parte de texto: { "text": "..." } */
     record Part(String text) {
     }
 
     /** Un mensaje en la conversación: { "role": "user", "parts": [...] } */
-    record Content(String role, java.util.List<Part> parts) {
-
-        static Content of(String role, String text) {
-            return new Content(role, java.util.List.of(new Part(text)));
-        }
+    record Content(String role, List<Part> parts) {
     }
 
     /** Instrucción del sistema: { "parts": [{ "text": "..." }] } — sin role */
-    record SystemInstruction(java.util.List<Part> parts) {
+    record SystemInstruction(List<Part> parts) {
 
         static SystemInstruction of(String text) {
-            return new SystemInstruction(java.util.List.of(new Part(text)));
+            return new SystemInstruction(List.of(new Part(text)));
         }
     }
 
-    /** El body completo del POST a generateContent */
+    /**
+     * Configuración de razonamiento. Los modelos Gemini 3 usan
+     * {@code thinkingLevel}; NO aceptan {@code thinkingBudget: 0}
+     * (responden 400 INVALID_ARGUMENT).
+     */
+    record ThinkingConfig(String thinkingLevel) {
+    }
+
+    /** Configuración de generación. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record GenerationConfig(ThinkingConfig thinkingConfig) {
+    }
+
+    /** El body completo del POST a generateContent / streamGenerateContent */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     record GenerateRequest(
             SystemInstruction system_instruction,
-            java.util.List<Content> contents) {
-    }
-
-    // --- Response ---
-
-    /** Un candidato de respuesta */
-    record Candidate(Content content, String finishReason) {
-    }
-
-    /** La respuesta completa de Gemini */
-    record GenerateResponse(java.util.List<Candidate> candidates) {
-
-        /** Extrae el texto del primer candidato, o lanza si no hay respuesta */
-        String text() {
-            if (candidates == null || candidates.isEmpty()) {
-                throw new AiEmptyResponseException();
-            }
-            var parts = candidates.getFirst().content().parts();
-            if (parts == null || parts.isEmpty()) {
-                throw new AiEmptyResponseException();
-            }
-            return parts.getFirst().text();
-        }
+            List<Content> contents,
+            GenerationConfig generationConfig) {
     }
 
     private GeminiApiModel() {

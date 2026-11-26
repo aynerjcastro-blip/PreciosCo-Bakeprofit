@@ -8,6 +8,9 @@ import {
     CuidadoAvatar,
 } from '@/components/ui/icons/AiAvatars';
 
+/** Turnos de historial que se envían al backend (máx. permitido: 20). */
+const MAX_HISTORY_TURNS = 10;
+
 /* ───────────────────────────────────────────
    Configuración por sección
    ─────────────────────────────────────────── */
@@ -184,7 +187,11 @@ export default function AiChatDrawer({ section, onClose }) {
                 {
                     section,
                     message: text,
-                    history: messages,
+                    // Solo los últimos turnos (el backend acepta máx. 20) y sin campos extra
+                    history: messages
+                        .filter(m => (m.role === 'user' || m.role === 'assistant') && m.content?.trim())
+                        .slice(-MAX_HISTORY_TURNS)
+                        .map(({ role, content }) => ({ role, content })),
                 },
                 (chunk) => {
                     fullText += chunk;

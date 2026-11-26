@@ -49,4 +49,33 @@ public interface UserRepository extends JpaRepository<User, Long> {
             """, nativeQuery = true)
     int incrementAiQueriesUsed(@Param("userId") Long userId);
 
+    /**
+     * Consume una consulta IA solo si el usuario no ha llegado al límite.
+     * Es atómico: dos peticiones concurrentes no pueden pasarse del límite.
+     *
+     * @return 1 si se consumió, 0 si la cuota estaba agotada
+     */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            UPDATE users
+            SET ai_queries_used = ai_queries_used + 1
+            WHERE id = :userId AND ai_queries_used < :limit
+            """, nativeQuery = true)
+    int tryConsumeAiQuery(@Param("userId") Long userId, @Param("limit") int limit);
+
+    /** Devuelve una consulta IA (cuando la llamada a la IA falló). */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            UPDATE users
+            SET ai_queries_used = GREATEST(ai_queries_used - 1, 0)
+            WHERE id = :userId
+            """, nativeQuery = true)
+    int refundAiQuery(@Param("userId") Long userId);
+
+    /** Lee el contador actual de consultas IA directamente de la BD. */
+    @Query(value = "SELECT ai_queries_used FROM users WHERE id = :userId", nativeQuery = true)
+    int findAiQueriesUsedById(@Param("userId") Long userId);
+
 }

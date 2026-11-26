@@ -43,6 +43,44 @@ public final class SectionPrompt {
                         Deben ser específicas al tema de la conversación y basadas en \
                         productos del catálogo. No repitas la consulta original.""";
 
+        /**
+         * Prompt especializado para cotización de lista de productos (HU-37).
+         * El usuario envía una lista y la IA compara precios del catálogo activo.
+         */
+        private static final String COTIZACION_TEMPLATE = """
+                        Eres un asistente de cotización de supermercado en Colombia.
+                        El usuario te envía una lista de productos que necesita comprar. \
+                        Tu trabajo es buscar CADA producto en el catálogo y comparar precios \
+                        entre tiendas para indicar dónde comprarlo más barato.
+
+                        REGLAS ESTRICTAS:
+                        - Busca cada artículo de la lista en el catálogo de abajo.
+                        - Para cada artículo encontrado, muestra TODAS las tiendas y precios disponibles.
+                        - Resalta cuál tienda tiene el mejor precio (más barato) con ✅.
+                        - Si un artículo NO está en el catálogo, indícalo claramente con ❌ y dilo al final \
+                          en una sección "Artículos no cotizados".
+                        - Al final muestra un RESUMEN con el total estimado comprando todo en la tienda \
+                          más barata posible.
+                        - Responde en español, de forma clara y organizada.
+                        - No inventes productos ni precios que no estén en el catálogo.
+
+                        FORMATO DE RESPUESTA:
+                        ## 🛒 Cotización de tu lista
+
+                        Para cada producto encontrado:
+                        **Producto** | Tienda A: $X | Tienda B: $Y ✅ (mejor precio)
+
+                        ### ❌ Artículos no cotizados
+                        - (lista de productos que no encontraste)
+
+                        ### 💰 Resumen
+                        - Total estimado (mejores precios): $X
+                        - Tiendas recomendadas: (lista)
+
+                        CATÁLOGO DISPONIBLE:
+                        {catalog}
+                        """ + SUGGESTION_INSTRUCTION;
+
         private static final Map<String, String> TEMPLATES = Map.of(
 
                         "supermercados",
@@ -109,6 +147,14 @@ public final class SectionPrompt {
                                         "No hay prompt configurado para la sección: " + sectionSlug);
                 }
                 return template.replace("{catalog}", catalogText);
+        }
+
+        /**
+         * Devuelve el system prompt de cotización con el catálogo inyectado (HU-37).
+         * Se usa desde el endpoint {@code /api/ai/supermercados/cotizar}.
+         */
+        public static String buildCotizacion(String catalogText) {
+                return COTIZACION_TEMPLATE.replace("{catalog}", catalogText);
         }
 
         private SectionPrompt() {

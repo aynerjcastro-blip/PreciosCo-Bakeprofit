@@ -5,7 +5,6 @@ import java.io.PrintWriter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,9 +15,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.comprasco.bakeprofit.ai.dto.AiChatRequest;
 import com.comprasco.bakeprofit.ai.dto.AiChatResponse;
 import com.comprasco.bakeprofit.ai.dto.AiQuotaResponse;
+import com.comprasco.bakeprofit.ai.exception.AiEmptyResponseException;
+import com.comprasco.bakeprofit.ai.exception.AiProviderException;
 import com.comprasco.bakeprofit.ai.service.AiChatService;
+import com.comprasco.bakeprofit.ai.service.AiChatService.ClientGoneException;
+import com.comprasco.bakeprofit.ai.service.AiChatService.PreparedChat;
 import com.comprasco.bakeprofit.ai.service.AiQuotaService;
-import com.comprasco.bakeprofit.auth.entity.Plan;
 import com.comprasco.bakeprofit.auth.entity.User;
 import com.comprasco.bakeprofit.auth.security.CurrentUser;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,12 +30,37 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
+/**
+ * Endpoints del asistente de IA.
+ *
+ * <p>
+ * Los endpoints de streaming validan la petición y reservan la cuota
+ * <b>antes</b> de escribir la respuesta. Así los errores de validación (400) y
+ * de cuota (429) llegan como respuestas HTTP JSON normales (vía
+ * {@code GlobalExceptionHandler}) y no como un evento SSE con estado 200.
+ * </p>
+ *
+ * <p>
+ * No se declara {@code produces = text/event-stream} en el mapping: si se
+ * declarara, Spring no podría serializar el JSON de error y respondería 406.
+ * </p>
+ *
+ * <p>
+ * Eventos SSE emitidos:
+ * </p>
+ * <ul>
+ * <li>{@code event: chunk} → fragmento de texto: {@code {"text":"..."}}</li>
+ * <li>{@code event: done} → fin del stream con info de cuota</li>
+ * <li>{@code event: error} → error durante el stream: {@code {"message":"..."}}</li>
+ * </ul>
+ */
 @Tag(name = "Integracion de IA")
 @RestController
 @RequestMapping("/api/ai")
 public class AiChatController {
 
     private static final Logger log = LoggerFactory.getLogger(AiChatController.class);
+    private static final String GENERIC_ERROR = "El asistente de IA no pudo responder. Intenta de nuevo.";
 
     private final AiChatService aiChatService;
     private final AiQuotaService quotaService;
@@ -53,83 +80,103 @@ public class AiChatController {
     @Operation(summary = "Enviar mensaje al chat IA con control de cuota")
     public ResponseEntity<AiChatResponse> chat(
             @CurrentUser User user,
-            @Valid @RequestBody AiChatRequest request) {
+            @Valid @RequestBody AiChatRequest request) throws IOException, InterruptedException {
 
-        AiChatResponse response = aiChatService.chat(request, user);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(aiChatService.chat(request, user));
     }
 
     /**
      * Endpoint con streaming SSE — el frontend recibe fragmentos en tiempo real.
-     *
-     * <p>
-     * Escribe directamente en el {@code HttpServletResponse} para evitar
-     * problemas de sincronización con {@code SseEmitter} + virtual threads.
-     * </p>
-     *
-     * <p>
-     * Eventos emitidos:
-     * </p>
-     * <ul>
-     * <li>{@code event: chunk} → fragmento de texto: {@code {"text":"..."}}</li>
-     * <li>{@code event: done} → fin del stream con info de cuota</li>
-     * <li>{@code event: error} → error durante el stream</li>
-     * </ul>
      */
-    @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @PostMapping("/chat/stream")
     @Operation(summary = "Enviar mensaje al chat IA con streaming SSE")
     public void chatStream(
             @CurrentUser User user,
             @Valid @RequestBody AiChatRequest request,
             HttpServletResponse response) throws IOException {
 
-        // Configurar la respuesta HTTP como SSE
-        response.setContentType("text/event-stream");
-        response.setCharacterEncoding("UTF-8");
-        response.setHeader("Cache-Control", "no-cache");
-        response.setHeader("Connection", "keep-alive");
-        response.setHeader("X-Accel-Buffering", "no"); // Desactivar buffering de proxies
+        // Puede lanzar 400/429: todavía no se escribió nada en la respuesta
+        PreparedChat prepared = aiChatService.prepareChat(request, user);
+        streamTo(response, prepared, user);
+    }
 
-        PrintWriter writer = response.getWriter();
+    /**
+     * Cotización de lista de productos con streaming SSE (HU-37, SCRUM-324).
+     *
+     * <p>
+     * El usuario envía su lista de compras en el campo {@code message}. Para
+     * usuarios FREE, el mensaje no puede superar los 200 caracteres (RF60).
+     * El campo {@code section} se ignora (siempre es supermercados).
+     * </p>
+     */
+    @PostMapping("/supermercados/cotizar")
+    @Operation(summary = "Cotizar lista de productos de supermercado con IA (streaming SSE)")
+    public void cotizarSupermercados(
+            @CurrentUser User user,
+            @Valid @RequestBody AiChatRequest request,
+            HttpServletResponse response) throws IOException {
 
-        try {
-            AiChatResponse quotaInfo = aiChatService.chatStream(
-                    request,
-                    user,
-                    chunk -> {
-                        try {
-                            String escapedText = objectMapper.writeValueAsString(chunk);
-                            writer.write("event: chunk\ndata: {\"text\":" + escapedText + "}\n\n");
-                            writer.flush();
-                        } catch (Exception e) {
-                            log.debug("Error enviando chunk al cliente: {}", e.getMessage());
-                        }
-                    });
-
-            // Enviar evento final con la info de cuota
-            writer.write("event: done\ndata: " + objectMapper.writeValueAsString(quotaInfo) + "\n\n");
-            writer.flush();
-
-        } catch (Exception e) {
-            log.error("Error en streaming IA: {}", e.getMessage(), e);
-            try {
-                String errorMsg = objectMapper.writeValueAsString(
-                        e.getMessage() != null ? e.getMessage() : "Error interno del servidor");
-                writer.write("event: error\ndata: {\"message\":" + errorMsg + "}\n\n");
-                writer.flush();
-            } catch (Exception ignored) {
-                // Cliente ya desconectado
-            }
-        }
+        PreparedChat prepared = aiChatService.prepareCotizacion(request, user);
+        streamTo(response, prepared, user);
     }
 
     @GetMapping("/quota")
     @Operation(summary = "Consultar cuota actual de consultas IA del usuario")
     public ResponseEntity<AiQuotaResponse> getQuota(@CurrentUser User user) {
-        int limit = user.getPlan() == Plan.PREMIUM ? 0 : quotaService.getFreeMonthlyLimit();
         return ResponseEntity.ok(new AiQuotaResponse(
                 user.getAiQueriesUsed(),
-                limit,
+                quotaService.limitFor(user),
                 user.getPlan().name()));
+    }
+
+    // ── Streaming ─────────────────────────────────────────
+
+    private void streamTo(HttpServletResponse response, PreparedChat prepared, User user) throws IOException {
+        response.setContentType("text/event-stream");
+        response.setCharacterEncoding("UTF-8");
+        response.setHeader("Cache-Control", "no-cache");
+        response.setHeader("X-Accel-Buffering", "no"); // Desactivar buffering de proxies
+
+        PrintWriter writer = response.getWriter();
+
+        try {
+            AiChatResponse quotaInfo = aiChatService.stream(prepared, user, chunk -> {
+                try {
+                    send(writer, "chunk", "{\"text\":" + objectMapper.writeValueAsString(chunk) + "}");
+                } catch (IOException e) {
+                    throw new ClientGoneException();
+                }
+            });
+            send(writer, "done", objectMapper.writeValueAsString(quotaInfo));
+
+        } catch (ClientGoneException e) {
+            log.debug("Cliente desconectado durante el streaming IA");
+        } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            // Solo mensajes pensados para el usuario; el resto queda en el log
+            String message = (e instanceof AiProviderException || e instanceof AiEmptyResponseException)
+                    ? e.getMessage()
+                    : GENERIC_ERROR;
+            log.error("Error en streaming IA: {}", e.getMessage(), e);
+            try {
+                send(writer, "error", "{\"message\":" + objectMapper.writeValueAsString(message) + "}");
+            } catch (IOException ignored) {
+                // Cliente ya desconectado
+            }
+        }
+    }
+
+    /**
+     * Escribe un evento SSE. {@link PrintWriter} no lanza excepciones, así que se
+     * revisa {@code checkError()} para detectar que el cliente se fue.
+     */
+    private static void send(PrintWriter writer, String event, String data) throws IOException {
+        writer.write("event: " + event + "\ndata: " + data + "\n\n");
+        writer.flush();
+        if (writer.checkError()) {
+            throw new IOException("Cliente desconectado");
+        }
     }
 }

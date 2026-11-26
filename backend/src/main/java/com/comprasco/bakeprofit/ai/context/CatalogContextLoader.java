@@ -136,7 +136,8 @@ public class CatalogContextLoader {
             case "supermercados" -> "Supermercado";
             case "droguerias" -> "Droguería";
             case "cuidado-facial" -> "Cuidado facial";
-            default -> throw new IllegalArgumentException("Sección desconocida: " + slug);
+            default -> throw new com.comprasco.bakeprofit.ai.exception.AiInvalidRequestException(
+                    "Sección desconocida: " + slug);
         };
     }
 }

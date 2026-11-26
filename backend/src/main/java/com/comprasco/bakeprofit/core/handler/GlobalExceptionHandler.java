@@ -1,6 +1,9 @@
 package com.comprasco.bakeprofit.core.handler;
 
 import com.comprasco.bakeprofit.ai.exception.AiEmptyResponseException;
+import com.comprasco.bakeprofit.ai.exception.AiInvalidRequestException;
+import com.comprasco.bakeprofit.ai.exception.AiMessageTooLongException;
+import com.comprasco.bakeprofit.ai.exception.AiProviderException;
 import com.comprasco.bakeprofit.ai.exception.AiQuotaExceededException;
 import com.comprasco.bakeprofit.auth.exception.AccountLockedException;
 import com.comprasco.bakeprofit.auth.exception.EmailAlreadyExistsException;
@@ -578,6 +581,68 @@ public class GlobalExceptionHandler {
                 return ResponseEntity
                                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                                 .body(Map.of("error", ex.getMessage()));
+        }
+
+        /**
+         * Maneja peticiones de IA inválidas (sección desconocida, etc.).
+         * Retorna HTTP 400 Bad Request.
+         */
+        @ExceptionHandler(AiInvalidRequestException.class)
+        public ResponseEntity<ErrorResponse> handleAiInvalidRequest(
+                        AiInvalidRequestException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_REQUEST.value())
+                                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        /**
+         * Maneja los errores del proveedor de IA (Gemini caído, modelo
+         * inexistente, timeout...). El mensaje ya es apto para el usuario; el
+         * detalle técnico se registró en el log. Retorna HTTP 503.
+         */
+        @ExceptionHandler(AiProviderException.class)
+        public ResponseEntity<ErrorResponse> handleAiProvider(
+                        AiProviderException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                                .error(HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
+        }
+
+        /**
+         * Maneja el exceso del límite de caracteres para usuarios FREE en la
+         * cotización.
+         * Retorna HTTP 400 Bad Request con el detalle del límite.
+         */
+        @ExceptionHandler(AiMessageTooLongException.class)
+        public ResponseEntity<ErrorResponse> handleAiMessageTooLong(
+                        AiMessageTooLongException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_REQUEST.value())
+                                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
 
         /**
