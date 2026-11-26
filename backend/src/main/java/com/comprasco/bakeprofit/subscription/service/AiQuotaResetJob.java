@@ -28,8 +28,8 @@ public class AiQuotaResetJob {
      * uno por cada ejecución.
      */
     @Scheduled(
-        initialDelayString = "${app.ai-quota.reset-check.initial-delay:PT1M}",
-        fixedDelayString = "${app.ai-quota.reset-check.fixed-delay:PT1H}")
+        initialDelayString = "${app.ai-quota.reset-check.initial-delay}",
+        fixedDelayString = "${app.ai-quota.reset-check.fixed-delay}")
     public void run() {
         int updated = userRepository.resetDueAiQuotas(OffsetDateTime.now(clock));
         log.info("Reinicio de cuota de IA: {} usuario(s) actualizado(s)", updated);
