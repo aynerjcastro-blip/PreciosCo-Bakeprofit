@@ -1,6 +1,7 @@
 package com.comprasco.bakeprofit.core.response;
 
 import java.time.LocalDateTime;
+import org.springframework.http.HttpStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,4 +21,8 @@ public class ErrorResponse {
     private String error;
     private String message;
     private String path;
+
+    public static ErrorResponse of(HttpStatus status, String message, String path) {
+        return new ErrorResponse(LocalDateTime.now(), status.value(), status.getReasonPhrase(), message, path);
+    }
 }

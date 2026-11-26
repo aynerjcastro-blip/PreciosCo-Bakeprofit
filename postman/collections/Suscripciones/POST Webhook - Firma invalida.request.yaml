@@ -17,8 +17,8 @@ scripts:
   - type: afterResponse
     language: text/javascript
     code: |-
-      pm.test("Rechaza la firma con 401 y cuerpo vacío", () => {
+      pm.test("Rechaza la firma con 401 y ErrorResponse", () => {
         pm.response.to.have.status(401);
-        pm.expect(pm.response.text()).to.equal("");
+        pm.expect(pm.response.json()).to.have.all.keys("timestamp", "status", "error", "message", "path");
       });
 order: 4000

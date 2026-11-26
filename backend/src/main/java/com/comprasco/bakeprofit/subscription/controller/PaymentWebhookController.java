@@ -6,7 +6,6 @@ import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,6 +14,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.comprasco.bakeprofit.core.response.ErrorResponse;
+import com.comprasco.bakeprofit.subscription.exception.InvalidWebhookNotificationException;
+import com.comprasco.bakeprofit.subscription.exception.InvalidWebhookSignatureException;
+import com.comprasco.bakeprofit.subscription.exception.WebhookGatewayException;
 import com.comprasco.bakeprofit.subscription.service.OrderWebhookService;
 import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.exceptions.MPException;
@@ -95,14 +97,14 @@ public class PaymentWebhookController {
         List<String> dataIds = query.get("data.id");
         String signedId = query.getFirst("data.id");
         if ((dataIds != null && dataIds.size() != 1) || !hasValidSignature(request, signedId)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new InvalidWebhookSignatureException();
         }
 
         JsonNode notification;
         try {
             notification = objectMapper.readTree(body == null ? "" : body);
         } catch (JacksonException ex) {
-            return ResponseEntity.badRequest().build();
+            throw new InvalidWebhookNotificationException("El cuerpo de la notificación no es JSON válido.");
         }
         if (notification == null || !"order".equals(notification.path("type").asString(null))) {
             return ResponseEntity.ok().build();
@@ -110,11 +112,11 @@ public class PaymentWebhookController {
 
         String bodyId = notification.path("data").path("id").asString(null);
         if (signedId == null || !signedId.equalsIgnoreCase(bodyId)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new InvalidWebhookSignatureException();
         }
         String orderId = signedId.toUpperCase(Locale.ROOT);
         if (!orderId.matches("ORD[A-Z0-9]{1,47}")) {
-            return ResponseEntity.badRequest().build();
+            throw new InvalidWebhookNotificationException("El ID de la orden tiene un formato inválido.");
         }
 
         try {
@@ -122,7 +124,7 @@ public class PaymentWebhookController {
             return ResponseEntity.ok().build();
         } catch (MPApiException | MPException ex) {
             log.warn("No se pudo verificar la Order {} de Mercado Pago", orderId);
-            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
+            throw new WebhookGatewayException();
         }
     }
 

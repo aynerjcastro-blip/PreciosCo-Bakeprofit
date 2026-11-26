@@ -1,6 +1,7 @@
 package com.comprasco.bakeprofit.subscription.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -16,6 +17,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 
+import com.comprasco.bakeprofit.subscription.exception.InvalidWebhookSignatureException;
 import com.comprasco.bakeprofit.subscription.service.OrderWebhookService;
 
 import tools.jackson.databind.json.JsonMapper;
@@ -34,7 +36,8 @@ class PaymentWebhookControllerTest {
         request.removeHeader("x-signature");
         request.addHeader("x-signature", "ts=1,v1=invalid");
 
-        assertThat(controller.receive(request, "not even JSON").getStatusCode().value()).isEqualTo(401);
+        assertThatThrownBy(() -> controller.receive(request, "not even JSON"))
+            .isInstanceOf(InvalidWebhookSignatureException.class);
         verifyNoInteractions(service);
     }
 
@@ -47,8 +50,8 @@ class PaymentWebhookControllerTest {
 
     @Test
     void refusesAnOrderIdInTheBodyThatDoesNotMatchTheSignature() throws Exception {
-        assertThat(controller.receive(signedRequest(ORDER_ID), notification("order", "ORDOTHER"))
-            .getStatusCode().value()).isEqualTo(401);
+        assertThatThrownBy(() -> controller.receive(signedRequest(ORDER_ID), notification("order", "ORDOTHER")))
+            .isInstanceOf(InvalidWebhookSignatureException.class);
         verifyNoInteractions(service);
     }
 

@@ -626,7 +626,7 @@ Verifica un nuevo `200` para el mismo `data.id`. El pago debe conservar su `subs
 .\mvnw.cmd test '-Dtest=OrderWebhookIntegrationTest' '-Dsurefire.excludedGroups='
 ```
 
-El resultado esperado es `Tests run: 11, Failures: 0, Errors: 0, Skipped: 0`. La suite incluye el rechazo, que confirma la entrega con `200` y conserva el plan `FREE`, y verifica que Swagger documenta el webhook como público.
+El resultado esperado es `Tests run: 12, Failures: 0, Errors: 0, Skipped: 0`. La suite incluye el rechazo, que confirma la entrega con `200` y conserva el plan `FREE`, y verifica que Swagger documenta el webhook como público.
 
 **Postman.** Abre la [colección Suscripciones](../postman/collections/Suscripciones/) en Local View. Usa `baseUrl=http://localhost:8080` para el backend local y `token` para el JWT de un usuario de prueba en `FREE`. Para el webhook, configura `mpOrderId` con una Order de sandbox ya acreditada y registrada en esa base. Guarda `mpWebhookSecret` como valor local del entorno de Postman, con el mismo secreto que carga el backend.
 

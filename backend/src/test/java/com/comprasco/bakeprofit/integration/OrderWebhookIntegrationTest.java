@@ -17,6 +17,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -48,6 +49,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -62,6 +64,7 @@ import com.comprasco.bakeprofit.auth.security.SecurityConfig;
 import com.comprasco.bakeprofit.core.config.OpenApiConfig;
 import com.comprasco.bakeprofit.core.filter.RateLimitFilter;
 import com.comprasco.bakeprofit.core.handler.GlobalExceptionHandler;
+import com.comprasco.bakeprofit.core.response.ErrorResponseWriter;
 import com.comprasco.bakeprofit.subscription.config.PremiumCheckoutProperties;
 import com.comprasco.bakeprofit.subscription.controller.PaymentWebhookController;
 import com.comprasco.bakeprofit.subscription.controller.SubscriptionController;
@@ -72,8 +75,11 @@ import com.comprasco.bakeprofit.subscription.repository.SubscriptionRepository;
 import com.comprasco.bakeprofit.subscription.service.OrderWebhookService;
 import com.comprasco.bakeprofit.subscription.service.PaymentService;
 import com.mercadopago.client.order.OrderClient;
+import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.net.HttpMethod;
 import com.mercadopago.net.MPResponse;
+
+import tools.jackson.databind.ObjectMapper;
 
 @Tag("integration")
 @EnabledIfEnvironmentVariable(named = "SPRING_DATASOURCE_URL", matches = ".+")
@@ -84,6 +90,7 @@ import com.mercadopago.net.MPResponse;
         "app.mercadopago.access-token=webhook-integration-test",
         "app.mercadopago.webhook-secret=" + OrderWebhookIntegrationTest.WEBHOOK_SECRET,
         "jwt.secret=local-only-integration-test-secret-for-webhook",
+        "app.rate-limit.requests-per-minute=60",
         "spring.datasource.hikari.maximum-pool-size=2"
     })
 class OrderWebhookIntegrationTest {
@@ -103,7 +110,8 @@ class OrderWebhookIntegrationTest {
     @EnableJpaRepositories(basePackageClasses = {UserRepository.class, PaymentTransactionRepository.class})
     @Import({OrderWebhookService.class, PaymentService.class, PaymentWebhookController.class,
         SubscriptionController.class, SecurityConfig.class, OpenApiConfig.class,
-        JwtAuthFilter.class, JwtSecurity.class, RateLimitFilter.class, GlobalExceptionHandler.class})
+        JwtAuthFilter.class, JwtSecurity.class, RateLimitFilter.class, GlobalExceptionHandler.class,
+        ErrorResponseWriter.class})
     static class Config {
         @Bean
         Clock clock() {
@@ -123,6 +131,9 @@ class OrderWebhookIntegrationTest {
                 assertThat(request.getHeaders()).containsEntry("Authorization", "Bearer webhook-integration-test");
                 String orderId = request.getUri().substring(request.getUri().lastIndexOf('/') + 1);
                 testOrders.calls.incrementAndGet();
+                if (testOrders.unavailable.contains(orderId)) {
+                    throw new MPApiException("Order unavailable", new MPResponse(503, Map.of(), "{}"));
+                }
                 CountDownLatch concurrentReads = testOrders.concurrentReads;
                 if (concurrentReads != null) {
                     concurrentReads.countDown();
@@ -142,6 +153,7 @@ class OrderWebhookIntegrationTest {
 
     static class TestOrders {
         private final Map<String, String> responses = new ConcurrentHashMap<>();
+        private final Set<String> unavailable = ConcurrentHashMap.newKeySet();
         private final AtomicInteger calls = new AtomicInteger();
         private volatile CountDownLatch concurrentReads;
     }
@@ -152,6 +164,7 @@ class OrderWebhookIntegrationTest {
     @Autowired private SubscriptionRepository subscriptions;
     @Autowired private JwtSecurity jwtSecurity;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private ObjectMapper objectMapper;
     @Autowired private TestOrders orders;
     @Autowired private WebApplicationContext webContext;
 
@@ -167,11 +180,52 @@ class OrderWebhookIntegrationTest {
     void cleanTestRows() {
         orders.concurrentReads = null;
         orders.responses.clear();
+        orders.unavailable.clear();
         for (Long userId : testUsers) {
             jdbc.update("DELETE FROM payment_transactions WHERE user_id = ?", userId);
             jdbc.update("DELETE FROM subscriptions WHERE user_id = ?", userId);
             jdbc.update("DELETE FROM users WHERE id = ?", userId);
         }
+    }
+
+    @Test
+    void usesTheSameErrorResponseFieldsAcrossMvcAndTheSecurityFilters() throws Exception {
+        String checkout = "/api/subscriptions/checkout";
+        Fixture payment = newPayment();
+        User buyer = users.findById(payment.userId()).orElseThrow();
+        String token = jwtSecurity.generateToken(buyer.getEmail(), "USER");
+
+        assertError(mvc.perform(webhook(payment.orderId(), "{", true)), 400, WEBHOOK_PATH);
+        assertError(mvc.perform(webhook(payment.orderId(), orderBody(payment.orderId()), false)), 401, WEBHOOK_PATH);
+        assertError(mvc.perform(post(checkout)), 401, checkout);
+        String missing = "/api/recurso-inexistente";
+        assertError(mvc.perform(get(missing).header("Authorization", "Bearer " + token)), 404, missing);
+
+        respond(payment, "processed", "accredited", "10000", "10000", "COP", "processed", "accredited");
+        mvc.perform(signedWebhook(payment.orderId())).andExpect(status().isOk());
+        assertError(mvc.perform(post(checkout).header("Authorization", "Bearer " + token)), 409, checkout);
+        jdbc.update("UPDATE users SET role = 'ADMIN' WHERE id = ?", payment.userId());
+        assertError(mvc.perform(post(checkout).header("Authorization", "Bearer " + token)), 403, checkout);
+
+        orders.unavailable.add(payment.orderId());
+        assertError(mvc.perform(signedWebhook(payment.orderId())), 502, WEBHOOK_PATH);
+
+        String rateLimitIp = "192.0.2.24";
+        for (int attempt = 0; attempt < 60; attempt++) {
+            mvc.perform(post(checkout).header("X-Forwarded-For", rateLimitIp)).andExpect(status().isUnauthorized());
+        }
+        assertError(mvc.perform(post(checkout).header("X-Forwarded-For", rateLimitIp))
+            .andExpect(result -> assertThat(result.getResponse().getHeader("Retry-After")).isNotBlank()), 429, checkout);
+    }
+
+    private void assertError(ResultActions result, int code, String path) throws Exception {
+        var response = result.andExpect(status().is(code))
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.status").value(code))
+            .andExpect(jsonPath("$.path").value(path))
+            .andReturn().getResponse();
+        var fields = objectMapper.readTree(response.getContentAsByteArray()).propertyNames();
+        assertThat(fields).containsExactlyInAnyOrder("timestamp", "status", "error", "message", "path");
     }
 
     @Test

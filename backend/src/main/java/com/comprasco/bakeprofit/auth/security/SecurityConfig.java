@@ -4,6 +4,7 @@ import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -15,6 +16,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.comprasco.bakeprofit.core.filter.RateLimitFilter;
+import com.comprasco.bakeprofit.core.response.ErrorResponseWriter;
 
 /**
  * Configuración central de seguridad: filtros HTTP, codificación de
@@ -47,7 +49,7 @@ public class SecurityConfig {
          * </p>
          */
         @Bean
-        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        public SecurityFilterChain filterChain(HttpSecurity http, ErrorResponseWriter errors) throws Exception {
                 String[] catalog = {
                                 "/api/categories/**",
                                 "/api/stores/**",
@@ -60,22 +62,9 @@ public class SecurityConfig {
                                 .csrf(csrf -> csrf.disable())
                                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                                 .exceptionHandling(ex -> ex
-                                                .authenticationEntryPoint((request, response, authException) -> {
-                                                        response.setStatus(
-                                                                        jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
-                                                        response.setContentType("application/json;charset=UTF-8");
-                                                        response.getWriter()
-                                                                        .write("""
-                                                                                        {
-                                                                                        "status": 401,
-                                                                                        "error": "Unauthorized",
-                                                                                        "message": "Acceso no autorizado o cuenta desactivada",
-                                                                                        "path": "%s"
-                                                                                        }
-                                                                                        """
-                                                                                        .formatted(request
-                                                                                                        .getRequestURI()));
-                                                }))
+                                                .authenticationEntryPoint((request, response, authException) ->
+                                                        errors.write(request, response, HttpStatus.UNAUTHORIZED,
+                                                                "Acceso no autorizado o cuenta desactivada")))
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**",
                                                                 "/swagger-ui.html")
