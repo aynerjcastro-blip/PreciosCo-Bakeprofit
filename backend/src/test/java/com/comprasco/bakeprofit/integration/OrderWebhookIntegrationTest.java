@@ -3,6 +3,7 @@ package com.comprasco.bakeprofit.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
@@ -32,6 +33,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
@@ -57,12 +59,15 @@ import com.comprasco.bakeprofit.auth.security.JwtSecurity;
 import com.comprasco.bakeprofit.auth.security.SecurityConfig;
 import com.comprasco.bakeprofit.core.filter.RateLimitFilter;
 import com.comprasco.bakeprofit.core.handler.GlobalExceptionHandler;
+import com.comprasco.bakeprofit.subscription.config.PremiumCheckoutProperties;
 import com.comprasco.bakeprofit.subscription.controller.PaymentWebhookController;
+import com.comprasco.bakeprofit.subscription.controller.SubscriptionController;
 import com.comprasco.bakeprofit.subscription.entity.PaymentTransaction;
 import com.comprasco.bakeprofit.subscription.entity.SubscriptionStatus;
 import com.comprasco.bakeprofit.subscription.repository.PaymentTransactionRepository;
 import com.comprasco.bakeprofit.subscription.repository.SubscriptionRepository;
 import com.comprasco.bakeprofit.subscription.service.OrderWebhookService;
+import com.comprasco.bakeprofit.subscription.service.PaymentService;
 import com.mercadopago.client.order.OrderClient;
 import com.mercadopago.net.HttpMethod;
 import com.mercadopago.net.MPResponse;
@@ -90,9 +95,11 @@ class OrderWebhookIntegrationTest {
 
     @Configuration(proxyBeanMethods = false)
     @EnableAutoConfiguration
+    @EnableConfigurationProperties(PremiumCheckoutProperties.class)
     @EntityScan(basePackageClasses = {User.class, PaymentTransaction.class})
     @EnableJpaRepositories(basePackageClasses = {UserRepository.class, PaymentTransactionRepository.class})
-    @Import({OrderWebhookService.class, PaymentWebhookController.class, SecurityConfig.class,
+    @Import({OrderWebhookService.class, PaymentService.class, PaymentWebhookController.class,
+        SubscriptionController.class, SecurityConfig.class,
         JwtAuthFilter.class, JwtSecurity.class, RateLimitFilter.class, GlobalExceptionHandler.class})
     static class Config {
         @Bean
@@ -140,6 +147,7 @@ class OrderWebhookIntegrationTest {
     @Autowired private UserRepository users;
     @Autowired private PaymentTransactionRepository payments;
     @Autowired private SubscriptionRepository subscriptions;
+    @Autowired private JwtSecurity jwtSecurity;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private TestOrders orders;
     @Autowired private WebApplicationContext webContext;
@@ -223,15 +231,7 @@ class OrderWebhookIntegrationTest {
     void accreditsOnlyOnceUnderConcurrentDeliveryAndSkipsARefundedOrderBeforeCallingMercadoPago() throws Exception {
         Fixture payment = newPayment();
         respond(payment, "processed", "accredited", "10000", "10000", "COP", "processed", "accredited");
-        orders.concurrentReads = new CountDownLatch(2);
-        try (var executor = Executors.newFixedThreadPool(2)) {
-            var first = executor.submit(() -> { service.process(payment.orderId()); return null; });
-            var second = executor.submit(() -> { service.process(payment.orderId()); return null; });
-            first.get(20, TimeUnit.SECONDS);
-            second.get(20, TimeUnit.SECONDS);
-        } finally {
-            orders.concurrentReads = null;
-        }
+        processTogether(payment, payment);
 
         assertPayment(payment, "processed", "accredited");
         assertActivated(payment);
@@ -242,6 +242,46 @@ class OrderWebhookIntegrationTest {
         int callsAfterRefund = orders.calls.get();
         service.process(payment.orderId());
         assertThat(orders.calls.get()).isEqualTo(callsAfterRefund);
+    }
+
+    @Test
+    void recordsDistinctConcurrentOrdersForOneUserUnderTheSameSubscription() throws Exception {
+        Fixture first = newPayment();
+        Fixture second = newPaymentFor(users.findById(first.userId()).orElseThrow());
+        respond(first, "processed", "accredited", "10000", "10000", "COP", "processed", "accredited");
+        respond(second, "processed", "accredited", "10000", "10000", "COP", "processed", "accredited");
+
+        processTogether(first, second);
+
+        assertPayment(first, "processed", "accredited");
+        assertPayment(second, "processed", "accredited");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM subscriptions WHERE user_id = ?",
+            Long.class, first.userId())).isEqualTo(1L);
+        var active = subscriptions.findByUserIdAndStatus(first.userId(), SubscriptionStatus.ACTIVE);
+        assertThat(active).singleElement().satisfies(subscription ->
+            assertThat(subscription.getPlan()).isEqualTo(Plan.PREMIUM));
+        Long subscriptionId = active.getFirst().getId();
+        assertThat(jdbc.queryForList("SELECT subscription_id FROM payment_transactions WHERE user_id = ?",
+            Long.class, first.userId())).containsExactly(subscriptionId, subscriptionId);
+        assertThat(users.findById(first.userId()).orElseThrow().getPlan()).isEqualTo(Plan.PREMIUM);
+    }
+
+    @Test
+    void rejectsANewCheckoutAfterPremiumIsActivated() throws Exception {
+        Fixture payment = newPayment();
+        respond(payment, "processed", "accredited", "10000", "10000", "COP", "processed", "accredited");
+        mvc.perform(signedWebhook(payment.orderId())).andExpect(status().isOk());
+        Long subscriptionId = assertActivated(payment);
+        int calls = orders.calls.get();
+        User user = users.findById(payment.userId()).orElseThrow();
+        String token = jwtSecurity.generateToken(user.getEmail(), user.getRole().name());
+
+        mvc.perform(post("/api/subscriptions/checkout").header("Authorization", "Bearer " + token))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value("Tu cuenta ya tiene Premium activo."));
+
+        assertThat(orders.calls.get()).isEqualTo(calls);
+        assertThat(assertActivated(payment)).isEqualTo(subscriptionId);
     }
 
     @Test
@@ -259,6 +299,18 @@ class OrderWebhookIntegrationTest {
         String expectedMessage = "El importe o la moneda de la Order " + payment.orderId()
             + " no coincide con el intento local";
         assertThat(output.getAll().lines().filter(line -> line.contains(expectedMessage)).count()).isEqualTo(3L);
+    }
+
+    private void processTogether(Fixture first, Fixture second) throws Exception {
+        orders.concurrentReads = new CountDownLatch(2);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var firstResult = executor.submit(() -> { service.process(first.orderId()); return null; });
+            var secondResult = executor.submit(() -> { service.process(second.orderId()); return null; });
+            firstResult.get(20, TimeUnit.SECONDS);
+            secondResult.get(20, TimeUnit.SECONDS);
+        } finally {
+            orders.concurrentReads = null;
+        }
     }
 
     @Test
@@ -326,15 +378,18 @@ class OrderWebhookIntegrationTest {
     }
 
     private Fixture newPayment() {
-        String reference = UUID.randomUUID().toString();
         var user = new User();
         user.setName("Prueba webhook");
-        user.setEmail(reference + "@example.test");
+        user.setEmail(UUID.randomUUID() + "@example.test");
         user.setRole(Role.USER);
         user.setPassword("fixture");
         users.saveAndFlush(user);
         testUsers.add(user.getId());
+        return newPaymentFor(user);
+    }
 
+    private Fixture newPaymentFor(User user) {
+        String reference = UUID.randomUUID().toString();
         var payment = new PaymentTransaction();
         payment.setUser(user);
         payment.setExternalReference(reference);

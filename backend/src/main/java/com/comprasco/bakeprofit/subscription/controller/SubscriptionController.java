@@ -15,6 +15,7 @@ import com.comprasco.bakeprofit.auth.security.CurrentUser;
 import com.comprasco.bakeprofit.core.response.ErrorResponse;
 import com.comprasco.bakeprofit.subscription.dto.CheckoutIntentResponse;
 import com.comprasco.bakeprofit.subscription.exception.CheckoutGatewayException;
+import com.comprasco.bakeprofit.subscription.exception.PremiumAlreadyActiveException;
 import com.comprasco.bakeprofit.subscription.service.PaymentService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,7 +39,17 @@ public class SubscriptionController {
     @ExceptionHandler(CheckoutGatewayException.class)
     public ResponseEntity<ErrorResponse> handleCheckoutGatewayError(CheckoutGatewayException ex,
                                                                     HttpServletRequest request) {
-        HttpStatus status = HttpStatus.BAD_GATEWAY;
+        return checkoutError(HttpStatus.BAD_GATEWAY, ex, request);
+    }
+
+    @ExceptionHandler(PremiumAlreadyActiveException.class)
+    public ResponseEntity<ErrorResponse> handlePremiumAlreadyActive(PremiumAlreadyActiveException ex,
+                                                                    HttpServletRequest request) {
+        return checkoutError(HttpStatus.CONFLICT, ex, request);
+    }
+
+    private ResponseEntity<ErrorResponse> checkoutError(HttpStatus status, RuntimeException ex,
+                                                        HttpServletRequest request) {
         return ResponseEntity.status(status).body(ErrorResponse.builder()
             .timestamp(LocalDateTime.now())
             .status(status.value())

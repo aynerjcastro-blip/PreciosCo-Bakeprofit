@@ -18,6 +18,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
 import com.comprasco.bakeprofit.auth.entity.Plan;
+import com.comprasco.bakeprofit.auth.entity.User;
 import com.comprasco.bakeprofit.auth.repository.UserRepository;
 import com.comprasco.bakeprofit.subscription.entity.PaymentTransaction;
 import com.comprasco.bakeprofit.subscription.entity.Subscription;
@@ -107,13 +108,31 @@ public class OrderWebhookService {
         payment.setUpdatedAt(updatedAt);
 
         if (accredited && payment.getSubscription() == null) {
-            Subscription subscription = new Subscription();
-            subscription.setUser(payment.getUser());
+            linkPremiumSubscription(payment, updatedAt);
+        }
+    }
+
+    private void linkPremiumSubscription(PaymentTransaction payment, OffsetDateTime startedAt) {
+        // Órdenes distintas del mismo comprador comparten el bloqueo de la cuenta.
+        Long userId = payment.getUser().getId();
+        User user = users.findByIdForUpdate(userId).orElseThrow();
+        Subscription subscription = subscriptions
+            .findFirstByUserIdAndPlanAndStatusOrderByIdAsc(userId, Plan.PREMIUM, SubscriptionStatus.ACTIVE)
+            .orElse(null);
+        if (subscription == null) {
+            subscription = new Subscription();
+            subscription.setUser(user);
             subscription.setPlan(Plan.PREMIUM);
             subscription.setStatus(SubscriptionStatus.ACTIVE);
-            subscription.setStartedAt(updatedAt);
-            payment.setSubscription(subscriptions.save(subscription));
-            users.updatePlan(payment.getUser().getId(), Plan.PREMIUM);
+            subscription.setStartedAt(startedAt);
+            subscription = subscriptions.save(subscription);
+        } else {
+            log.warn("La Order {} se acreditó para una cuenta con Premium activo. Se vinculó a la suscripción {}",
+                payment.getExternalOrderId(), subscription.getId());
+        }
+        payment.setSubscription(subscription);
+        if (user.getPlan() != Plan.PREMIUM) {
+            users.updatePlan(userId, Plan.PREMIUM);
         }
     }
 

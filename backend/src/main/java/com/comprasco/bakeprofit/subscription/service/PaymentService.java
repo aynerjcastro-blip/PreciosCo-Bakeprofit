@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.comprasco.bakeprofit.auth.entity.Plan;
 import com.comprasco.bakeprofit.auth.entity.User;
 import com.comprasco.bakeprofit.auth.exception.UserNotFoundException;
 import com.comprasco.bakeprofit.auth.repository.UserRepository;
@@ -20,6 +21,7 @@ import com.comprasco.bakeprofit.subscription.config.PremiumCheckoutProperties;
 import com.comprasco.bakeprofit.subscription.dto.CheckoutIntentResponse;
 import com.comprasco.bakeprofit.subscription.entity.PaymentTransaction;
 import com.comprasco.bakeprofit.subscription.exception.CheckoutGatewayException;
+import com.comprasco.bakeprofit.subscription.exception.PremiumAlreadyActiveException;
 import com.comprasco.bakeprofit.subscription.repository.PaymentTransactionRepository;
 import com.mercadopago.client.order.OrderClient;
 import com.mercadopago.client.order.OrderConfigRequest;
@@ -53,12 +55,19 @@ public class PaymentService {
         this.accessToken = accessToken;
     }
 
-    // La transacción del repositorio confirma el intento antes de llamar a Mercado Pago.
+    /**
+     * El intento queda confirmado antes de crear la orden en Mercado Pago. Si el webhook llega
+     * antes de que guardemos el ID de la orden, la referencia local permite asociarlo con el pago.
+     * Si falla la pasarela, el intento queda disponible para diagnóstico.
+     */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public CheckoutIntentResponse createCheckoutIntent(Long userId) {
-        validateConfiguration();
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
+        if (user.getPlan() == Plan.PREMIUM) {
+            throw new PremiumAlreadyActiveException();
+        }
+        validateConfiguration();
         String externalReference = UUID.randomUUID().toString();
 
         PaymentTransaction payment = new PaymentTransaction();
@@ -82,6 +91,9 @@ public class PaymentService {
         return new CheckoutIntentResponse(externalReference, order.getCheckoutUrl());
     }
 
+    /**
+     * En el sandbox colombiano, Checkout Pro rechazó importes enteros en COP con el sufijo {@code .00}.
+     */
     private Order createOrder(User user, String externalReference) {
         BigDecimal price = checkout.price().stripTrailingZeros();
         String amount = price.scale() <= 0 ? price.toPlainString() : price.setScale(2).toPlainString();

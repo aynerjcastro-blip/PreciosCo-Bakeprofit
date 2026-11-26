@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
@@ -19,11 +20,13 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.comprasco.bakeprofit.auth.entity.Plan;
 import com.comprasco.bakeprofit.auth.entity.User;
 import com.comprasco.bakeprofit.auth.repository.UserRepository;
 import com.comprasco.bakeprofit.subscription.config.PremiumCheckoutProperties;
 import com.comprasco.bakeprofit.subscription.entity.PaymentTransaction;
 import com.comprasco.bakeprofit.subscription.exception.CheckoutGatewayException;
+import com.comprasco.bakeprofit.subscription.exception.PremiumAlreadyActiveException;
 import com.comprasco.bakeprofit.subscription.repository.PaymentTransactionRepository;
 import com.google.gson.JsonObject;
 import com.mercadopago.client.order.OrderClient;
@@ -49,12 +52,23 @@ class PaymentServiceTest {
         var user = new User();
         user.setId(USER_ID);
         user.setEmail("buyer@example.test");
+        user.setPlan(Plan.FREE);
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
         when(paymentRepository.save(any(PaymentTransaction.class))).thenAnswer(invocation -> {
             savedPayment = invocation.getArgument(0);
             savedPayment.setId(PAYMENT_ID);
             return savedPayment;
         });
+    }
+
+    @Test
+    void rejectsCheckoutForPremiumWithoutCreatingAnIntentOrOrder() {
+        userRepository.findById(USER_ID).orElseThrow().setPlan(Plan.PREMIUM);
+        MPHttpClient transport = mock(MPHttpClient.class);
+
+        assertThatThrownBy(() -> service(transport).createCheckoutIntent(USER_ID))
+            .isInstanceOf(PremiumAlreadyActiveException.class);
+        verifyNoInteractions(paymentRepository, transport);
     }
 
     @Test
