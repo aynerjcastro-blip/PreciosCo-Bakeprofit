@@ -1,0 +1,19 @@
+$kind: http-request
+name: POST Checkout - Intento creado
+description: Usa el JWT de un usuario de prueba con rol USER y plan FREE.
+url: "{{baseUrl}}/api/subscriptions/checkout"
+method: POST
+headers:
+  - key: Authorization
+    value: Bearer {{token}}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Devuelve 201 con la referencia local y la URL de checkout", () => {
+        pm.response.to.have.status(201);
+        const response = pm.response.json();
+        pm.expect(response.externalReference).to.match(/^[0-9a-f-]{36}$/i);
+        pm.expect(response.checkoutUrl).to.match(/^https:\/\//);
+      });
+order: 1000

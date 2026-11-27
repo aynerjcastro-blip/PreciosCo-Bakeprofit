@@ -1,5 +1,6 @@
 package com.comprasco.bakeprofit.core.filter;
 
+import com.comprasco.bakeprofit.core.response.ErrorResponseWriter;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.github.bucket4j.Bandwidth;
@@ -29,6 +30,8 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
+    private final ErrorResponseWriter errors;
+
     @Value("${app.rate-limit.requests-per-minute:60}")
     private int requestsPerMinute;
 
@@ -37,6 +40,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
             .maximumSize(100_000)
             .expireAfterAccess(10, TimeUnit.MINUTES)
             .build(this::newBucket);
+
+    public RateLimitFilter(ErrorResponseWriter errors) {
+        this.errors = errors;
+    }
 
     private Bucket newBucket(String key) {
         int limit = requestsPerMinute > 0 ? requestsPerMinute : 60;
@@ -66,15 +73,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (!probe.isConsumed()) {
             long waitSeconds = probe.getNanosToWaitForRefill() / 1_000_000_000;
             response.setHeader("Retry-After", String.valueOf(waitSeconds));
-            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("""
-                    {
-                      "status": 429,
-                      "error": "Too Many Requests",
-                      "message": "Límite de solicitudes excedido. Intenta en %d segundos."
-                    }
-                    """.formatted(waitSeconds));
+            errors.write(request, response, HttpStatus.TOO_MANY_REQUESTS,
+                    "Límite de solicitudes excedido. Intenta en %d segundos.".formatted(waitSeconds));
             return;
         }
 

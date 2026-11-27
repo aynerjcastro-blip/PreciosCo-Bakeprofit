@@ -1,0 +1,38 @@
+$kind: http-request
+name: POST Webhook - Firma válida
+description: Usa una Order de sandbox ya acreditada que exista en la base local.
+url: "{{baseUrl}}/api/payments/webhook/mercadopago?data.id={{mpOrderId}}&type=order"
+method: POST
+auth:
+  type: noauth
+body:
+  type: json
+  content: '{"type":"order","action":"order.processed","live_mode":false,"data":{"id":"{{mpOrderId}}"}}'
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      const orderId = pm.variables.get("mpOrderId");
+      const secret = pm.variables.get("mpWebhookSecret");
+      if (!/^ORDTST[A-Z0-9]+$/.test(orderId ?? "") || !secret) {
+        throw new Error("Configura mpOrderId con una orden de sandbox y mpWebhookSecret con el secreto local.");
+      }
+      const requestId = pm.variables.replaceIn("{{$guid}}");
+      const timestamp = Math.floor(Date.now() / 1000);
+      const manifest = "id:" + orderId.toLowerCase() + ";request-id:" + requestId + ";ts:" + timestamp + ";";
+      const encoder = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        "raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+      );
+      const digest = await crypto.subtle.sign("HMAC", key, encoder.encode(manifest));
+      const signature = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+      pm.request.headers.upsert({ key: "x-request-id", value: requestId });
+      pm.request.headers.upsert({ key: "x-signature", value: "ts=" + timestamp + ",v1=" + signature });
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Confirma la entrega con 200 y cuerpo vacío", () => {
+        pm.response.to.have.status(200);
+        pm.expect(pm.response.text()).to.equal("");
+      });
+order: 3000

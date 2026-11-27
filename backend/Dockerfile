@@ -33,5 +33,5 @@ COPY --from=build /app/target/*.jar app.jar
 # Puerto por defecto de Spring Boot
 EXPOSE 8080
 
-# Comando que inicia Spring Boot
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# El argumento de Spring prevalece sobre las variables del contenedor.
+ENTRYPOINT ["java", "-jar", "app.jar", "--spring.jpa.hibernate.ddl-auto=validate"]

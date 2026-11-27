@@ -1,0 +1,13 @@
+{
+  "action": "order.processed",
+  "api_version": "v1",
+  "application_id": "123456",
+  "date_created": "2025-08-07T18:54:40.851374414Z",
+  "id": "123456",
+  "live_mode": true,
+  "type": "order",
+  "user_id": 123456,
+  "data": {
+    "id": "ORD01JYH1Z1YJN4HZ8J3Q0RB3YP6D"
+  }
+}

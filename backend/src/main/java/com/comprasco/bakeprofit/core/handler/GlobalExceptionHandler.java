@@ -27,6 +27,11 @@ import com.comprasco.bakeprofit.review.exception.ReviewNotAllowedException;
 import com.comprasco.bakeprofit.review.exception.ReviewNotFoundException;
 import com.comprasco.bakeprofit.store.exception.StoreAlreadyExistsException;
 import com.comprasco.bakeprofit.store.exception.StoreNotFoundException;
+import com.comprasco.bakeprofit.subscription.exception.CheckoutGatewayException;
+import com.comprasco.bakeprofit.subscription.exception.InvalidWebhookNotificationException;
+import com.comprasco.bakeprofit.subscription.exception.InvalidWebhookSignatureException;
+import com.comprasco.bakeprofit.subscription.exception.PremiumAlreadyActiveException;
+import com.comprasco.bakeprofit.subscription.exception.WebhookGatewayException;
 
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
@@ -42,8 +47,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -63,6 +66,33 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
         private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+        @ExceptionHandler({CheckoutGatewayException.class, WebhookGatewayException.class})
+        public ResponseEntity<ErrorResponse> handlePaymentGatewayError(RuntimeException ex, HttpServletRequest request) {
+                return paymentError(HttpStatus.BAD_GATEWAY, ex.getMessage(), request);
+        }
+
+        @ExceptionHandler(PremiumAlreadyActiveException.class)
+        public ResponseEntity<ErrorResponse> handlePremiumAlreadyActive(
+                        PremiumAlreadyActiveException ex, HttpServletRequest request) {
+                return paymentError(HttpStatus.CONFLICT, ex.getMessage(), request);
+        }
+
+        @ExceptionHandler(InvalidWebhookNotificationException.class)
+        public ResponseEntity<ErrorResponse> handleInvalidWebhookNotification(
+                        InvalidWebhookNotificationException ex, HttpServletRequest request) {
+                return paymentError(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+        }
+
+        @ExceptionHandler(InvalidWebhookSignatureException.class)
+        public ResponseEntity<ErrorResponse> handleInvalidWebhookSignature(
+                        InvalidWebhookSignatureException ex, HttpServletRequest request) {
+                return paymentError(HttpStatus.UNAUTHORIZED, ex.getMessage(), request);
+        }
+
+        private ResponseEntity<ErrorResponse> paymentError(HttpStatus status, String message, HttpServletRequest request) {
+                return ResponseEntity.status(status).body(ErrorResponse.of(status, message, request.getRequestURI()));
+        }
 
         /**
          * Maneja errores de validacion en los atributos de los DTOs.
@@ -520,14 +550,10 @@ public class GlobalExceptionHandler {
          * 500.
          */
         @ExceptionHandler({ AccessDeniedException.class, AuthorizationDeniedException.class })
-        public ResponseEntity<Map<String, Object>> handleAccessDeniedException(Exception ex) {
-                Map<String, Object> body = new HashMap<>();
-                body.put("timestamp", LocalDateTime.now());
-                body.put("status", HttpStatus.FORBIDDEN.value());
-                body.put("error", "Forbidden");
-                body.put("message", "Acceso denegado: Se requieren permisos de administrador.");
-
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+        public ResponseEntity<ErrorResponse> handleAccessDeniedException(HttpServletRequest request) {
+                HttpStatus status = HttpStatus.FORBIDDEN;
+                return ResponseEntity.status(status).body(
+                        ErrorResponse.of(status, "Acceso denegado para el rol de la cuenta.", request.getRequestURI()));
         }
 
         /**
