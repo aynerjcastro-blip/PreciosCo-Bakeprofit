@@ -673,3 +673,15 @@
         transform: none;
     }
 }
+/* Aceptación de términos y privacidad en el registro (Ley 1581) */
+.auth-form__legal {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.auth-form__legal a {
+    color: var(--color-primary);
+}

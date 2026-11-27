@@ -12,6 +12,8 @@ import Profile from '@/components/profile/Profile';
 import SectionPresentation from './pages/SectionPresentation';
 import Explore from './pages/Explore';
 import Contact from './pages/Contact';
+import Terms from './pages/legal/Terms';
+import Privacy from './pages/legal/Privacy';
 import { AuthProvider } from '@/context/AuthContext';
 export default function App() {
   return (
@@ -31,6 +33,8 @@ export default function App() {
             <Route path="/secciones/:slug" element={<SectionPresentation />} />
             <Route path="explorar" element={<Explore />} />
             <Route path="contacto" element={<Contact />} />
+            <Route path="terminos" element={<Terms />} />
+            <Route path="privacidad" element={<Privacy />} />
 
             {/* Rutas Protegidas (Requieren Login) */}
             <Route element={<ProtectedRoute />}>

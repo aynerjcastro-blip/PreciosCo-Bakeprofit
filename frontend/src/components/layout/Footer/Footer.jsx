@@ -6,6 +6,7 @@
  */
 
 import { Link } from 'react-router-dom';
+import { FacebookIcon, InstagramIcon, XIcon } from '@/components/ui/icons/SocialIcons';
 
 // Importación del módulo CSS para encapsular los estilos y evitar colisiones
 import styles from './Footer.module.css';
@@ -58,14 +59,13 @@ export default function Footer() {
                 {/* 3. Sección de Redes Sociales */}
                 <div className={styles['site-footer__social']} aria-label="Redes sociales">
                     <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className={styles['social-link']} aria-label="Facebook">
-                        {/* Se asume el uso de una clase de ícono global o puedes insertar un SVG directo */}
-                        <span className="icon icon--facebook" aria-hidden="true">f</span>
+                        <FacebookIcon />
                     </a>
                     <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className={styles['social-link']} aria-label="Instagram">
-                        <span className="icon icon--instagram" aria-hidden="true">ig</span>
+                        <InstagramIcon />
                     </a>
-                    <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className={styles['social-link']} aria-label="Twitter">
-                        <span className="icon icon--twitter" aria-hidden="true">x</span>
+                    <a href="https://x.com" target="_blank" rel="noopener noreferrer" className={styles['social-link']} aria-label="X (antes Twitter)">
+                        <XIcon />
                     </a>
                 </div>
             </div>

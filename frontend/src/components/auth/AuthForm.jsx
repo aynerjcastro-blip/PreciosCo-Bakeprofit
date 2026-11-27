@@ -244,6 +244,16 @@ export default function AuthForm({
 
             {error && <p className={styles['auth-form__error']} role="alert">{error}</p>}
 
+            {/* Autorización de tratamiento de datos (Ley 1581): aplica también al registro con Google */}
+            {!isLogin && (
+                <p className={styles['auth-form__legal']}>
+                    Al crear tu cuenta aceptas los{' '}
+                    <Link to="/terminos" target="_blank" rel="noopener noreferrer">Términos y Condiciones</Link>{' '}
+                    y autorizas el tratamiento de tus datos según la{' '}
+                    <Link to="/privacidad" target="_blank" rel="noopener noreferrer">Política de Privacidad</Link>.
+                </p>
+            )}
+
             <button
                 type="submit"
                 className={styles['auth-form__submit']}

@@ -1,11 +1,6 @@
 import { Link } from 'react-router-dom';
 import styles from './Contact.module.css';
-
-/**
- * Correo de contacto del equipo. Se configura en frontend/.env (VITE_CONTACT_EMAIL) para no
- * dejar un correo fijo en el código; sin él, la página muestra solo los demás canales.
- */
-const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL?.trim() || null;
+import { CONTACT_EMAIL } from '@/config/contact';
 
 function MailIcon() {
     return (
