@@ -14,5 +14,11 @@ public record CatalogOfferRow(
         String brandName,
         String storeName,
         BigDecimal value,
-        String productUrl) {
+        String productUrl,
+        Boolean requiresPrescription) {
+
+    /** Marcado en la BD como "requiere fórmula médica" (HU-39). */
+    public boolean flaggedAsPrescription() {
+        return Boolean.TRUE.equals(requiresPrescription);
+    }
 }

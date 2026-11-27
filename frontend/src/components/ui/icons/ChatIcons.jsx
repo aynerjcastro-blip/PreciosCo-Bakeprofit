@@ -110,6 +110,16 @@ export function ExternalIcon(props) {
     );
 }
 
+/** Escudo con cruz: aviso de salud (droguería, RN-33). */
+export function ShieldIcon(props) {
+    return (
+        <Svg size={16} {...props}>
+            <path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z" />
+            <path d="M12 9v6M9 12h6" />
+        </Svg>
+    );
+}
+
 export function InfinityIcon(props) {
     return (
         <Svg size={14} {...props}>

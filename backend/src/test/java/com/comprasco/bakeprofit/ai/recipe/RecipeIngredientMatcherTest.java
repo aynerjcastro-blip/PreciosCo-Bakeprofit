@@ -120,6 +120,6 @@ class RecipeIngredientMatcherTest {
 
     private static CatalogOfferRow row(Long productId, String name, String store, String value) {
         return new CatalogOfferRow(productId, name, null, null, store, new BigDecimal(value),
-                "https://tienda.example/" + productId);
+                "https://tienda.example/" + productId, false);
     }
 }

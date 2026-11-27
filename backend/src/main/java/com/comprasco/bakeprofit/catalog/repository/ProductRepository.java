@@ -43,6 +43,11 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
             """)
     List<Long> findPricedActiveIdsByCategoryIds(@Param("categoryIds") Collection<Long> categoryIds, Limit limit);
 
+    /** Marca o desmarca un producto como de venta bajo fórmula médica (HU-39, RN-33). */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Product p SET p.requiresPrescription = :required WHERE p.id = :id")
+    int updateRequiresPrescription(@Param("id") Long id, @Param("required") boolean required);
+
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Product p SET p.active = :active WHERE p.category.id = :categoryId")
     int updateActiveByCategoryId(@Param("categoryId") Long categoryId, @Param("active") boolean active);

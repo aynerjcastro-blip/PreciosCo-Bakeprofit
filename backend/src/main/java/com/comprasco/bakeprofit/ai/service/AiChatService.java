@@ -16,6 +16,7 @@ import com.comprasco.bakeprofit.ai.dto.AiMessage;
 import com.comprasco.bakeprofit.ai.dto.AiRecipeResponse;
 import com.comprasco.bakeprofit.ai.exception.AiInvalidRequestException;
 import com.comprasco.bakeprofit.ai.exception.AiMessageTooLongException;
+import com.comprasco.bakeprofit.ai.pharmacy.PharmacySection;
 import com.comprasco.bakeprofit.ai.prompt.SectionPrompt;
 import com.comprasco.bakeprofit.ai.recipe.ExtractedRecipe;
 import com.comprasco.bakeprofit.ai.recipe.MatchedIngredient;
@@ -65,9 +66,12 @@ public class AiChatService {
      *
      * @param donePayload lo que se envía en el evento {@code done} al terminar
      * @param refund      devuelve la cuota reservada si Gemini falla
+     * @param trailer     texto que el backend agrega SIEMPRE al final de la
+     *                    respuesta, sin depender del modelo (aviso de droguería,
+     *                    RN-33); null si no hay
      */
     public record PreparedChat(String systemPrompt, List<AiMessage> messages, Object donePayload,
-            Runnable refund) {
+            Runnable refund, String trailer) {
     }
 
     /**
@@ -77,8 +81,11 @@ public class AiChatService {
         PreparedChat prepared = prepareChat(request, user);
         try {
             String reply = geminiClient.chat(prepared.systemPrompt(), prepared.messages());
+            if (prepared.trailer() != null) {
+                reply = reply + "\n\n" + prepared.trailer();
+            }
             AiChatResponse q = (AiChatResponse) prepared.donePayload();
-            return new AiChatResponse(reply, q.queriesUsed(), q.queriesLimit(), q.plan());
+            return new AiChatResponse(reply, q.queriesUsed(), q.queriesLimit(), q.plan(), q.disclaimer());
         } catch (Exception e) {
             prepared.refund().run();
             throw e;
@@ -98,7 +105,9 @@ public class AiChatService {
         }
         String catalogText = catalogLoader.loadForSection(request.section());
         String systemPrompt = SectionPrompt.build(request.section(), catalogText);
-        return reserveQuery(systemPrompt, buildMessages(request), user);
+        // Droguería: el aviso de RN-33 lo pone el backend, no el modelo
+        String disclaimer = PharmacySection.SLUG.equals(request.section()) ? PharmacySection.DISCLAIMER : null;
+        return reserveQuery(systemPrompt, buildMessages(request), user, disclaimer);
     }
 
     /**
@@ -154,7 +163,7 @@ public class AiChatService {
 
             String systemPrompt = SectionPrompt.buildReceta(recipe.dish(), servings, availabilityText(matched));
             AiRecipeResponse done = recipeDone(used, user, recipe.dish(), servings, matched);
-            return new PreparedChat(systemPrompt, messages, done, refund);
+            return new PreparedChat(systemPrompt, messages, done, refund, null);
         } catch (Exception e) {
             refund.run();
             throw e;
@@ -178,6 +187,10 @@ public class AiChatService {
             prepared.refund().run();
             throw e;
         }
+        // Aviso obligatorio (RN-33): lo escribe el backend aunque el modelo no recomiende nada
+        if (prepared.trailer() != null) {
+            onChunk.accept("\n\n" + prepared.trailer());
+        }
         return prepared.donePayload();
     }
 
@@ -191,9 +204,15 @@ public class AiChatService {
     // ── Helpers ───────────────────────────────────────────
 
     private PreparedChat reserveQuery(String systemPrompt, List<AiMessage> messages, User user) {
+        return reserveQuery(systemPrompt, messages, user, null);
+    }
+
+    private PreparedChat reserveQuery(String systemPrompt, List<AiMessage> messages, User user,
+            String disclaimer) {
         int used = quotaService.consume(user); // último paso: si algo antes falla, no se cobra
-        AiChatResponse quotaInfo = new AiChatResponse("", used, quotaService.limitFor(user), user.getPlan().name());
-        return new PreparedChat(systemPrompt, messages, quotaInfo, () -> quotaService.refund(user));
+        AiChatResponse quotaInfo = new AiChatResponse("", used, quotaService.limitFor(user),
+                user.getPlan().name(), disclaimer);
+        return new PreparedChat(systemPrompt, messages, quotaInfo, () -> quotaService.refund(user), disclaimer);
     }
 
     /** Una línea por ingrediente con la disponibilidad ya verificada, para el prompt. */

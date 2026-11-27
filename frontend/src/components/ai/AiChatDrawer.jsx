@@ -14,6 +14,7 @@ import {
     InfinityIcon,
     PlusIcon,
     RecipeIcon,
+    ShieldIcon,
     TimerIcon,
     TrashIcon,
     TypingIndicator,
@@ -100,6 +101,12 @@ function parseSuggestions(rawText) {
         .filter(line => line.length > 0 && line.length <= 50);
 
     return { cleanText, suggestions: suggestions.slice(0, 3) };
+}
+
+/** Quita del texto el aviso que agregó el backend (se muestra aparte como bloque fijo). */
+function removeDisclaimer(text, disclaimer) {
+    const idx = text.lastIndexOf(disclaimer);
+    return idx === -1 ? text : (text.slice(0, idx) + text.slice(idx + disclaimer.length)).trimEnd();
 }
 
 /** ¿El usuario prefiere menos movimiento? (accesibilidad) */
@@ -281,8 +288,13 @@ export default function AiChatDrawer({ section, onClose }) {
 
             const duration = Date.now() - start;
 
+            // Droguería (RN-33): el backend agrega el aviso al final del texto; se saca del
+            // texto y se muestra como bloque fijo para que no se pierda entre las sugerencias.
+            const disclaimer = done?.disclaimer || undefined;
+            const text = disclaimer ? removeDisclaimer(fullText, disclaimer) : fullText;
+
             // Extraer sugerencias del texto completo
-            const { cleanText, suggestions } = parseSuggestions(fullText);
+            const { cleanText, suggestions } = parseSuggestions(text);
 
             setMessages(prev => [
                 ...prev,
@@ -292,6 +304,7 @@ export default function AiChatDrawer({ section, onClose }) {
                     time: duration,
                     // Disponibilidad de ingredientes resuelta contra el catálogo
                     recipe: asRecipe && done?.ingredients ? done : undefined,
+                    disclaimer,
                 },
             ]);
             setStreamingText('');
@@ -455,6 +468,11 @@ export default function AiChatDrawer({ section, onClose }) {
                                 <>
                                     <ReactMarkdown components={MD_COMPONENTS}>{msg.content}</ReactMarkdown>
                                     {msg.recipe && <RecipeCard recipe={msg.recipe} />}
+                                    {msg.disclaimer && (
+                                        <p className={s.disclaimer} role="note">
+                                            <ShieldIcon /> {msg.disclaimer}
+                                        </p>
+                                    )}
                                 </>
                             )}
                             {msg.role === 'assistant' && msg.time != null && (

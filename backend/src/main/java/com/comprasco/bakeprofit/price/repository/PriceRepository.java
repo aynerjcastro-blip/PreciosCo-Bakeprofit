@@ -114,7 +114,7 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
      */
     @Query("""
                 SELECT new com.comprasco.bakeprofit.price.dto.CatalogOfferRow(
-                    pr.id, pr.name, pr.unit, b.name, s.name, p.value, p.productUrl)
+                    pr.id, pr.name, pr.unit, b.name, s.name, p.value, p.productUrl, pr.requiresPrescription)
                 FROM Price p
                 JOIN p.product pr
                 LEFT JOIN pr.brand b

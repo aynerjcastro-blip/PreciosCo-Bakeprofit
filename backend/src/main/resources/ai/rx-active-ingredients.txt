@@ -1,0 +1,194 @@
+# HU-39 · RF63 · RN-33 — Principios activos de venta bajo fórmula médica.
+#
+# Red de seguridad del filtro de droguería: si el NOMBRE de un producto contiene alguno de estos
+# términos (palabra completa, sin distinguir tildes ni mayúsculas), el producto no se envía a la IA.
+# La otra fuente es la columna products.requires_prescription; basta con que una lo marque.
+#
+# Reglas para editar:
+# - Un término por línea; "#" inicia un comentario.
+# - Solo principios que en Colombia se venden con fórmula en TODAS sus presentaciones del catálogo.
+#   No agregar los que tienen presentaciones de venta libre (diclofenaco gel, terbinafina crema,
+#   clotrimazol, ketoconazol champú, hidrocortisona crema, levonorgestrel de emergencia, ibuprofeno,
+#   naproxeno, loratadina, cetirizina...): excluirían productos OTC. Para esos casos se marca la columna.
+# - La lista debe revisarla un químico farmacéutico antes de producción.
+# - Se pueden agregar términos sin recompilar con preciosco.ai.rx.extra-terms (separados por coma).
+
+# Antibióticos
+amoxicilina
+ampicilina
+penicilina
+dicloxacilina
+oxacilina
+azitromicina
+claritromicina
+eritromicina
+cefalexina
+cefradina
+cefadroxilo
+cefuroxima
+cefixima
+ceftriaxona
+cefepime
+ciprofloxacino
+levofloxacino
+moxifloxacino
+norfloxacino
+ofloxacino
+doxiciclina
+tetraciclina
+minociclina
+clindamicina
+metronidazol
+tinidazol
+secnidazol
+nitrofurantoina
+trimetoprim
+sulfametoxazol
+gentamicina
+amikacina
+vancomicina
+linezolid
+rifampicina
+isoniazida
+
+# Antivirales y antifúngicos sistémicos
+valaciclovir
+oseltamivir
+fluconazol
+itraconazol
+voriconazol
+
+# Cardiovasculares
+losartan
+valsartan
+irbesartan
+telmisartan
+candesartan
+enalapril
+captopril
+lisinopril
+ramipril
+amlodipino
+nifedipino
+verapamilo
+diltiazem
+metoprolol
+propranolol
+carvedilol
+atenolol
+bisoprolol
+hidroclorotiazida
+clortalidona
+furosemida
+espironolactona
+atorvastatina
+rosuvastatina
+simvastatina
+lovastatina
+ezetimiba
+clopidogrel
+warfarina
+rivaroxaban
+apixaban
+dabigatran
+digoxina
+amiodarona
+
+# Diabetes y endocrinos
+metformina
+glibenclamida
+glimepirida
+sitagliptina
+vildagliptina
+empagliflozina
+dapagliflozina
+insulina
+levotiroxina
+metimazol
+
+# Sistema nervioso, psiquiatría y medicamentos de control especial
+clonazepam
+alprazolam
+lorazepam
+diazepam
+midazolam
+bromazepam
+zolpidem
+fluoxetina
+sertralina
+escitalopram
+citalopram
+paroxetina
+venlafaxina
+duloxetina
+amitriptilina
+imipramina
+trazodona
+mirtazapina
+bupropion
+quetiapina
+risperidona
+olanzapina
+haloperidol
+aripiprazol
+litio
+carbamazepina
+oxcarbazepina
+acido valproico
+valproato
+lamotrigina
+levetiracetam
+topiramato
+fenitoina
+fenobarbital
+gabapentina
+pregabalina
+metilfenidato
+atomoxetina
+
+# Opioides y analgésicos de fórmula
+tramadol
+codeina
+morfina
+oxicodona
+hidromorfona
+fentanilo
+buprenorfina
+metadona
+tapentadol
+ketorolaco
+
+# Corticoides sistémicos
+prednisona
+prednisolona
+dexametasona
+metilprednisolona
+deflazacort
+
+# Respiratorios de fórmula
+salbutamol
+beclometasona
+budesonida
+fluticasona
+formoterol
+salmeterol
+tiotropio
+montelukast
+
+# Otros
+sildenafil
+tadalafil
+misoprostol
+isotretinoina
+metotrexato
+tamoxifeno
+finasterida
+dutasterida
+alopurinol
+colchicina
+ondansetron
+metoclopramida
+domperidona
+estradiol
+progesterona
+medroxiprogesterona

@@ -10,10 +10,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Component;
 
 import com.comprasco.bakeprofit.ai.exception.AiInvalidRequestException;
+import com.comprasco.bakeprofit.ai.pharmacy.PharmacySection;
+import com.comprasco.bakeprofit.ai.pharmacy.PrescriptionFilter;
+import com.comprasco.bakeprofit.catalog.event.ProductPrescriptionChangedEvent;
 import com.comprasco.bakeprofit.catalog.repository.CategoryRepository;
 import com.comprasco.bakeprofit.catalog.repository.ProductRepository;
 import com.comprasco.bakeprofit.notification.event.PriceRegisteredEvent;
@@ -45,15 +50,18 @@ public class CatalogContextLoader {
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final PriceRepository priceRepository;
+    private final PrescriptionFilter prescriptionFilter;
     private final Cache<String, String> cache;
 
     public CatalogContextLoader(CategoryRepository categoryRepository,
             ProductRepository productRepository,
             PriceRepository priceRepository,
+            PrescriptionFilter prescriptionFilter,
             @Value("${preciosco.ai.catalog-cache-ttl:PT30M}") Duration cacheTtl) {
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
         this.priceRepository = priceRepository;
+        this.prescriptionFilter = prescriptionFilter;
         this.cache = Caffeine.newBuilder()
                 .expireAfterWrite(cacheTtl)
                 .maximumSize(10)
@@ -75,7 +83,7 @@ public class CatalogContextLoader {
      */
     public String loadForSection(String sectionSlug) {
         String rootName = resolveRootName(sectionSlug); // valida antes de tocar la caché
-        return cache.get(sectionSlug, slug -> build(rootName));
+        return cache.get(sectionSlug, slug -> build(slug, rootName));
     }
 
     /** Un precio nuevo cambia el catálogo: se descarta la caché. */
@@ -84,7 +92,16 @@ public class CatalogContextLoader {
         cache.invalidateAll();
     }
 
-    private String build(String rootName) {
+    /**
+     * Un producto se marcó o desmarcó como de fórmula médica (HU-39): se descarta
+     * la caché después del commit, para que la siguiente consulta lea la marca nueva.
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onPrescriptionChanged(ProductPrescriptionChangedEvent event) {
+        cache.invalidateAll();
+    }
+
+    private String build(String sectionSlug, String rootName) {
         long start = System.nanoTime();
 
         // 1. Subcategorías activas de la sección
@@ -101,8 +118,19 @@ public class CatalogContextLoader {
         }
 
         // 3. Precios vigentes con todos los datos necesarios, en una sola consulta
+        List<CatalogOfferRow> rows = priceRepository.findCatalogOffersByProductIds(productIds);
+
+        // 3b. Droguería: fuera los productos de fórmula médica ANTES de que lleguen al modelo
+        //     (HU-39 · RF63 · RN-33). Independiente del prompt y del scraper.
+        if (PharmacySection.SLUG.equals(sectionSlug)) {
+            PrescriptionFilter.Result filtered = prescriptionFilter.exclude(rows);
+            rows = filtered.allowed();
+            log.info("Catálogo IA de droguería: {} producto(s) de fórmula médica excluido(s) (RN-33)",
+                    filtered.excludedProducts());
+        }
+
         Map<Long, List<CatalogOfferRow>> byProduct = new LinkedHashMap<>();
-        for (CatalogOfferRow row : priceRepository.findCatalogOffersByProductIds(productIds)) {
+        for (CatalogOfferRow row : rows) {
             byProduct.computeIfAbsent(row.productId(), id -> new ArrayList<>()).add(row);
         }
 

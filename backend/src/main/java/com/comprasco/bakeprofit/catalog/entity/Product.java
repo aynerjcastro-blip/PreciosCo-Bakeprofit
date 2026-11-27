@@ -66,6 +66,13 @@ public class Product {
     @Column(nullable = false)
     private Boolean active = true;
 
+    /**
+     * Requiere fórmula médica (HU-39, RN-33). El asistente de IA de droguería no envía estos
+     * productos al modelo. Se marca por script o administración, no desde el scraper.
+     */
+    @Column(name = "requires_prescription", nullable = false)
+    private Boolean requiresPrescription = false;
+
     @Column(nullable = false)
     private LocalDateTime registrationDate = LocalDateTime.now();
 
