@@ -35,6 +35,23 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     /** Categorías raíz: los dominios (Supermercado, Droguería, ...). */
     List<Category> findByParentIsNull ();
 
+    /**
+     * IDs de las subcategorías activas de la categoría raíz con ese nombre
+     * (sin distinguir mayúsculas). Solo IDs, en una consulta: lo usa el
+     * contexto del asistente de IA.
+     */
+    @Query("""
+            SELECT c.id FROM Category c
+            WHERE c.active = true
+              AND c.parent.parent IS NULL
+              AND LOWER(c.parent.name) = LOWER(:rootName)
+            """)
+    List<Long> findActiveChildIdsByRootName(@Param("rootName") String rootName);
+
+    /** ID de la categoría raíz (sección) con ese nombre, sin distinguir mayúsculas. */
+    @Query("SELECT c.id FROM Category c WHERE c.parent IS NULL AND LOWER(c.name) = LOWER(:name)")
+    java.util.Optional<Long> findRootIdByName(@Param("name") String name);
+
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Category c SET c.active = :active WHERE c.parent.id = :parentId")
     int updateActiveByParentId(@Param("parentId") Long parentId, @Param("active") boolean active);

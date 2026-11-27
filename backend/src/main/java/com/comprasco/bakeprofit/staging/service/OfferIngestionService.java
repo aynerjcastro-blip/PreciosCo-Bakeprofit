@@ -103,7 +103,7 @@ public class OfferIngestionService {
         if (!duplicates.isEmpty()) {
             Candidate winner = duplicates.stream().min(Comparator
                     .comparing((Candidate c) -> c.accepted().price())
-                    .thenComparing(c -> c.offer().getId())).orElseThrow();
+                    .thenComparing(c -> c.offer().getId(), Comparator.<Long>naturalOrder())).orElseThrow();
             offer = winner.offer();
             screened = new OfferScreening.Result(winner.accepted(), null);
         }

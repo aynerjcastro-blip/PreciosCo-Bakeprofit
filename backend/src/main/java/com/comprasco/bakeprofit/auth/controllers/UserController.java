@@ -14,6 +14,7 @@ import com.comprasco.bakeprofit.auth.entity.User;
 import com.comprasco.bakeprofit.auth.security.CurrentUser;
 import com.comprasco.bakeprofit.auth.service.UserService;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 /**
@@ -23,6 +24,7 @@ import jakarta.validation.Valid;
  * por lo que no reciben ningún id en la URL: un usuario nunca puede ver ni
  * modificar el perfil de otro.
  */
+@Tag(name="Usuarios")
 @RestController
 @RequestMapping("/api/users/me")
 public class UserController {

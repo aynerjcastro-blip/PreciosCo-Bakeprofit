@@ -4,8 +4,12 @@ import java.util.TimeZone;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+
+import com.comprasco.bakeprofit.ai.config.AiProperties;
 
 @SpringBootApplication
+@EnableConfigurationProperties(AiProperties.class)
 public class BakeprofitApplication {
 
 	/**
