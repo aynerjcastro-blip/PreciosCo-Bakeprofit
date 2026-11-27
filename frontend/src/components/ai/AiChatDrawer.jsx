@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { streamAiMessage, streamAiRecipe, fetchAiQuota } from '../../api/ai';
+import { streamAiMessage, streamAiRecipe, streamAiFacial, fetchAiQuota } from '../../api/ai';
 import s from '@/components/ai/AiChatDrawer.module.css';
 import {
     SuperAvatar,
@@ -20,6 +20,7 @@ import {
     TypingIndicator,
 } from '@/components/ui/icons/ChatIcons';
 import RecipeCard from '@/components/ai/RecipeCard';
+import FacialCard from '@/components/ai/FacialCard';
 
 /** Turnos de historial que se envían al backend (máx. permitido: 20). */
 const MAX_HISTORY_TURNS = 10;
@@ -55,10 +56,11 @@ const SUGGESTIONS = {
         'Protector solar',
         'Kit primeros auxilios',
     ],
+    // HU-40: el asistente pide tipo de piel, necesidades y presupuesto por producto
     'cuidado-facial': [
-        'Sérum vitamina C',
-        'Hidratante piel grasa',
-        'Protector solar facial',
+        'Piel grasa con acné, hasta $100.000',
+        'Piel seca y sensible',
+        'Protector solar para piel mixta',
     ],
 };
 
@@ -255,6 +257,7 @@ export default function AiChatDrawer({ section, onClose }) {
         if (!text || loading) return;
 
         const asRecipe = recipeMode;
+        const isFacial = section === 'cuidado-facial';
         const userMsg = { role: 'user', content: text, recipe: asRecipe || undefined };
         setMessages(prev => [...prev, userMsg]);
         setInput('');
@@ -284,12 +287,14 @@ export default function AiChatDrawer({ section, onClose }) {
         try {
             const done = asRecipe
                 ? await streamAiRecipe(payload, onChunk)
-                : await streamAiMessage(payload, onChunk);
+                : isFacial
+                    ? await streamAiFacial(payload, onChunk)
+                    : await streamAiMessage(payload, onChunk);
 
             const duration = Date.now() - start;
 
-            // Droguería (RN-33): el backend agrega el aviso al final del texto; se saca del
-            // texto y se muestra como bloque fijo para que no se pierda entre las sugerencias.
+            // Droguería (RN-33) y cuidado facial (RN-17): el backend agrega el aviso al final del
+            // texto; se saca del texto y se muestra como bloque fijo para que no se pierda.
             const disclaimer = done?.disclaimer || undefined;
             const text = disclaimer ? removeDisclaimer(fullText, disclaimer) : fullText;
 
@@ -304,6 +309,8 @@ export default function AiChatDrawer({ section, onClose }) {
                     time: duration,
                     // Disponibilidad de ingredientes resuelta contra el catálogo
                     recipe: asRecipe && done?.ingredients ? done : undefined,
+                    // Opciones de cuidado facial ya filtradas por presupuesto (HU-40)
+                    facial: isFacial && done?.groups?.length ? done : undefined,
                     disclaimer,
                 },
             ]);
@@ -432,7 +439,10 @@ export default function AiChatDrawer({ section, onClose }) {
                                         ingredientes que encuentras en el catálogo.</>
                                 ) : (
                                     <>¡Hola! Soy <strong>{cfg.label}</strong>, tu asistente
-                                        de {cfg.sub.toLowerCase()}. ¿Qué producto necesitas cotizar?</>
+                                        de {cfg.sub.toLowerCase()}.{' '}
+                                        {section === 'cuidado-facial'
+                                            ? 'Cuéntame tu tipo de piel, qué quieres mejorar y tu presupuesto por producto.'
+                                            : '¿Qué producto necesitas cotizar?'}</>
                                 )}
                             </p>
                             <div className={s.chips}>
@@ -468,6 +478,7 @@ export default function AiChatDrawer({ section, onClose }) {
                                 <>
                                     <ReactMarkdown components={MD_COMPONENTS}>{msg.content}</ReactMarkdown>
                                     {msg.recipe && <RecipeCard recipe={msg.recipe} />}
+                                    {msg.facial && <FacialCard recommendation={msg.facial} />}
                                     {msg.disclaimer && (
                                         <p className={s.disclaimer} role="note">
                                             <ShieldIcon /> {msg.disclaimer}
@@ -498,7 +509,11 @@ export default function AiChatDrawer({ section, onClose }) {
                         <div className={`${s.bubble} ${s.assistant} ${s.loadingBubble}`} aria-live="polite">
                             <TypingIndicator className={s.typing} />
                             <span className={s.loadingLabel}>
-                                {recipeMode ? 'Buscando ingredientes en el catálogo' : 'Pensando'}
+                                {recipeMode
+                                    ? 'Buscando ingredientes en el catálogo'
+                                    : section === 'cuidado-facial'
+                                        ? 'Buscando productos para tu piel'
+                                        : 'Pensando'}
                             </span>
                             <span className={s.liveTimer}>
                                 {formatTime(elapsed)}

@@ -17,6 +17,7 @@ import com.comprasco.bakeprofit.ai.dto.AiChatResponse;
 import com.comprasco.bakeprofit.ai.dto.AiQuotaResponse;
 import com.comprasco.bakeprofit.ai.exception.AiEmptyResponseException;
 import com.comprasco.bakeprofit.ai.exception.AiProviderException;
+import com.comprasco.bakeprofit.ai.facial.FacialAdvisorService;
 import com.comprasco.bakeprofit.ai.service.AiChatService;
 import com.comprasco.bakeprofit.ai.service.AiChatService.ClientGoneException;
 import com.comprasco.bakeprofit.ai.service.AiChatService.PreparedChat;
@@ -64,13 +65,41 @@ public class AiChatController {
 
     private final AiChatService aiChatService;
     private final AiQuotaService quotaService;
+    private final FacialAdvisorService facialAdvisorService;
     private final ObjectMapper objectMapper;
 
     public AiChatController(AiChatService aiChatService,
-            AiQuotaService quotaService) {
+            AiQuotaService quotaService,
+            FacialAdvisorService facialAdvisorService) {
         this.aiChatService = aiChatService;
         this.quotaService = quotaService;
+        this.facialAdvisorService = facialAdvisorService;
         this.objectMapper = new ObjectMapper();
+    }
+
+    /**
+     * Recomendaciones de cuidado facial según tipo de piel, necesidades y
+     * presupuesto, con streaming SSE (HU-40, RF32).
+     *
+     * <p>
+     * El usuario escribe en texto libre ("piel grasa con acné, máximo 60 mil").
+     * Gasta 1 consulta de la cuota normal; si falta el tipo de piel, se pregunta
+     * y no se cobra. El presupuesto (por producto) lo filtra el backend; el
+     * evento {@code done} trae las opciones por tipo de producto
+     * ({@link com.comprasco.bakeprofit.ai.dto.AiFacialResponse}) y el aviso de
+     * orientación, que también llega al final del texto. El campo
+     * {@code section} se ignora.
+     * </p>
+     */
+    @PostMapping("/cuidado-facial")
+    @Operation(summary = "Recomendar productos de cuidado facial por tipo de piel, necesidades y presupuesto (streaming SSE)")
+    public void cuidadoFacial(
+            @CurrentUser User user,
+            @Valid @RequestBody AiChatRequest request,
+            HttpServletResponse response) throws IOException, InterruptedException {
+
+        PreparedChat prepared = facialAdvisorService.prepare(request, user);
+        streamTo(response, prepared);
     }
 
     /**

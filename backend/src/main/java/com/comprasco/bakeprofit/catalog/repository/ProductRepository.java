@@ -10,6 +10,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import org.springframework.data.domain.Limit;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 import java.util.Collection;
 import java.util.List;
@@ -17,6 +21,16 @@ import java.util.Optional;
 
 // JpaSpecificationExecutor: la búsqueda combina sus filtros con ProductSpecifications (HU-06a, HU-06b)
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
+
+    /**
+     * Búsqueda paginada con la categoría, su sección y la marca en la MISMA consulta.
+     * Sin el entity graph, las relaciones EAGER se cargaban con una consulta por producto
+     * (N+1), y el ahorro (OneToOne inverso, que Hibernate no puede cargar perezoso) también:
+     * con la BD remota, la página de 12 productos de la portada tardaba ~3,5 s.
+     */
+    @Override
+    @EntityGraph(attributePaths = {"category", "category.parent", "brand", "savings"})
+    Page<Product> findAll(Specification<Product> spec, Pageable pageable);
 
     List<Product> findByActiveTrue ();
 

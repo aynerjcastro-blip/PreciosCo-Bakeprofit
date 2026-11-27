@@ -68,10 +68,17 @@ public class AiChatService {
      * @param refund      devuelve la cuota reservada si Gemini falla
      * @param trailer     texto que el backend agrega SIEMPRE al final de la
      *                    respuesta, sin depender del modelo (aviso de droguería,
-     *                    RN-33); null si no hay
+     *                    RN-33, o de cuidado facial, RN-17); null si no hay
+     * @param directReply respuesta fija que se envía SIN llamar a Gemini (p. ej.
+     *                    preguntar el tipo de piel); null para la ruta normal
      */
     public record PreparedChat(String systemPrompt, List<AiMessage> messages, Object donePayload,
-            Runnable refund, String trailer) {
+            Runnable refund, String trailer, String directReply) {
+
+        public PreparedChat(String systemPrompt, List<AiMessage> messages, Object donePayload,
+                Runnable refund, String trailer) {
+            this(systemPrompt, messages, donePayload, refund, trailer, null);
+        }
     }
 
     /**
@@ -179,6 +186,14 @@ public class AiChatService {
      */
     public Object stream(PreparedChat prepared, Consumer<String> onChunk)
             throws IOException, InterruptedException {
+        if (prepared.directReply() != null) {
+            // Respuesta fija (no se llama a Gemini ni se cobra; la cuota ya se devolvió al preparar)
+            onChunk.accept(prepared.directReply());
+            if (prepared.trailer() != null) {
+                onChunk.accept("\n\n" + prepared.trailer());
+            }
+            return prepared.donePayload();
+        }
         try {
             geminiClient.chatStream(prepared.systemPrompt(), prepared.messages(), onChunk);
         } catch (ClientGoneException e) {

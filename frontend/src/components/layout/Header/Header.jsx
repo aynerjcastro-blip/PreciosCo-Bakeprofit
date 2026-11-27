@@ -167,6 +167,14 @@ export default function Header() {
                     </button>
 
                     <Link to="/" className={styles['site-header__title']} aria-label="PreciosCo, ir al inicio">
+                        <img
+                            src="/assets/images/LogoPreciosCo.png"
+                            alt=""
+                            className={styles['logo-mark']}
+                            width="40"
+                            height="40"
+                            decoding="async"
+                        />
                         <span className={styles['logo-text']}>Precios</span>
                         <img src="/assets/images/co-badge.png" alt="" className={styles['logo-co']} />
                     </Link>

@@ -284,7 +284,7 @@ export default function Home() {
             </section>
 
             {/* ===================== PREGUNTAS FRECUENTES ===================== */}
-            <section className={styles.sectionAlt} aria-labelledby="faq-title">
+            <section id="preguntas-frecuentes" className={styles.sectionAlt} aria-labelledby="faq-title">
                 <div className={styles.innerNarrow}>
                     <h2 id="faq-title" className={styles.h2}>Preguntas, respondidas.</h2>
                     {/* <details> es un acordeón nativo: abre con teclado y lector de pantalla sin JavaScript */}

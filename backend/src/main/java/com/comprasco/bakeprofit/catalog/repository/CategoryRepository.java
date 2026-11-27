@@ -48,6 +48,17 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
             """)
     List<Long> findActiveChildIdsByRootName(@Param("rootName") String rootName);
 
+    /** ID de una subcategoría activa por su nombre y el de su sección (sin distinguir mayúsculas). */
+    @Query("""
+            SELECT c.id FROM Category c
+            WHERE c.active = true
+              AND c.parent.parent IS NULL
+              AND LOWER(c.parent.name) = LOWER(:rootName)
+              AND LOWER(c.name) = LOWER(:name)
+            """)
+    java.util.Optional<Long> findActiveChildIdByRootAndName(@Param("rootName") String rootName,
+            @Param("name") String name);
+
     /** ID de la categoría raíz (sección) con ese nombre, sin distinguir mayúsculas. */
     @Query("SELECT c.id FROM Category c WHERE c.parent IS NULL AND LOWER(c.name) = LOWER(:name)")
     java.util.Optional<Long> findRootIdByName(@Param("name") String name);

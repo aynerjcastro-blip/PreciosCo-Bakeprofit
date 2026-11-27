@@ -5,15 +5,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
+import com.comprasco.bakeprofit.ai.text.SearchText;
 import com.comprasco.bakeprofit.price.dto.CatalogOfferRow;
 
 /**
@@ -45,8 +43,6 @@ import com.comprasco.bakeprofit.price.dto.CatalogOfferRow;
 public class PrescriptionFilter {
 
     private static final Logger log = LoggerFactory.getLogger(PrescriptionFilter.class);
-    private static final Pattern DIACRITICS = Pattern.compile("\\p{M}+");
-    private static final Pattern NON_ALNUM = Pattern.compile("[^a-z0-9]+");
 
     /** Términos ya normalizados, rodeados de espacios para comparar palabras completas. */
     private final List<String> terms;
@@ -106,11 +102,7 @@ public class PrescriptionFilter {
 
     /** Minúsculas, sin tildes y con cualquier separador convertido en un espacio. */
     static String normalize(String text) {
-        if (text == null) {
-            return "";
-        }
-        String noAccents = DIACRITICS.matcher(Normalizer.normalize(text, Normalizer.Form.NFD)).replaceAll("");
-        return NON_ALNUM.matcher(noAccents.toLowerCase(Locale.ROOT)).replaceAll(" ").strip();
+        return SearchText.normalize(text);
     }
 
     private static List<String> readTerms(Resource list) {

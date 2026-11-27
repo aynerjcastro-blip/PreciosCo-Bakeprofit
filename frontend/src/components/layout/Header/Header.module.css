@@ -71,6 +71,46 @@ html {
     vertical-align: middle;
 }
 
+/* Logo circular a la izquierda del nombre */
+.logo-mark {
+    width: 40px;
+    height: 40px;
+    margin-right: 8px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Anchos medios (menú en píldora visible pero poco espacio): solo el logo circular, que ya
+   lleva el nombre. Sin esto, "PreciosCo" se montaba sobre "Explorar" entre ~960 y ~1220 px. */
+@media (min-width: 961px) and (max-width: 1220px) {
+    .logo-text,
+    .logo-co {
+        display: none;
+    }
+
+    .logo-mark {
+        width: 44px;
+        height: 44px;
+        margin-right: 0;
+    }
+}
+
+/* Móvil: tampoco cabe el nombre junto al logo, el modo y la cuenta */
+@media (max-width: 480px) {
+    .logo-text,
+    .logo-co {
+        display: none;
+    }
+
+    .logo-mark {
+        width: 38px;
+        height: 38px;
+        margin-right: 0;
+    }
+}
+
 /* ---------- Botón redondo (hamburguesa y atajo de búsqueda) ---------- */
 .icon-button {
     display: grid;
@@ -133,7 +173,7 @@ html {
     list-style: none;
     border: 1px solid var(--border-color);
     border-radius: 999px;
-    background: var(--bg-main);
+    background: var(--bg);
 }
 
 .site-nav__link {

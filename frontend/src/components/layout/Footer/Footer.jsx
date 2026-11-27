@@ -42,8 +42,9 @@ export default function Footer() {
                 <nav className={styles['site-footer__nav']} aria-label="Navegación del pie de página">
                     {/* Grupo 1: Enlaces principales de la plataforma */}
                     <div className={styles['site-footer__nav-group']}>
-                        <Link to="/sobre-nosotros">Quiénes somos</Link>
-                        <Link to="/como-funciona">Cómo funciona</Link>
+                        {/* Son secciones de la portada (Home.jsx), no páginas aparte */}
+                        <Link to="/#sobre-nosotros">Quiénes somos</Link>
+                        <Link to="/#como-funciona">Cómo funciona</Link>
                         <Link to="/contacto">Contáctanos</Link>
                     </div>
                     {/* Grupo 2: Accesos rápidos a categorías o funcionalidades */}

@@ -17,14 +17,51 @@ import { AuthContext } from '@/context/AuthContext';
  * arriba. Con Atrás y Adelante (POP) no se toca, para que el navegador recupere la posición.
  */
 function ScrollToTopOnNavigate() {
-    const { pathname } = useLocation();
+    const { pathname, hash } = useLocation();
     const navigationType = useNavigationType();
 
     useEffect(() => {
-        if (navigationType !== 'POP') {
-            window.scrollTo(0, 0);
+        if (navigationType === 'POP') return;
+
+        // Con ancla (/#como-funciona, desde el pie de página): ir a esa sección.
+        // La sección puede tardar en pintarse y, al llegar los productos, el contenido de arriba
+        // crece y la empuja: durante ~2 s se reajusta si se movió, salvo que el usuario ya
+        // haya hecho scroll por su cuenta.
+        if (hash) {
+            const id = decodeURIComponent(hash.slice(1));
+            const offset = 88; // altura del header fijo (igual a scroll-padding-top)
+            let elapsed = 0;
+            let userScrolled = false;
+            const stop = () => { userScrolled = true; };
+            window.addEventListener('wheel', stop, { passive: true });
+            window.addEventListener('touchmove', stop, { passive: true });
+            window.addEventListener('keydown', stop);
+
+            const timer = setInterval(() => {
+                elapsed += 100;
+                const target = document.getElementById(id);
+                if (target && !userScrolled) {
+                    const drift = target.getBoundingClientRect().top - offset;
+                    if (Math.abs(drift) > 4) {
+                        window.scrollTo(0, window.scrollY + drift);
+                    }
+                }
+                if (userScrolled || elapsed >= 2000) {
+                    cleanup();
+                }
+            }, 100);
+
+            function cleanup() {
+                clearInterval(timer);
+                window.removeEventListener('wheel', stop);
+                window.removeEventListener('touchmove', stop);
+                window.removeEventListener('keydown', stop);
+            }
+            return cleanup;
         }
-    }, [pathname, navigationType]);
+
+        window.scrollTo(0, 0);
+    }, [pathname, hash, navigationType]);
 
     return null;
 }

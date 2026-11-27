@@ -28,6 +28,21 @@ export function streamAiRecipe(payload, onChunk) {
     return streamAi('/api/ai/supermercados/receta', payload, onChunk);
 }
 
+/**
+ * Recomendaciones de cuidado facial por tipo de piel, necesidades y presupuesto (HU-40).
+ *
+ * @param {{ message: string, history: Array }} payload — texto libre del usuario
+ * @param {(text: string) => void} onChunk — callback por cada fragmento
+ * @returns {Promise<{ queriesUsed: number, queriesLimit: number, plan: string, disclaimer: string,
+ *          skinType: string|null, needs: string[], budget: number|null,
+ *          groups: Array<{ type: string, label: string,
+ *            withinBudget: Array<{ name: string, brand?: string, store: string, price: number, url?: string }>,
+ *            cheapestOverBudget: object|null }> }>}
+ */
+export function streamAiFacial(payload, onChunk) {
+    return streamAi('/api/ai/cuidado-facial', payload, onChunk);
+}
+
 /** Cliente SSE común: errores HTTP (400/429/503) llegan como JSON antes del stream. */
 async function streamAi(path, payload, onChunk) {
     const res = await fetch(`${API_ORIGIN}${path}`, {

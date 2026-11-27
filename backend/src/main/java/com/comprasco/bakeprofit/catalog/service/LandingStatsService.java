@@ -5,13 +5,17 @@ import com.comprasco.bakeprofit.catalog.dto.LandingStatsResponse.SectionStats;
 import com.comprasco.bakeprofit.catalog.exception.LandingStatsRepository;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 /**
  * Servicio responsable de calcular y exponer las estadísticas mostradas
@@ -26,8 +30,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class LandingStatsService {
 
+    private static final String CACHE_KEY = "stats";
+
     private final LandingStatsRepository repository;
     private final Clock clock;
+    /**
+     * Las cifras de la portada cambian solo cuando corre el procesador de precios: se
+     * guardan unos minutos para no repetir 4 consultas contra la BD remota (~0,9 s) en cada
+     * visita.
+     */
+    private final Cache<String, LandingStatsResponse> cache;
 
     /**
      * Crea el servicio con el repositorio encargado de ejecutar las
@@ -35,25 +47,24 @@ public class LandingStatsService {
      *
      * @param repository repositorio de estadísticas de la landing
      */
-    public LandingStatsService(LandingStatsRepository repository, Clock clock) {
+    public LandingStatsService(LandingStatsRepository repository, Clock clock,
+            @Value("${app.landing.stats-cache-ttl:PT5M}") Duration cacheTtl) {
         this.repository = repository;
         this.clock = clock;
+        this.cache = Caffeine.newBuilder().expireAfterWrite(cacheTtl).maximumSize(1).build();
     }
 
     /**
-     * Obtiene las estadísticas agregadas para la landing page.
-     *
-     * <p>
-     * Ejecuta las consultas dentro de una transacción de solo lectura,
-     * permitiendo que las consultas compartan la misma conexión del pool
-     * y evitando escrituras accidentales.
-     * </p>
+     * Obtiene las estadísticas agregadas para la landing page (en caché unos minutos).
      *
      * @return respuesta con contadores globales, fecha de última
      *         actualización y estadísticas por sección
      */
-    @Transactional(readOnly = true)
     public LandingStatsResponse getStats() {
+        return cache.get(CACHE_KEY, key -> computeStats());
+    }
+
+    private LandingStatsResponse computeStats() {
         List<SectionStats> sections = repository.findSectionStats().stream()
                 .map(result -> new SectionStats(
                         result.getId(),
