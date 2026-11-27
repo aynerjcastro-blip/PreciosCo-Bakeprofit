@@ -13,6 +13,8 @@ import com.comprasco.bakeprofit.auth.entity.Plan;
 import com.comprasco.bakeprofit.auth.entity.Role;
 import com.comprasco.bakeprofit.auth.entity.User;
 
+import jakarta.persistence.LockModeType;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -31,6 +33,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT u FROM User u WHERE u.id = :userId")
     Optional<User> findByIdForUpdate(@Param("userId") Long userId);
+
+    // Pasarela de pago (PR #75): se perdió en el merge de develop con integracion-IA
+    @Modifying
+    @Query("UPDATE User u SET u.plan = :plan WHERE u.id = :userId")
+    int updatePlan(@Param("userId") Long userId, @Param("plan") Plan plan);
 
     @Transactional
     @Modifying(flushAutomatically = true, clearAutomatically = true)
