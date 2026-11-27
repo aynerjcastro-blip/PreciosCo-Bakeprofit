@@ -52,18 +52,6 @@ CREATE INDEX idx_payment_transactions_user_id ON public.payment_transactions (us
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
 
--- Permite registrar la referencia de la aplicación antes de recibir el ID de Mercado Pago.
--- Si HT-23 ya está aplicado, ejecutar solo estos tres ALTER TABLE en una transacción.
-ALTER TABLE public.payment_transactions
-    ALTER COLUMN external_payment_id DROP NOT NULL;
-
-ALTER TABLE public.payment_transactions
-    ADD COLUMN external_reference VARCHAR(64) NOT NULL DEFAULT gen_random_uuid()::text;
-
-ALTER TABLE public.payment_transactions
-    ALTER COLUMN external_reference DROP DEFAULT,
-    ADD CONSTRAINT payment_transactions_external_reference_key UNIQUE (external_reference);
-
 COMMIT;
 
 -- Consulta de sincronización. Puede ejecutarse de forma independiente para verificar
@@ -86,8 +74,7 @@ WITH expected_tables (table_name) AS (
         ('payment_transactions', 'id', 'bigint', true, NULL),
         ('payment_transactions', 'user_id', 'bigint', true, NULL),
         ('payment_transactions', 'subscription_id', 'bigint', false, NULL),
-        ('payment_transactions', 'external_payment_id', 'character varying(50)', false, NULL),
-        ('payment_transactions', 'external_reference', 'character varying(64)', true, NULL),
+        ('payment_transactions', 'external_payment_id', 'character varying(50)', true, NULL),
         ('payment_transactions', 'status', 'character varying(30)', true, NULL),
         ('payment_transactions', 'status_detail', 'character varying(100)', false, NULL),
         ('payment_transactions', 'amount', 'numeric(12,2)', true, NULL),
@@ -102,8 +89,7 @@ WITH expected_tables (table_name) AS (
         ('subscriptions', 'fk_subscriptions_users', 'f', 'user_id', 'users', NULL),
         ('payment_transactions', 'fk_payment_transactions_users', 'f', 'user_id', 'users', NULL),
         ('payment_transactions', 'fk_payment_transactions_subscriptions', 'f', 'subscription_id', 'subscriptions', NULL),
-        ('payment_transactions', 'payment_transactions_external_payment_id_key', 'u', 'external_payment_id', NULL, NULL),
-        ('payment_transactions', 'payment_transactions_external_reference_key', 'u', 'external_reference', NULL, NULL)
+        ('payment_transactions', 'payment_transactions_external_payment_id_key', 'u', 'external_payment_id', NULL, NULL)
 ), actual_tables AS (
     SELECT relation.oid AS table_id, relation.relname::text AS table_name, relation.relrowsecurity
     FROM pg_catalog.pg_class AS relation

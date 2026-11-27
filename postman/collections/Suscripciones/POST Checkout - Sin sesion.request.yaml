@@ -1,0 +1,15 @@
+$kind: http-request
+name: POST Checkout - Sin sesión
+description: El checkout requiere autenticación de usuario.
+url: "{{baseUrl}}/api/subscriptions/checkout"
+method: POST
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Devuelve 401 sin JWT", () => {
+        pm.response.to.have.status(401);
+      });
+order: 2000
