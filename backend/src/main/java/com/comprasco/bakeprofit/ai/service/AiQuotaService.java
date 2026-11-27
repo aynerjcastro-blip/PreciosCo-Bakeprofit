@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.comprasco.bakeprofit.ai.exception.AiQuotaExceededException;
+import com.comprasco.bakeprofit.ai.exception.AiRecipeQuotaExceededException;
 import com.comprasco.bakeprofit.auth.entity.Plan;
 import com.comprasco.bakeprofit.auth.entity.User;
 import com.comprasco.bakeprofit.auth.repository.UserRepository;
@@ -25,13 +26,45 @@ public class AiQuotaService {
 
     private final UserRepository userRepository;
     private final int freeMonthlyLimit;
+    private final int freeMonthlyRecipeLimit;
 
     public AiQuotaService(
             UserRepository userRepository,
-            @Value("${app.ai-quota.free-monthly-limit:20}") int freeMonthlyLimit) {
+            @Value("${app.ai-quota.free-monthly-limit:20}") int freeMonthlyLimit,
+            @Value("${app.ai-quota.free-monthly-recipe-limit:10}") int freeMonthlyRecipeLimit) {
         this.userRepository = userRepository;
         this.freeMonthlyLimit = freeMonthlyLimit;
+        this.freeMonthlyRecipeLimit = freeMonthlyRecipeLimit;
     }
+
+    // ── Recetas (SCRUM-325): cuota propia, no gasta consultas ──
+
+    /**
+     * Reserva una receta para el usuario.
+     *
+     * @return recetas usadas este mes después de reservar
+     * @throws AiRecipeQuotaExceededException si el usuario FREE agotó sus recetas
+     */
+    public int consumeRecipe(User user) {
+        if (user.getPlan() == Plan.PREMIUM) {
+            userRepository.incrementAiRecipesUsed(user.getId());
+        } else if (userRepository.tryConsumeAiRecipe(user.getId(), freeMonthlyRecipeLimit) == 0) {
+            throw new AiRecipeQuotaExceededException(freeMonthlyRecipeLimit);
+        }
+        return userRepository.findAiRecipesUsedById(user.getId());
+    }
+
+    /** Devuelve una receta reservada cuando la IA no pudo responder. */
+    public void refundRecipe(User user) {
+        userRepository.refundAiRecipe(user.getId());
+    }
+
+    /** Límite mensual de recetas del usuario (0 = ilimitado / PREMIUM). */
+    public int recipeLimitFor(User user) {
+        return user.getPlan() == Plan.PREMIUM ? 0 : freeMonthlyRecipeLimit;
+    }
+
+    // ── Consultas ──
 
     /**
      * Reserva una consulta para el usuario.

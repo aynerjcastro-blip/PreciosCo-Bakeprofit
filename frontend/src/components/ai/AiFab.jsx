@@ -5,6 +5,7 @@ import {
     DrogueriaAvatar,
     CuidadoAvatar,
 } from '../ui/icons/AiAvatars';
+import { ChatIcon, CloseIcon } from '../ui/icons/ChatIcons';
 
 const SECTIONS = [
     { slug: 'supermercados', label: 'Supermercados', Icon: SuperAvatar },
@@ -52,7 +53,7 @@ export default function AiFab({ onOpenChat }) {
                 onClick={() => setOpen(prev => !prev)}
                 aria-label="Abrir chat IA"
             >
-                {open ? '✕' : '💬'}
+                {open ? <CloseIcon size={24} /> : <ChatIcon size={26} />}
             </button>
         </div>
     );

@@ -5,6 +5,7 @@ import com.comprasco.bakeprofit.ai.exception.AiInvalidRequestException;
 import com.comprasco.bakeprofit.ai.exception.AiMessageTooLongException;
 import com.comprasco.bakeprofit.ai.exception.AiProviderException;
 import com.comprasco.bakeprofit.ai.exception.AiQuotaExceededException;
+import com.comprasco.bakeprofit.ai.exception.AiRecipeQuotaExceededException;
 import com.comprasco.bakeprofit.auth.exception.AccountLockedException;
 import com.comprasco.bakeprofit.auth.exception.EmailAlreadyExistsException;
 import com.comprasco.bakeprofit.auth.exception.ForbiddenActionException;
@@ -653,9 +654,9 @@ public class GlobalExceptionHandler {
          * @param request peticion HTTP actual
          * @return respuesta HTTP 429 Too Many Requests
          */
-        @ExceptionHandler(AiQuotaExceededException.class)
+        @ExceptionHandler({ AiQuotaExceededException.class, AiRecipeQuotaExceededException.class })
         public ResponseEntity<ErrorResponse> handleAiQuotaExceeded(
-                        AiQuotaExceededException ex,
+                        RuntimeException ex,
                         HttpServletRequest request) {
 
                 ErrorResponse error = ErrorResponse.builder()

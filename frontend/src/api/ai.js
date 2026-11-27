@@ -10,8 +10,27 @@ import { getToken } from '../utils/auth-helper';
  * @returns {Promise<{ queriesUsed: number, queriesLimit: number, plan: string }>}
  *          Resuelve con la info de cuota cuando el stream termina.
  */
-export async function streamAiMessage(payload, onChunk) {
-    const res = await fetch(`${API_ORIGIN}/api/ai/chat/stream`, {
+export function streamAiMessage(payload, onChunk) {
+    return streamAi('/api/ai/chat/stream', payload, onChunk);
+}
+
+/**
+ * Pide una receta con ingredientes vinculados al catálogo (SCRUM-325).
+ *
+ * @param {{ message: string, history: Array }} payload — message: el plato
+ * @param {(text: string) => void} onChunk — callback por cada fragmento
+ * @returns {Promise<{ recipesUsed: number, recipesLimit: number, plan: string,
+ *          dish: string, servings: number, estimatedTotal: number,
+ *          ingredients: Array<{ name: string, quantity: string, available: boolean,
+ *          productName?: string, storeName?: string, price?: number, url?: string }> }>}
+ */
+export function streamAiRecipe(payload, onChunk) {
+    return streamAi('/api/ai/supermercados/receta', payload, onChunk);
+}
+
+/** Cliente SSE común: errores HTTP (400/429/503) llegan como JSON antes del stream. */
+async function streamAi(path, payload, onChunk) {
+    const res = await fetch(`${API_ORIGIN}${path}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

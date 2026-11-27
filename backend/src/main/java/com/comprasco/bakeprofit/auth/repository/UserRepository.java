@@ -31,6 +31,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query(value = """
             UPDATE users
             SET ai_queries_used = 0,
+                ai_recipes_used = 0,
                 ai_queries_reset_at = ai_queries_reset_at + INTERVAL '1 month'
             WHERE ai_queries_reset_at <= :now
             """, nativeQuery = true)
@@ -73,6 +74,40 @@ public interface UserRepository extends JpaRepository<User, Long> {
             WHERE id = :userId
             """, nativeQuery = true)
     int refundAiQuery(@Param("userId") Long userId);
+
+    // ── Recetas (SCRUM-325): contador propio, mismas reglas que las consultas ──
+
+    /** Incrementa en 1 el contador de recetas (PREMIUM, sin límite). */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "UPDATE users SET ai_recipes_used = ai_recipes_used + 1 WHERE id = :userId",
+            nativeQuery = true)
+    int incrementAiRecipesUsed(@Param("userId") Long userId);
+
+    /**
+     * Consume una receta solo si el usuario no ha llegado al límite (atómico).
+     *
+     * @return 1 si se consumió, 0 si la cuota de recetas estaba agotada
+     */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            UPDATE users
+            SET ai_recipes_used = ai_recipes_used + 1
+            WHERE id = :userId AND ai_recipes_used < :limit
+            """, nativeQuery = true)
+    int tryConsumeAiRecipe(@Param("userId") Long userId, @Param("limit") int limit);
+
+    /** Devuelve una receta (cuando la IA no pudo responder). */
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "UPDATE users SET ai_recipes_used = GREATEST(ai_recipes_used - 1, 0) WHERE id = :userId",
+            nativeQuery = true)
+    int refundAiRecipe(@Param("userId") Long userId);
+
+    /** Lee el contador actual de recetas directamente de la BD. */
+    @Query(value = "SELECT ai_recipes_used FROM users WHERE id = :userId", nativeQuery = true)
+    int findAiRecipesUsedById(@Param("userId") Long userId);
 
     /** Lee el contador actual de consultas IA directamente de la BD. */
     @Query(value = "SELECT ai_queries_used FROM users WHERE id = :userId", nativeQuery = true)

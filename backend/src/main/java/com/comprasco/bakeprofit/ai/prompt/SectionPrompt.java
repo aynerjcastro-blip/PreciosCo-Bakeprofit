@@ -15,24 +15,10 @@ import java.util.Map;
 public final class SectionPrompt {
 
         /**
-         * Instrucción común que se agrega al final de cada prompt para que
-         * Gemini genere sugerencias de follow-up.
-         *
-         * <p>
-         * Formato estricto para facilitar el parsing en el frontend:
-         * </p>
-         * 
-         * <pre>
-         * [SUGERENCIAS]
-         * - Texto de sugerencia 1
-         * - Texto de sugerencia 2
-         * - Texto de sugerencia 3
-         * </pre>
-         */
-        /**
-         * Instrucción común sobre los enlaces: en el catálogo cada precio viene
-         * como enlace Markdown {@code [Tienda $precio](url)} a la página del
-         * producto en la tienda.
+         * Instrucción común sobre los enlaces y el estilo: en el catálogo cada
+         * precio viene como enlace Markdown {@code [Tienda $precio](url)} a la
+         * página del producto en la tienda. La interfaz usa iconos SVG, así que
+         * la IA no debe escribir emojis.
          */
         private static final String LINK_INSTRUCTION = """
 
@@ -41,8 +27,26 @@ public final class SectionPrompt {
                         Cada vez que menciones un precio, escríbelo con su enlace COPIADO EXACTAMENTE \
                         como aparece en el catálogo, para que el usuario pueda ir al producto. \
                         Nunca inventes, acortes ni modifiques una URL. Si un precio no tiene enlace, \
-                        escríbelo sin enlace.""";
+                        escríbelo sin enlace.
 
+                        ESTILO:
+                        No uses emojis ni emoticonos en ninguna parte de la respuesta.""";
+
+        /**
+         * Instrucción común que se agrega al final de cada prompt para que
+         * Gemini genere sugerencias de follow-up.
+         *
+         * <p>
+         * Formato estricto para facilitar el parsing en el frontend:
+         * </p>
+         *
+         * <pre>
+         * [SUGERENCIAS]
+         * - Texto de sugerencia 1
+         * - Texto de sugerencia 2
+         * - Texto de sugerencia 3
+         * </pre>
+         */
         private static final String SUGGESTION_INSTRUCTION = """
 
                         SUGERENCIAS DE SEGUIMIENTO:
@@ -70,8 +74,8 @@ public final class SectionPrompt {
                         REGLAS ESTRICTAS:
                         - Busca cada artículo de la lista en el catálogo de abajo.
                         - Para cada artículo encontrado, muestra TODAS las tiendas y precios disponibles.
-                        - Resalta cuál tienda tiene el mejor precio (más barato) con ✅.
-                        - Si un artículo NO está en el catálogo, indícalo claramente con ❌ y dilo al final \
+                        - Indica cuál tienda tiene el mejor precio (más barato) con el texto "(mejor precio)".
+                        - Si un artículo NO está en el catálogo, dilo claramente al final \
                           en una sección "Artículos no cotizados".
                         - Al final muestra un RESUMEN con el total estimado comprando todo en la tienda \
                           más barata posible.
@@ -79,15 +83,15 @@ public final class SectionPrompt {
                         - No inventes productos ni precios que no estén en el catálogo.
 
                         FORMATO DE RESPUESTA:
-                        ## 🛒 Cotización de tu lista
+                        ## Cotización de tu lista
 
                         Para cada producto encontrado:
-                        **Producto** | [Tienda A $X](url) | [Tienda B $Y](url) ✅ (mejor precio)
+                        **Producto** | [Tienda A $X](url) | [Tienda B $Y](url) (mejor precio)
 
-                        ### ❌ Artículos no cotizados
+                        ### Artículos no cotizados
                         - (lista de productos que no encontraste)
 
-                        ### 💰 Resumen
+                        ### Resumen
                         - Total estimado (mejores precios): $X
                         - Tiendas recomendadas: (lista)
 
@@ -169,6 +173,82 @@ public final class SectionPrompt {
          */
         public static String buildCotizacion(String catalogText) {
                 return COTIZACION_TEMPLATE.replace("{catalog}", catalogText);
+        }
+
+        // ── Recetas (SCRUM-325) ──────────────────────────────
+
+        /**
+         * Paso 1 de la receta: extraer el plato y sus ingredientes en JSON
+         * (salida estructurada). Los {@code searchTerms} son los que se buscan en
+         * el catálogo, así que deben parecerse al nombre de un producto.
+         */
+        public static final String RECIPE_EXTRACTION = """
+                        Eres un chef colombiano. Lee la conversación y identifica el plato que el usuario \
+                        quiere preparar ahora (puede ser un ajuste de una receta anterior, por ejemplo \
+                        "y para 6 personas").
+
+                        Devuelve:
+                        - isRecipe: false si el último mensaje no pide un plato, receta o preparación de comida.
+                        - dish: nombre del plato.
+                        - servings: porciones (usa las que pida el usuario; si no dice, 4).
+                        - ingredients: máximo 15, sin agua. Para cada uno:
+                          - name: nombre corto en español ("papa criolla").
+                          - quantity: cantidad para esas porciones ("500 g", "2 unidades", "1 cucharada").
+                          - searchTerms: de 1 a 3 términos para buscarlo en un supermercado colombiano, \
+                        del más específico al más general, en singular, sin marcas ni cantidades, \
+                        como aparecería en el nombre del producto (["papa criolla", "papa"], \
+                        ["pechuga pollo", "pollo"], ["crema leche"]). El término más general debe \
+                        seguir siendo EL MISMO ingrediente: nunca uses categorías como "fruta", \
+                        "verdura", "hierba", "condimento", "encurtido" o "carne". Escribe siempre \
+                        en singular ("alcaparra", "guasca").""";
+
+        /**
+         * Paso 2 de la receta: redactar la receta. La disponibilidad viene
+         * decidida por la base de datos en {@code {ingredients}}; la IA no la cambia.
+         * Los precios y enlaces los muestra el frontend en una tarjeta aparte.
+         */
+        private static final String RECIPE_TEMPLATE = """
+                        Eres un chef y asistente de compras de supermercado en Colombia. \
+                        Escribe la receta del plato que pidió el usuario.
+
+                        PLATO: {dish}
+                        PORCIONES: {servings}
+
+                        DISPONIBILIDAD EN EL CATÁLOGO (ya verificada, NO la cambies):
+                        {ingredients}
+
+                        REGLAS ESTRICTAS:
+                        - Usa exactamente los ingredientes de la lista de disponibilidad, con sus cantidades.
+                        - A los ingredientes marcados NO DISPONIBLE agrégales el texto "(no está en el catálogo)".
+                        - No escribas precios, tiendas ni enlaces: la aplicación los muestra aparte.
+                        - Pasos de preparación claros, numerados y en orden.
+                        - Responde en español, de forma concisa.
+                        - No uses emojis ni emoticonos en ninguna parte de la respuesta.
+
+                        FORMATO DE RESPUESTA:
+                        ## (nombre del plato)
+                        Porciones: N · Tiempo aproximado: X minutos
+
+                        ### Ingredientes
+                        - cantidad ingrediente
+
+                        ### Preparación
+                        1. paso
+
+                        ### Consejo
+                        (una línea opcional con un consejo útil)
+                        """ + SUGGESTION_INSTRUCTION;
+
+        /**
+         * Devuelve el system prompt para redactar la receta.
+         *
+         * @param ingredientsText una línea por ingrediente con su disponibilidad
+         */
+        public static String buildReceta(String dish, int servings, String ingredientsText) {
+                return RECIPE_TEMPLATE
+                                .replace("{dish}", dish)
+                                .replace("{servings}", String.valueOf(servings))
+                                .replace("{ingredients}", ingredientsText);
         }
 
         private SectionPrompt() {

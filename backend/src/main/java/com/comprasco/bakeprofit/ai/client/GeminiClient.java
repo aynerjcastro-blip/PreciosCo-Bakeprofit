@@ -64,9 +64,34 @@ public class GeminiClient {
          */
         public String chat(String systemPrompt, List<AiMessage> messages)
                         throws IOException, InterruptedException {
+                return generate(systemPrompt, messages, generationConfig(null));
+        }
+
+        /**
+         * Pide a Gemini una respuesta JSON con la forma de {@code responseSchema}
+         * (salida estructurada, sin streaming).
+         *
+         * @param responseSchema esquema OpenAPI de la respuesta (tipos OBJECT,
+         *                       ARRAY, STRING, INTEGER, BOOLEAN)
+         * @return el JSON ya parseado
+         * @throws AiEmptyResponseException si Gemini no devolvió un JSON válido
+         */
+        public JsonNode generateJson(String systemPrompt, List<AiMessage> messages, Object responseSchema)
+                        throws IOException, InterruptedException {
+                String json = generate(systemPrompt, messages, generationConfig(responseSchema));
+                try {
+                        return objectMapper.readTree(json);
+                } catch (IOException e) {
+                        log.warn("Gemini devolvió un JSON inválido: {}", json);
+                        throw new AiEmptyResponseException();
+                }
+        }
+
+        private String generate(String systemPrompt, List<AiMessage> messages,
+                        GeminiApiModel.GenerationConfig config) throws IOException, InterruptedException {
 
                 HttpResponse<String> response = send(
-                                "generateContent", systemPrompt, messages,
+                                "generateContent", systemPrompt, messages, config,
                                 HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
                 if (response.statusCode() != 200) {
@@ -98,7 +123,7 @@ public class GeminiClient {
                         Consumer<String> onChunk) throws IOException, InterruptedException {
 
                 HttpResponse<InputStream> response = send(
-                                "streamGenerateContent?alt=sse", systemPrompt, messages,
+                                "streamGenerateContent?alt=sse", systemPrompt, messages, generationConfig(null),
                                 HttpResponse.BodyHandlers.ofInputStream());
 
                 if (response.statusCode() != 200) {
@@ -140,12 +165,13 @@ public class GeminiClient {
         // ── Helpers privados ───────────────────────────────────
 
         private <T> HttpResponse<T> send(String method, String systemPrompt, List<AiMessage> messages,
+                        GeminiApiModel.GenerationConfig config,
                         HttpResponse.BodyHandler<T> handler) throws IOException, InterruptedException {
 
                 var payload = new GeminiApiModel.GenerateRequest(
                                 GeminiApiModel.SystemInstruction.of(systemPrompt),
                                 toContents(messages),
-                                generationConfig());
+                                config);
 
                 HttpRequest request = HttpRequest.newBuilder()
                                 .uri(URI.create(BASE_URL + properties.model() + ":" + method))
@@ -167,14 +193,21 @@ public class GeminiClient {
 
         /**
          * Gemini 3 no permite {@code thinkingBudget: 0}; se usa
-         * {@code thinkingLevel} (configurable). Si está vacío no se envía nada.
+         * {@code thinkingLevel} (configurable; vacío = no se envía). Con
+         * {@code responseSchema} se pide salida JSON estructurada.
          */
-        private GeminiApiModel.GenerationConfig generationConfig() {
+        private GeminiApiModel.GenerationConfig generationConfig(Object responseSchema) {
                 String level = properties.thinkingLevel();
-                if (level == null || level.isBlank()) {
+                GeminiApiModel.ThinkingConfig thinking = (level == null || level.isBlank())
+                                ? null
+                                : new GeminiApiModel.ThinkingConfig(level.trim());
+                if (thinking == null && responseSchema == null) {
                         return null;
                 }
-                return new GeminiApiModel.GenerationConfig(new GeminiApiModel.ThinkingConfig(level.trim()));
+                return new GeminiApiModel.GenerationConfig(
+                                thinking,
+                                responseSchema == null ? null : "application/json",
+                                responseSchema);
         }
 
         private AiProviderException providerError(int status, String body) {

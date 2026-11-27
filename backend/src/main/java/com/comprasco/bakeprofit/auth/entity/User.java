@@ -73,4 +73,9 @@ public class User {
     @Column(name = "ai_queries_reset_at", nullable = false)
     private OffsetDateTime aiQueriesResetAt;
 
+    /** Recetas pedidas al asistente este mes (SCRUM-325); se reinicia con ai_queries_used. */
+    @Generated
+    @Column(name = "ai_recipes_used", nullable = false)
+    private Integer aiRecipesUsed;
+
 }

@@ -150,7 +150,7 @@ public class CatalogContextLoader {
      * Solo URLs http(s). Se codifican espacios y paréntesis para que no rompan
      * la sintaxis de enlace Markdown.
      */
-    private static String safeUrl(String url) {
+    public static String safeUrl(String url) {
         if (url == null) {
             return null;
         }

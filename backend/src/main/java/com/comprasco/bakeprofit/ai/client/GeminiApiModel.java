@@ -37,9 +37,13 @@ class GeminiApiModel {
     record ThinkingConfig(String thinkingLevel) {
     }
 
-    /** Configuración de generación. */
+    /**
+     * Configuración de generación. {@code responseMimeType} +
+     * {@code responseSchema} fuerzan una respuesta JSON con esa forma
+     * (salida estructurada).
+     */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    record GenerationConfig(ThinkingConfig thinkingConfig) {
+    record GenerationConfig(ThinkingConfig thinkingConfig, String responseMimeType, Object responseSchema) {
     }
 
     /** El body completo del POST a generateContent / streamGenerateContent */

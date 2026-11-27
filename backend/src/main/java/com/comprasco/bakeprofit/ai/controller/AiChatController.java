@@ -97,7 +97,7 @@ public class AiChatController {
 
         // Puede lanzar 400/429: todavía no se escribió nada en la respuesta
         PreparedChat prepared = aiChatService.prepareChat(request, user);
-        streamTo(response, prepared, user);
+        streamTo(response, prepared);
     }
 
     /**
@@ -117,21 +117,46 @@ public class AiChatController {
             HttpServletResponse response) throws IOException {
 
         PreparedChat prepared = aiChatService.prepareCotizacion(request, user);
-        streamTo(response, prepared, user);
+        streamTo(response, prepared);
+    }
+
+    /**
+     * Receta con ingredientes vinculados al catálogo, con streaming SSE
+     * (SCRUM-325, RF30).
+     *
+     * <p>
+     * El usuario escribe el plato en {@code message} ("ajiaco para 4"). Usa la
+     * cuota mensual de recetas (no gasta consultas). Antes del stream se extraen
+     * los ingredientes y se buscan en el catálogo; el evento {@code done} trae
+     * esa disponibilidad ({@link com.comprasco.bakeprofit.ai.dto.AiRecipeResponse}).
+     * El campo {@code section} se ignora.
+     * </p>
+     */
+    @PostMapping("/supermercados/receta")
+    @Operation(summary = "Pedir una receta con ingredientes del catálogo de supermercados (streaming SSE)")
+    public void receta(
+            @CurrentUser User user,
+            @Valid @RequestBody AiChatRequest request,
+            HttpServletResponse response) throws IOException, InterruptedException {
+
+        PreparedChat prepared = aiChatService.prepareReceta(request, user);
+        streamTo(response, prepared);
     }
 
     @GetMapping("/quota")
-    @Operation(summary = "Consultar cuota actual de consultas IA del usuario")
+    @Operation(summary = "Consultar cuota actual de consultas y recetas IA del usuario")
     public ResponseEntity<AiQuotaResponse> getQuota(@CurrentUser User user) {
         return ResponseEntity.ok(new AiQuotaResponse(
                 user.getAiQueriesUsed(),
                 quotaService.limitFor(user),
-                user.getPlan().name()));
+                user.getPlan().name(),
+                user.getAiRecipesUsed(),
+                quotaService.recipeLimitFor(user)));
     }
 
     // ── Streaming ─────────────────────────────────────────
 
-    private void streamTo(HttpServletResponse response, PreparedChat prepared, User user) throws IOException {
+    private void streamTo(HttpServletResponse response, PreparedChat prepared) throws IOException {
         response.setContentType("text/event-stream");
         response.setCharacterEncoding("UTF-8");
         response.setHeader("Cache-Control", "no-cache");
@@ -140,14 +165,14 @@ public class AiChatController {
         PrintWriter writer = response.getWriter();
 
         try {
-            AiChatResponse quotaInfo = aiChatService.stream(prepared, user, chunk -> {
+            Object donePayload = aiChatService.stream(prepared, chunk -> {
                 try {
                     send(writer, "chunk", "{\"text\":" + objectMapper.writeValueAsString(chunk) + "}");
                 } catch (IOException e) {
                     throw new ClientGoneException();
                 }
             });
-            send(writer, "done", objectMapper.writeValueAsString(quotaInfo));
+            send(writer, "done", objectMapper.writeValueAsString(donePayload));
 
         } catch (ClientGoneException e) {
             log.debug("Cliente desconectado durante el streaming IA");
