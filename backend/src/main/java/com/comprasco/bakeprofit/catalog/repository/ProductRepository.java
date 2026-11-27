@@ -9,6 +9,9 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import org.springframework.data.domain.Limit;
+
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,6 +28,20 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     boolean existsByBrandAndManufacturerRefNorm(Brand brand, String manufacturerRefNorm);
 
     boolean existsByBrandAndManufacturerRefNormAndIdNot(Brand brand, String manufacturerRefNorm, Long id);
+
+    /**
+     * IDs de productos activos de las categorías que tienen al menos un precio
+     * en una tienda activa (contexto del asistente de IA). Solo IDs: no carga
+     * entidades ni dispara las relaciones EAGER (marca, categoría).
+     */
+    @Query("""
+            SELECT p.id FROM Product p
+            WHERE p.category.id IN :categoryIds
+              AND p.active = true
+              AND EXISTS (SELECT 1 FROM Price pr WHERE pr.product = p AND pr.store.active = true)
+            ORDER BY p.id
+            """)
+    List<Long> findPricedActiveIdsByCategoryIds(@Param("categoryIds") Collection<Long> categoryIds, Limit limit);
 
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Product p SET p.active = :active WHERE p.category.id = :categoryId")

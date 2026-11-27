@@ -1,54 +1,72 @@
 package com.comprasco.bakeprofit.ai.context;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.event.EventListener;
+import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Component;
 
-import com.comprasco.bakeprofit.catalog.entity.Category;
-import com.comprasco.bakeprofit.catalog.entity.Product;
+import com.comprasco.bakeprofit.ai.exception.AiInvalidRequestException;
 import com.comprasco.bakeprofit.catalog.repository.CategoryRepository;
 import com.comprasco.bakeprofit.catalog.repository.ProductRepository;
-import com.comprasco.bakeprofit.price.dto.ProductOffer;
+import com.comprasco.bakeprofit.notification.event.PriceRegisteredEvent;
+import com.comprasco.bakeprofit.price.dto.CatalogOfferRow;
 import com.comprasco.bakeprofit.price.repository.PriceRepository;
-
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.jpa.domain.Specification;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 /**
  * Carga productos y precios reales de la BD para inyectarlos como contexto
  * en el prompt de la IA.
  *
  * <p>
- * No es un "RAG con embeddings" — es una consulta SQL directa.
- * El catálogo de PreciosCo es lo bastante pequeño para que esto funcione
- * sin infraestructura adicional.
+ * Rendimiento: el catálogo se arma con 3 consultas de solo lectura
+ * (subcategorías, IDs de producto y una proyección plana con marca, tienda,
+ * precio y URL) en lugar de cargar entidades {@code Product}, cuyas relaciones
+ * EAGER generaban una consulta por marca (N+1, ~200 idas y vueltas a la BD).
+ * Además, el texto resultante se guarda en caché por sección y se invalida
+ * cuando se registra un precio nuevo.
  * </p>
  */
 @Component
 public class CatalogContextLoader {
+
+    private static final Logger log = LoggerFactory.getLogger(CatalogContextLoader.class);
 
     private static final int MAX_PRODUCTS = 200;
 
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final PriceRepository priceRepository;
+    private final Cache<String, String> cache;
 
     public CatalogContextLoader(CategoryRepository categoryRepository,
             ProductRepository productRepository,
-            PriceRepository priceRepository) {
+            PriceRepository priceRepository,
+            @Value("${preciosco.ai.catalog-cache-ttl:PT30M}") Duration cacheTtl) {
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
         this.priceRepository = priceRepository;
+        this.cache = Caffeine.newBuilder()
+                .expireAfterWrite(cacheTtl)
+                .maximumSize(10)
+                .build();
     }
 
     /**
      * Genera un bloque de texto con los productos y precios de la sección.
      *
      * <p>
-     * Formato de cada línea:
-     * {@code Producto: Arroz Diana 500g | Marca: Diana | Tienda: D1 $4.500, Éxito $5.200}
+     * Formato de cada línea (cada precio es un enlace Markdown a la tienda
+     * cuando hay URL):
+     * {@code - Arroz Diana 500 g | Marca: Diana | Precios: [D1 $4500](https://...), Éxito $5200}
      * </p>
      *
      * @param sectionSlug slug de la sección ("supermercados", "droguerias",
@@ -56,74 +74,91 @@ public class CatalogContextLoader {
      * @return texto con el catálogo formateado, listo para el prompt
      */
     public String loadForSection(String sectionSlug) {
-        // 1. Encontrar la categoría raíz que corresponde a esta sección
-        String rootName = resolveRootName(sectionSlug);
-        Category root = categoryRepository.findByParentIsNull().stream()
-                .filter(c -> c.getName().equalsIgnoreCase(rootName))
-                .findFirst()
-                .orElse(null);
+        String rootName = resolveRootName(sectionSlug); // valida antes de tocar la caché
+        return cache.get(sectionSlug, slug -> build(rootName));
+    }
 
-        if (root == null) {
-            return "(No hay productos disponibles en esta sección)";
-        }
+    /** Un precio nuevo cambia el catálogo: se descarta la caché. */
+    @EventListener
+    public void onPriceRegistered(PriceRegisteredEvent event) {
+        cache.invalidateAll();
+    }
 
-        // 2. Categorías hijas activas de esta raíz
-        List<Long> childCategoryIds = categoryRepository
-                .findByParentIdAndActiveTrue(root.getId())
-                .stream()
-                .map(Category::getId)
-                .toList();
+    private String build(String rootName) {
+        long start = System.nanoTime();
 
-        if (childCategoryIds.isEmpty()) {
+        // 1. Subcategorías activas de la sección
+        List<Long> categoryIds = categoryRepository.findActiveChildIdsByRootName(rootName);
+        if (categoryIds.isEmpty()) {
             return "(No hay categorías activas en esta sección)";
         }
 
-        // 3. Productos activos de esas categorías (limitados)
-        Specification<Product> spec = (r, q, cb) -> cb.and(
-                r.get("category").get("id").in(childCategoryIds),
-                cb.isTrue(r.get("active")));
-        List<Product> products = productRepository.findAll(spec, PageRequest.of(0, MAX_PRODUCTS))
-                .getContent();
-
-        if (products.isEmpty()) {
+        // 2. Productos activos con al menos un precio en tienda activa (limitados)
+        List<Long> productIds = productRepository.findPricedActiveIdsByCategoryIds(
+                categoryIds, Limit.of(MAX_PRODUCTS));
+        if (productIds.isEmpty()) {
             return "(No hay productos disponibles en esta sección)";
         }
 
-        // 4. Precios vigentes de esos productos, agrupados por producto
-        List<Long> productIds = products.stream().map(Product::getId).toList();
-        Map<Long, List<ProductOffer>> offersByProduct = priceRepository
-                .findCurrentOffersByProductIds(productIds)
-                .stream()
-                .collect(Collectors.groupingBy(ProductOffer::productId));
+        // 3. Precios vigentes con todos los datos necesarios, en una sola consulta
+        Map<Long, List<CatalogOfferRow>> byProduct = new LinkedHashMap<>();
+        for (CatalogOfferRow row : priceRepository.findCatalogOffersByProductIds(productIds)) {
+            byProduct.computeIfAbsent(row.productId(), id -> new ArrayList<>()).add(row);
+        }
 
-        // 5. Formatear como texto plano
+        // 4. Formatear como texto plano
         StringBuilder sb = new StringBuilder();
-        for (Product product : products) {
-            List<ProductOffer> offers = offersByProduct.get(product.getId());
-            if (offers == null || offers.isEmpty()) {
-                continue; // Sin precio vigente, no lo mostramos
+        for (List<CatalogOfferRow> offers : byProduct.values()) {
+            CatalogOfferRow first = offers.getFirst();
+            sb.append("- ").append(first.productName());
+            if (first.unit() != null) {
+                sb.append(" ").append(first.unit());
             }
-
-            sb.append("- ");
-            sb.append(product.getName());
-            if (product.getUnit() != null) {
-                sb.append(" ").append(product.getUnit());
-            }
-            if (product.getBrand() != null) {
-                sb.append(" | Marca: ").append(product.getBrand().getName());
+            if (first.brandName() != null) {
+                sb.append(" | Marca: ").append(first.brandName());
             }
             sb.append(" | Precios: ");
-
-            String priceList = offers.stream()
-                    .map(o -> o.storeName() + " $" + o.value().toPlainString())
-                    .collect(Collectors.joining(", "));
-            sb.append(priceList);
+            for (int i = 0; i < offers.size(); i++) {
+                if (i > 0) {
+                    sb.append(", ");
+                }
+                appendOffer(sb, offers.get(i));
+            }
             sb.append("\n");
         }
+
+        log.debug("Catálogo IA '{}' armado: {} productos en {} ms",
+                rootName, byProduct.size(), (System.nanoTime() - start) / 1_000_000);
 
         return sb.isEmpty()
                 ? "(No hay productos con precios disponibles en esta sección)"
                 : sb.toString();
+    }
+
+    /** {@code [Tienda $precio](url)} si hay URL http(s) válida; si no, texto plano. */
+    private static void appendOffer(StringBuilder sb, CatalogOfferRow offer) {
+        String label = offer.storeName() + " $" + offer.value().toPlainString();
+        String url = safeUrl(offer.productUrl());
+        if (url == null) {
+            sb.append(label);
+        } else {
+            sb.append('[').append(label).append("](").append(url).append(')');
+        }
+    }
+
+    /**
+     * Solo URLs http(s). Se codifican espacios y paréntesis para que no rompan
+     * la sintaxis de enlace Markdown.
+     */
+    private static String safeUrl(String url) {
+        if (url == null) {
+            return null;
+        }
+        String u = url.trim();
+        if (!(u.startsWith("https://") || u.startsWith("http://"))) {
+            return null;
+        }
+        return u.replace(" ", "%20").replace("(", "%28").replace(")", "%29");
     }
 
     /**
@@ -136,8 +171,7 @@ public class CatalogContextLoader {
             case "supermercados" -> "Supermercado";
             case "droguerias" -> "Droguería";
             case "cuidado-facial" -> "Cuidado facial";
-            default -> throw new com.comprasco.bakeprofit.ai.exception.AiInvalidRequestException(
-                    "Sección desconocida: " + slug);
+            default -> throw new AiInvalidRequestException("Sección desconocida: " + slug);
         };
     }
 }

@@ -11,6 +11,12 @@ import {
 /** Turnos de historial que se envían al backend (máx. permitido: 20). */
 const MAX_HISTORY_TURNS = 10;
 
+/** Los enlaces de la IA (páginas del producto en cada tienda) abren en otra pestaña. */
+const MD_COMPONENTS = {
+    // eslint-disable-next-line no-unused-vars
+    a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />,
+};
+
 /* ───────────────────────────────────────────
    Configuración por sección
    ─────────────────────────────────────────── */
@@ -304,7 +310,7 @@ export default function AiChatDrawer({ section, onClose }) {
                             }`}>
                             {msg.role === 'user'
                                 ? msg.content
-                                : <ReactMarkdown>{msg.content}</ReactMarkdown>
+                                : <ReactMarkdown components={MD_COMPONENTS}>{msg.content}</ReactMarkdown>
                             }
                             {msg.role === 'assistant' && msg.time != null && (
                                 <span className={s.responseTime}>
@@ -317,7 +323,7 @@ export default function AiChatDrawer({ section, onClose }) {
                     {/* Streaming: texto parcial en tiempo real */}
                     {loading && streamingText && (
                         <div className={`${s.bubble} ${s.assistant} ${s.streaming}`}>
-                            <ReactMarkdown>{parseSuggestions(streamingText).cleanText}</ReactMarkdown>
+                            <ReactMarkdown components={MD_COMPONENTS}>{parseSuggestions(streamingText).cleanText}</ReactMarkdown>
                             <span className={s.liveTimer}>
                                 ⚡ {formatTime(elapsed)}
                             </span>

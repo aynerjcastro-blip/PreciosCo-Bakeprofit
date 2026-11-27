@@ -106,4 +106,26 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
                 ORDER BY p.product.id, p.value ASC, p.id ASC
             """)
     List<ProductOffer> findCurrentOffersByProductIds(@Param("productIds") Collection<Long> productIds);
+
+    /**
+     * Precios vigentes de los productos con su nombre, unidad, marca, tienda y
+     * URL, en UNA sola consulta (contexto del asistente de IA). Mismo criterio
+     * de vigencia que {@link #findCurrentOffersByProductIds}.
+     */
+    @Query("""
+                SELECT new com.comprasco.bakeprofit.price.dto.CatalogOfferRow(
+                    pr.id, pr.name, pr.unit, b.name, s.name, p.value, p.productUrl)
+                FROM Price p
+                JOIN p.product pr
+                LEFT JOIN pr.brand b
+                JOIN p.store s
+                WHERE pr.id IN :productIds
+                  AND s.active = true
+                  AND p.registrationDate = (
+                      SELECT MAX(p2.registrationDate) FROM Price p2
+                      WHERE p2.product.id = p.product.id AND p2.store.id = p.store.id)
+                ORDER BY pr.id, p.value ASC, p.id ASC
+            """)
+    List<com.comprasco.bakeprofit.price.dto.CatalogOfferRow> findCatalogOffersByProductIds(
+            @Param("productIds") Collection<Long> productIds);
 }

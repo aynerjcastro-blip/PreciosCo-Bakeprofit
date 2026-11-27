@@ -29,6 +29,20 @@ public final class SectionPrompt {
          * - Texto de sugerencia 3
          * </pre>
          */
+        /**
+         * Instrucción común sobre los enlaces: en el catálogo cada precio viene
+         * como enlace Markdown {@code [Tienda $precio](url)} a la página del
+         * producto en la tienda.
+         */
+        private static final String LINK_INSTRUCTION = """
+
+                        ENLACES A LAS TIENDAS:
+                        En el catálogo, los precios vienen como enlaces Markdown: [Tienda $precio](url). \
+                        Cada vez que menciones un precio, escríbelo con su enlace COPIADO EXACTAMENTE \
+                        como aparece en el catálogo, para que el usuario pueda ir al producto. \
+                        Nunca inventes, acortes ni modifiques una URL. Si un precio no tiene enlace, \
+                        escríbelo sin enlace.""";
+
         private static final String SUGGESTION_INSTRUCTION = """
 
                         SUGERENCIAS DE SEGUIMIENTO:
@@ -68,7 +82,7 @@ public final class SectionPrompt {
                         ## 🛒 Cotización de tu lista
 
                         Para cada producto encontrado:
-                        **Producto** | Tienda A: $X | Tienda B: $Y ✅ (mejor precio)
+                        **Producto** | [Tienda A $X](url) | [Tienda B $Y](url) ✅ (mejor precio)
 
                         ### ❌ Artículos no cotizados
                         - (lista de productos que no encontraste)
@@ -79,7 +93,7 @@ public final class SectionPrompt {
 
                         CATÁLOGO DISPONIBLE:
                         {catalog}
-                        """ + SUGGESTION_INSTRUCTION;
+                        """ + LINK_INSTRUCTION + SUGGESTION_INSTRUCTION;
 
         private static final Map<String, String> TEMPLATES = Map.of(
 
@@ -99,7 +113,7 @@ public final class SectionPrompt {
                                         CATÁLOGO DISPONIBLE:
                                         {catalog}
                                         """
-                                        + SUGGESTION_INSTRUCTION,
+                                        + LINK_INSTRUCTION + SUGGESTION_INSTRUCTION,
 
                         "droguerias", """
                                         Eres un asistente de droguería en Colombia.
@@ -116,7 +130,7 @@ public final class SectionPrompt {
 
                                         CATÁLOGO DISPONIBLE:
                                         {catalog}
-                                        """ + SUGGESTION_INSTRUCTION,
+                                        """ + LINK_INSTRUCTION + SUGGESTION_INSTRUCTION,
 
                         "cuidado-facial",
                         """
@@ -135,7 +149,7 @@ public final class SectionPrompt {
                                         CATÁLOGO DISPONIBLE:
                                         {catalog}
                                         """
-                                        + SUGGESTION_INSTRUCTION);
+                                        + LINK_INSTRUCTION + SUGGESTION_INSTRUCTION);
 
         /**
          * Devuelve el system prompt de la sección con el catálogo inyectado.
